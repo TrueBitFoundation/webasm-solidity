@@ -1,3 +1,4 @@
 contracts
 node_modules
 *~
+*.wast
