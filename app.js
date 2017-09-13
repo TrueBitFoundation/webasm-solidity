@@ -27,6 +27,8 @@ var contract = contractABI.at("0x21bdd8db134abeb218d523d14f5605ac18116902")
 var iactiveABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")))
 var iactive = iactiveABI.at("0x398f9e1313869333363534e4edc45b03643bed37")
 
+var wasm_path = "../webasm/interpreter/wasm"
+
 io.on("connection", function(socket) {
     console.log("Got client")
     io.emit("client", {})
@@ -45,7 +47,7 @@ io.on("connection", function(socket) {
             // store into filesystem
             fs.writeFile(filename, obj, function () {
                 // run init script
-                execFile('../interpreter/wasm', ["-m", "-init", "0", filename], (error, stdout, stderr) => {
+                execFile(wasm_path, ["-m", "-init", "0", filename], (error, stdout, stderr) => {
                     if (error) {
                         console.error('stderr', stderr)
                         return
@@ -69,7 +71,7 @@ function solveTask(obj) {
     var filename = obj.filehash + ".wast"
     // store into filesystem
     fs.writeFile(filename, obj.file, function () {
-        execFile('../interpreter/wasm', ["-m", "-init", "0", filename], (error, stdout, stderr) => {
+        execFile(wasm_path, ["-m", "-init", "0", filename], (error, stdout, stderr) => {
             if (error) {
                 console.error('stderr', stderr)
                 return
@@ -82,7 +84,7 @@ function solveTask(obj) {
                 console.log("Initial hash was wrong")
                 return
             }
-            execFile('../interpreter/wasm', ["-m", "-result", "0", filename], function (error, stdout, stderr) {
+            execFile(wasm_path, ["-m", "-result", "0", filename], function (error, stdout, stderr) {
                 if (error) {
                     console.error('stderr', stderr)
                     return
@@ -104,7 +106,7 @@ function verifyTask(obj) {
     var filename = obj.filehash + ".wast"
     // store into filesystem
     fs.writeFile(filename, obj.file, function () {
-        execFile('../interpreter/wasm', ["-m", "-init", "0", filename], (error, stdout, stderr) => {
+        execFile(wasm_path, ["-m", "-init", "0", filename], (error, stdout, stderr) => {
             if (error) {
                 console.error('stderr', stderr)
                 return
@@ -117,7 +119,7 @@ function verifyTask(obj) {
                 console.log("Initial hash was wrong")
                 return
             }
-            execFile('../interpreter/wasm', ["-m", "-result", "0", filename], function (error, stdout, stderr) {
+            execFile(wasm_path, ["-m", "-result", "0", filename], function (error, stdout, stderr) {
                 if (error) {
                     console.error('stderr', stderr)
                     return
@@ -188,14 +190,14 @@ contract.Solved("latest").watch(function (err, ev) {
 var challenges = {}
 
 function getLocation(fname, place, cont) {
-    execFile('../interpreter/wasm', ["-m", "-location", place, "-case", "0", fname], function (error, stdout, stderr) {
+    execFile(wasm_path, ["-m", "-location", place, "-case", "0", fname], function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
     })
 }
 
 function getStep(fname, place, cont) {
-    execFile('../interpreter/wasm', ["-m", "-step", place, "-case", "0", fname], function (error, stdout, stderr) {
+    execFile(wasm_path, ["-m", "-step", place, "-case", "0", fname], function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
     })
