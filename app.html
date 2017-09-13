@@ -1,0 +1,64 @@
+<!doctype html>
+
+<title>Test node</title>
+
+<h1>Post tasks</h1>
+
+<textarea cols="100" rows="20" id="module">
+(module
+  ;; Recursive factorial
+  (func (export "fac-rec") (param i64) (result i64)
+    (if (result i64) (i64.eq (get_local 0) (i64.const 0))
+      (then (i64.const 1))
+      (else
+        (i64.mul (get_local 0) (call 0 (i64.sub (get_local 0) (i64.const 1))))
+      )
+    )
+  )
+)
+(assert_return (invoke "fac-rec" (i64.const 25)) (i64.const 7034535277573963776))
+</textarea>
+<p>
+
+<button onclick="newTask();">New task</button>
+
+<div id="success"></div>
+
+<h1>Solver</h1>
+
+<div id="posted"></div>
+
+<div id="solve_success"></div>
+
+<h1>Verifier</h1>
+
+<div id="solved"></div>
+
+<script src="socketio.js"></script>
+
+<script>
+    
+    var socket = io("localhost:22448")
+    socket.on("client", () => console.log("Got message!"))
+    socket.on("posted", function (obj) {
+        console.log(obj)
+        document.querySelector("#posted").innerHTML += "<br>" + JSON.stringify(obj)
+    })
+    socket.on("solved", function (obj) {
+        console.log(obj)
+        document.querySelector("#solved").innerHTML += "<br>" + JSON.stringify(obj)
+    })
+    socket.on("task_success", function (id) {
+        document.querySelector("#success").innerHTML += "<br>" + id
+    })
+    socket.on("solve_success", function (id) {
+        document.querySelector("#solve_success").innerHTML += "<br>" + id
+    })
+    
+    function newTask() {
+        socket.emit("new_task", document.querySelector("#module").value)
+    }
+    
+</script>
+
+

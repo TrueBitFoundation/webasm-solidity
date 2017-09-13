@@ -1,0 +1,7 @@
+{
+"name": "webasm-test",
+"version": "0.0.0",
+"dependencies" : {
+  "web3": "0.20"
+}
+}
