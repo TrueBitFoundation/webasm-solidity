@@ -47,7 +47,7 @@ io.on("connection", function(socket) {
             // store into filesystem
             fs.writeFile(filename, obj, function () {
                 // run init script
-                execFile(wasm_path, ["-m", "-init", "0", filename], (error, stdout, stderr) => {
+                execFile(wasm_path, ["-m", "-init", "-case", "0", filename], (error, stdout, stderr) => {
                     if (error) {
                         console.error('stderr', stderr)
                         return
@@ -71,7 +71,7 @@ function solveTask(obj) {
     var filename = obj.filehash + ".wast"
     // store into filesystem
     fs.writeFile(filename, obj.file, function () {
-        execFile(wasm_path, ["-m", "-init", "0", filename], (error, stdout, stderr) => {
+        execFile(wasm_path, ["-m", "-init", "-case", "0", filename], (error, stdout, stderr) => {
             if (error) {
                 console.error('stderr', stderr)
                 return
@@ -84,7 +84,7 @@ function solveTask(obj) {
                 console.log("Initial hash was wrong")
                 return
             }
-            execFile(wasm_path, ["-m", "-result", "0", filename], function (error, stdout, stderr) {
+            execFile(wasm_path, ["-m", "-result", "-case", "0", filename], function (error, stdout, stderr) {
                 if (error) {
                     console.error('stderr', stderr)
                     return
@@ -106,7 +106,7 @@ function verifyTask(obj) {
     var filename = obj.filehash + ".wast"
     // store into filesystem
     fs.writeFile(filename, obj.file, function () {
-        execFile(wasm_path, ["-m", "-init", "0", filename], (error, stdout, stderr) => {
+        execFile(wasm_path, ["-m", "-init", "-case", "0", filename], (error, stdout, stderr) => {
             if (error) {
                 console.error('stderr', stderr)
                 return
@@ -119,7 +119,7 @@ function verifyTask(obj) {
                 console.log("Initial hash was wrong")
                 return
             }
-            execFile(wasm_path, ["-m", "-result", "0", filename], function (error, stdout, stderr) {
+            execFile(wasm_path, ["-m", "-result", "-case", "0", filename], function (error, stdout, stderr) {
                 if (error) {
                     console.error('stderr', stderr)
                     return
