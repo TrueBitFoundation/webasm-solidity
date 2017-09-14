@@ -39,7 +39,7 @@ contract Interactive2 {
     }
     
     function Interactive2(address addr) {
-        judge = Instruction(addr);
+        judge = Judge(addr);
     }
 
     // perhaps they should be indexed by end state ?
