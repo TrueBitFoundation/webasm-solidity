@@ -1,7 +1,5 @@
 pragma solidity ^0.4.15;
 
-// import "./alu.sol";
-
 contract Instruction {
 
     bytes32[14] phases;
@@ -769,6 +767,17 @@ contract Instruction {
     
     function test(uint a, uint b) returns (uint, uint) {
         return fromMemory(toMemory(a,b));
+    }
+    
+    function judge(bytes32[14] res, uint q,
+                        bytes32[] proof, uint loc, bytes32 fetched_op,
+                        bytes32 vm_, bytes32 op, uint[4] regs,
+                        bytes32[9] roots, uint[5] pointers) returns (uint) {
+        setup(res,msg.sender,msg.sender,q);
+        setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
+        setVM2(roots, pointers);
+        provePhase(proof, loc, fetched_op);
+        return 123;
     }
 
 }

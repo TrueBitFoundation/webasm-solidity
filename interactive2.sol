@@ -1,6 +1,6 @@
 pragma solidity ^0.4.16;
 
-interface Instruction {
+interface Judge {
     function setMachine(bytes32 vm, bytes32 op, uint reg1, uint reg2, uint reg3, uint ireg);
     function setVM2(bytes32[9] roots, uint[5] pointers);
     function setup(bytes32[14] arr, address c, address p, uint i);
@@ -9,7 +9,7 @@ interface Instruction {
 
 contract Interactive2 {
 
-    Instruction judge;
+    Judge judge;
     
     struct Record {
         address prover;
