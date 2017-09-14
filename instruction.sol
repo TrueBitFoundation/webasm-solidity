@@ -26,6 +26,7 @@ contract Instruction {
         bytes32 break_stack2;
         bytes32 globals;
         bytes32 calltable;
+        bytes32 calltypes;
         bytes32 call_stack;
         
         uint pc;
@@ -55,6 +56,7 @@ contract Instruction {
         bytes32 globals,
         bytes32 call_stack,
         bytes32 calltable,
+        bytes32 calltypes,
         
         uint pc,
         uint stack_ptr,
@@ -70,6 +72,7 @@ contract Instruction {
         vm.break_stack2 = break_stack2;
         vm.globals = globals;
         vm.calltable = calltable;
+        vm.calltypes = calltypes;
         vm.pc = pc;
         vm.stack_ptr = stack_ptr;
         vm.break_ptr = break_ptr;
@@ -77,7 +80,7 @@ contract Instruction {
         vm.memsize = memsize;
     }
     
-    function setVM2(bytes32[8] roots, uint[5] pointers) {
+    function setVM2(bytes32[9] roots, uint[5] pointers) {
         require(msg.sender == prover);
         vm.code = roots[0];
         vm.stack = roots[1];
@@ -87,6 +90,7 @@ contract Instruction {
         vm.break_stack2 = roots[5];
         vm.globals = roots[6];
         vm.calltable = roots[7];
+        vm.calltypes = roots[8];
 
         vm.pc = pointers[0];
         vm.stack_ptr = pointers[1];
@@ -97,7 +101,7 @@ contract Instruction {
     
     function hashVM() returns (bytes32) {
         return sha3(vm.code, vm.mem, vm.stack, vm.globals, vm.call_stack, vm.break_stack1,
-                    vm.break_stack2, vm.calltable,
+                    vm.break_stack2, vm.calltable, vm.calltypes,
                     vm.pc, vm.stack_ptr, vm.call_ptr, vm.break_ptr, vm.memsize);
     }
     
@@ -136,6 +140,7 @@ contract Instruction {
             if (loc%2 == 0) res = sha3(res, proof[i]);
             else res = sha3(proof[i], res);
         }
+        require(loc < 2);
         return res;
     }
 
@@ -187,6 +192,7 @@ contract Instruction {
         else if (hint == 15) return (m.reg1+m.ireg)/8;
         else if (hint == 16) return m.reg1;
         else if (hint == 17) return (m.reg1+m.ireg)/8 + 1;
+        else if (hint == 18) return m.reg1;
     }
 
     function writePosition(uint hint) returns (uint) {
@@ -219,6 +225,7 @@ contract Instruction {
         else if (hint == 15) return vm.mem;
         else if (hint == 16) return vm.calltable;
         else if (hint == 17) return vm.mem;
+        else if (hint == 16) return vm.calltypes;
     }
     
     function writeRoot(uint hint) returns (bytes32) {
@@ -296,7 +303,7 @@ contract Instruction {
     function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) returns (uint) {
         uint res;
         if (hint == 0) return r1;
-        else if (hint == 1) revert(); // Trap
+        else if (hint == 1 || hint == 6) revert(); // Trap
         // Loading from memory
         else if (hint & 0xc0 == 0xc0) {
             uint8[] memory arr = toMemory(r2, r3);
@@ -306,15 +313,23 @@ contract Instruction {
             if (r1 < r2) res = r1;
             else res = r2;
         }
+        // Calculate conditional jump
         else if (hint == 3) {
             if (r1 == 0) res = r2;
             else res = r3;
         }
+        // Calculate jump to jump table
         else if (hint == 4) {
-            res = r1 + r2;
+            res = r2 + (r1 >= ireg ? ireg : r1);
         }
+        // Handle inserting break
         else if (hint == 5) {
             res = r1 + r2 - 1;
+        }
+        // Check dynamic call
+        else if (hint == 7) {
+            if (ireg != r2) revert();
+            res = 0;
         }
         else if (hint == 0x45 || hint == 0x50) {
             if (r1 == 0) res = 1;
@@ -456,7 +471,7 @@ contract Instruction {
         else if (hint == 0x76 || hint == 0x88) {
             res = r1/2**r2;
         }
-        // rol, ror
+        // rol, ror -- fix
         else if (hint == 0x77) {
             res = (r1*2**r2) | (r1/2**32);
         }

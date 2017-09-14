@@ -2,45 +2,15 @@ pragma solidity ^0.4.16;
 
 interface Instruction {
     function setMachine(bytes32 vm, bytes32 op, uint reg1, uint reg2, uint reg3, uint ireg);
-    function setVM2(bytes32[8] roots, uint[5] pointers);
+    function setVM2(bytes32[9] roots, uint[5] pointers);
     function setup(bytes32[14] arr, address c, address p, uint i);
     function provePhase(bytes32[] proof, uint loc, bytes32 op);
 }
 
 contract Interactive2 {
 
-    struct VM {
-        /*
-        bytes32 code;
-        bytes32 stack;
-        bytes32 mem;
-        bytes32 break_stack1;
-        bytes32 break_stack2;
-        bytes32 globals;
-        bytes32 calltable;
-        bytes32 call_stack;
-        
-        uint pc;
-        uint stack_ptr;
-        uint break_ptr;
-        uint call_ptr;
-        uint memsize;
-        */
-        bytes32[8] roots;
-        uint[5] pointers;
-    }
-    
     Instruction judge;
     
-    struct Machine {
-        bytes32 vm;
-        bytes32 op;
-        uint reg1;
-        uint reg2;
-        uint reg3;
-        uint ireg;
-    }
-
     struct Record {
         address prover;
         address challenger;
@@ -66,12 +36,6 @@ contract Interactive2 {
         bytes32[] proof;
         bytes32[14] result;
         
-        // Information for the judging step
-        uint loc;
-        bytes32[] merkle;
-        VM vm;
-        Machine reg_machine;
-        bytes32 op;
     }
     
     function Interactive2(address addr) {
@@ -203,56 +167,10 @@ contract Interactive2 {
         r.next = r.prover;
     }
     
-    function prepareVM(bytes32 id, bytes32[8] roots, uint[5] pointers) {
-        Record storage r = records[id];
-        require(msg.sender == r.prover && r.next == r.prover);
-        VM storage vm = records[id].vm;
-        vm.roots = roots;
-        vm.pointers = pointers;
-    }
-
-    function prepareMachine(bytes32 id,
-        bytes32 vm,
-        bytes32 op,
-        uint reg1,
-        uint reg2,
-        uint reg3,
-        uint ireg) {
-        Record storage r = records[id];
-        require(msg.sender == r.prover && r.next == r.prover);
-        Machine storage m = records[id].reg_machine;
-        m.vm = vm;
-        m.op = op;
-        m.reg1 = reg1;
-        m.reg2 = reg2;
-        m.reg3 = reg3;
-        m.ireg = ireg;
-    }
-    
-    function prepareMerkle(bytes32 id, bytes32[] proof, uint loc, bytes32 op) {
-        Record storage r = records[id];
-        require(msg.sender == r.prover && r.next == r.prover);
-        r.loc = loc;
-        r.merkle = proof;
-        r.op = op;
-    }
-    
-    function callJudge(bytes32 id, uint i1, uint q) {
-        Record storage r = records[id];
-        require(r.phase == q && msg.sender == r.prover && r.idx1 == i1 &&
-                r.next == r.prover);
-        judge.setup(r.result, r.challenger, r.prover, r.phase);
-        Machine storage m = r.reg_machine;
-        judge.setMachine(m.vm, m.op, m.reg1, m.reg2, m.reg3, m.ireg);
-        VM storage vm = r.vm;
-        judge.setVM2(vm.roots, vm.pointers);
-        judge.provePhase(r.proof, r.loc, r.op);
-    }
-
-    function callJudge2(bytes32 id, uint i1, uint q,
+    function callJudge(bytes32 id, uint i1, uint q,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
                         bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[8] roots, uint[5] pointers) {
+                        bytes32[9] roots, uint[5] pointers) {
         Record storage r = records[id];
         require(r.phase == q && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);

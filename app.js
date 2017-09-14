@@ -269,9 +269,9 @@ function submitProof(id, idx1, phase) {
         var fetched = proof.op || 0
         var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
         var vm = proof.vm || { code: "0x00", stack:"0x00", break_stack1:"0x00", break_stack2:"0x00", call_stack:"0x00", calltable:"0x00",
-                               globals : "0x00", memory:"0x00", pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
-        iactive.callJudge2(id, idx1, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable],
+                               globals : "0x00", memory:"0x00", calltypes:"0x00", pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
+        iactive.callJudge(id, idx1, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes],
                            [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize])
     })
 }
