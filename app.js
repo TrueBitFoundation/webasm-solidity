@@ -16,8 +16,10 @@ web3.setProvider(new web3.providers.HttpProvider('http://programming-progress.co
 var solver_error = true
 var verifier_error = false
 
+console.log(web3.eth.coinbase)
+
 // var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
-var base = "0x9acbcf2d9bd157999ae5541c446f8d6962da1d4d"
+var base = web3.eth.coinbase
 
 var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 
