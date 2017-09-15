@@ -90,9 +90,9 @@ contract Interactive2 {
         i2 = r.idx2;
     }
     
-    event Reported(bytes32 id, uint idx1, uint ixd2, bytes32[] arr);
+    event Reported(bytes32 id, uint idx1, uint idx2, bytes32[] arr);
 
-    function report(bytes32 id, uint i1, uint i2, bytes32[] arr) {
+    function report(bytes32 id, uint i1, uint i2, bytes32[] arr) returns (bool) {
         Record storage r = records[id];
         require(r.size != 0 && arr.length == r.size && i1 == r.idx1 && i2 == r.idx2 &&
                 msg.sender == r.prover && r.prover == r.next);
@@ -103,6 +103,7 @@ contract Interactive2 {
         }
         r.next = r.challenger;
         Reported(id, i1, i2, arr);
+        return true;
     }
     
     function roundsTest(uint rounds, uint stuff) returns (uint it, uint i1, uint i2) {
@@ -118,7 +119,7 @@ contract Interactive2 {
         return getIter(id);
     }
 
-    event Queried(bytes32 id, uint idx1, uint ixd2);
+    event Queried(bytes32 id, uint idx1, uint idx2);
 
     function query(bytes32 id, uint i1, uint i2, uint num) {
         Record storage r = records[id];
@@ -132,7 +133,7 @@ contract Interactive2 {
         if (r.size > r.idx2-r.idx1-1) r.size = r.idx2-r.idx1-1;
         // size eventually becomes zero here
         r.next = r.prover;
-        Queried(id, i1, i2);
+        Queried(id, r.idx1, r.idx2);
     }
 
     function getStep(bytes32 id, uint idx) returns (bytes32) {
@@ -140,7 +141,7 @@ contract Interactive2 {
         return r.proof[idx];
     }
     
-    event PostedPhases(bytes32 id, uint i1, bytes32[14] arr);
+    event PostedPhases(bytes32 id, uint idx1, bytes32[14] arr);
 
     function postPhases(bytes32 id, uint i1, bytes32[14] arr) {
         Record storage r = records[id];
@@ -156,7 +157,7 @@ contract Interactive2 {
         return r.result;
     }
     
-    event SelectedPhase(bytes32 id, uint i1, uint phase);
+    event SelectedPhase(bytes32 id, uint idx1, uint phase);
     
     function selectPhase(bytes32 id, uint i1, bytes32 st, uint q) {
         Record storage r = records[id];

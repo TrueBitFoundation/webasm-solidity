@@ -16,6 +16,10 @@ contract Tasks {
         iactive = Interactive(contr);
     }
     
+    function getInteractive() returns (address) {
+        return address(iactive);
+    }
+    
     struct Task {
         address giver;
         bytes32 init;
@@ -45,7 +49,7 @@ contract Tasks {
     
     function challenge(uint id) {
         Task storage t = tasks[id];
-        bytes32 uniq = iactive.make(t.solver, msg.sender, t.init, t.result, t.steps, 2, 10);
+        bytes32 uniq = iactive.make(t.solver, msg.sender, t.init, t.result, t.steps, 1, 10);
         challenges[uniq] = id;
     }
     

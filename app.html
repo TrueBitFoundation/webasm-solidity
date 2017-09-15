@@ -38,21 +38,44 @@
 
 <script>
     
+    function printObject(obj) {
+        var res = "<p>Message <ul>"
+        for (var i in obj) {
+            res += "<li>" + i + ": " + JSON.stringify(obj[i])
+        }
+        return res + "</ul>"
+    }
+    
     var socket = io("localhost:22448")
     socket.on("client", () => console.log("Got message!"))
     socket.on("posted", function (obj) {
         console.log(obj)
-        document.querySelector("#posted").innerHTML += "<br>" + JSON.stringify(obj)
+        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
     })
     socket.on("solved", function (obj) {
         console.log(obj)
-        document.querySelector("#solved").innerHTML += "<br>" + JSON.stringify(obj)
+        document.querySelector("#solved").innerHTML += "<br>" + printObject(obj)
     })
     socket.on("task_success", function (id) {
         document.querySelector("#success").innerHTML += "<br>" + id
     })
     socket.on("solve_success", function (id) {
         document.querySelector("#solve_success").innerHTML += "<br>" + id
+    })
+    socket.on("challenge", function (obj) {
+        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
+    })
+    socket.on("reply", function (obj) {
+        document.querySelector("#solved").innerHTML += "<br>" + printObject(obj)
+    })
+    socket.on("query", function (obj) {
+        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
+    })
+    socket.on("phases", function (obj) {
+        document.querySelector("#solved").innerHTML += "<br>" + printObject(obj)
+    })
+    socket.on("phase_selected", function (obj) {
+        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
     })
     
     function newTask() {

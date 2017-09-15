@@ -13,19 +13,24 @@ var ipfs = ipfsAPI('programming-progress.com', '5001', {protocol: 'http'})
 
 web3.setProvider(new web3.providers.HttpProvider('http://programming-progress.com:8545'))
 
+var solver_error = true
+var verifier_error = false
+
 // var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
 var base = "0x9acbcf2d9bd157999ae5541c446f8d6962da1d4d"
 
 var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 
+var addresses = JSON.parse(fs.readFileSync("config.json"))
+
 var send_opt = {from:base, gas: 4000000}
 
 // var contract = new web3.eth.Contract(abi, "0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab")
 var contractABI = web3.eth.contract(abi)
-var contract = contractABI.at("0x21bdd8db134abeb218d523d14f5605ac18116902")
+var contract = contractABI.at(addresses.tasks)
 
 var iactiveABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")))
-var iactive = iactiveABI.at("0x398f9e1313869333363534e4edc45b03643bed37")
+var iactive = iactiveABI.at(addresses.interactive)
 
 var wasm_path = "../webasm/interpreter/wasm"
 
@@ -67,7 +72,15 @@ io.on("connection", function(socket) {
     })
 })
 
-function solveTask(obj) {
+function insertError(args, make_error) {
+    if (make_error) {
+        args.push("-insert-error")
+        args.push("100")
+    }
+    return args
+}
+
+function solveTask(obj, make_error) {
     var filename = obj.filehash + ".wast"
     // store into filesystem
     fs.writeFile(filename, obj.file, function () {
@@ -84,7 +97,8 @@ function solveTask(obj) {
                 console.log("Initial hash was wrong")
                 return
             }
-            execFile(wasm_path, ["-m", "-result", "-case", "0", filename], function (error, stdout, stderr) {
+            var args = insertError(["-m", "-result", "-case", "0", filename], make_error)
+            execFile(wasm_path, args, function (error, stdout, stderr) {
                 if (error) {
                     console.error('stderr', stderr)
                     return
@@ -102,7 +116,7 @@ function solveTask(obj) {
     })
 }
 
-function verifyTask(obj) {
+function verifyTask(obj, make_error) {
     var filename = obj.filehash + ".wast"
     // store into filesystem
     fs.writeFile(filename, obj.file, function () {
@@ -119,16 +133,22 @@ function verifyTask(obj) {
                 console.log("Initial hash was wrong")
                 return
             }
-            execFile(wasm_path, ["-m", "-result", "-case", "0", filename], function (error, stdout, stderr) {
+            var args = insertError(["-m", "-result", "-case", "0", filename], make_error)
+            execFile(wasm_path, args, function (error, stdout, stderr) {
                 if (error) {
                     console.error('stderr', stderr)
                     return
                 }
                 var res = JSON.parse(stdout)
-                if (res.result != obj.hash) console.log("Result mismatch")
+                if (res.result != obj.hash) {
+                    console.log("Result mismatch")
+                    contract.challenge(obj.id, send_opt, function (err, tx) {
+                        if (!err) console.log(tx, "challenge initiated")
+                    })
+                }
                 else if (res.steps != obj.steps) {
                     console.log("Wrong number of steps")
-                    contract.challenge(obj.id, function (err, tx) {
+                    contract.challenge(obj.id, send_opt, function (err, tx) {
                         if (!err) console.log(tx, "challenge initiated")
                     })
                 }
@@ -166,11 +186,11 @@ contract.Posted("latest").watch(function (err, ev) {
         return
     }
     var id = ev.args.id.toString()
-    task_to_file[id] = ev.args.file + ".wasm"
+    task_to_file[id] = ev.args.file + ".wast"
     io.emit("posted", {giver: ev.args.giver, hash: ev.args.hash, file:ev.args.file, id:id})
     // download file from IPFS
     getFile(ev.args.file, function (filestr) {
-        solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id})
+        solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id}, solver_error)
     })
 })
 
@@ -181,58 +201,73 @@ contract.Solved("latest").watch(function (err, ev) {
     }
     var id = ev.args.id.toString()
     io.emit("solved", {hash: ev.args.hash, file:ev.args.file, init: ev.args.init, id:id, steps:ev.args.steps.toString()})
-    task_to_file[id] = ev.args.file + ".wasm"
+    task_to_file[id] = ev.args.file + ".wast"
     getFile(ev.args.file, function (filestr) {
-        verifyTask({hash: ev.args.hash, file: filestr, filehash:ev.args.file, init: ev.args.init, id:id, steps:ev.args.steps.toString()})
+        verifyTask({hash: ev.args.hash, file: filestr, filehash:ev.args.file, init: ev.args.init, id:id, steps:ev.args.steps.toString()}, verifier_error)
     })
 })
 
 var challenges = {}
 
-function getLocation(fname, place, cont) {
-    execFile(wasm_path, ["-m", "-location", place, "-case", "0", fname], function (error, stdout, stderr) {
+function getLocation(fname, place, make_error, cont) {
+    var args = insertError(["-m", "-location", place, "-case", "0", fname], make_error)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
-        else cont(JSON.parse(stdout))
+        else {
+            console.log("Got location " + place + ": " + stdout)
+            cont(JSON.parse(stdout))
+        }
     })
 }
 
-function getStep(fname, place, cont) {
-    execFile(wasm_path, ["-m", "-step", place, "-case", "0", fname], function (error, stdout, stderr) {
+function getStep(fname, place, make_error, cont) {
+    var args = insertError(["-m", "-step", place, "-case", "0", fname], make_error)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
     })
 }
 
 function replyChallenge(id, idx1, idx2) {
-    if (!challenges[id]) return
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
     var fname = task_to_file[challenges[id].task]
-    var place = Math.floor((idx2-idx1)/2)
+    var place = Math.floor((idx2-idx1)/2 + idx1)
     if (idx1 + 1 == idx2) {
         // Now we are sending the intermediate states
-        getStep(fname, idx1, function (err,obj) {
-            iactive.postPhases(id, idx1, obj.states, function (err,tx) {
+        getStep(fname, idx1, solver_error, function (obj) {
+            iactive.postPhases(id, idx1, obj.states, send_opt, function (err,tx) {
                 if (err) console.log(err)
                 else console.log("Posted phases", tx)
             })
         })
         return
     }
-    getLocation(fname, place, function (hash) {
-        iactive.report(id, idx1, idx2, [hash], function (err,tx) {
+    getLocation(fname, place, solver_error, function (hash) {
+        iactive.report(id, idx1, idx2, [hash], send_opt, function (err,tx) {
             if (err) console.log(err)
             else console.log("Replied to challenge", tx)
+        })
+        iactive.report.call(id, idx1, idx2, [hash], send_opt, function (err, res) {
+            if (err) console.log(err)
+            else console.log("Testing reporting:", res)
         })
     })
 }
 
 function replyPhases(id, idx1, arr) {
-    if (!challenges[id]) return
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
     var fname = task_to_file[challenges[id].task]
     // Now we are checking the intermediate states
-    getStep(fname, idx1, function (err,obj) {
+    getStep(fname, idx1, verifier_error, function (obj) {
         for (var i = 1; i < arr.length; i++) {
             if (obj.states[i] != arr[i]) {
-                iactive.selectPhase(id, idx1, arr[i-1], i-1, function (err,tx) {
+                iactive.selectPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
                     if (err) console.log(err)
                     else console.log("Selected wrong phase", tx)
                 })
@@ -259,10 +294,13 @@ var phase_table = {
 }
 
 function submitProof(id, idx1, phase) {
-    if (!challenges[id]) return
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
     var fname = task_to_file[challenges[id].task]
     // Now we are checking the intermediate states
-    getStep(fname, idx1, function (err,obj) {
+    getStep(fname, idx1, solver_error, function (obj) {
         var proof = obj[phase_table[phase]]
         var merkle = proof.proof || []
         var loc = proof.location || 0
@@ -272,19 +310,25 @@ function submitProof(id, idx1, phase) {
                                globals : "0x00", memory:"0x00", calltypes:"0x00", pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
         iactive.callJudge(id, idx1, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes],
-                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize])
+                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
+            if (err) console.log(err)
+            else console.log("Judging success " + res)
+        })
     })
 }
 
 function replyReported(id, idx1, idx2, otherhash) {
-    if (!challenges[id]) return
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
     var fname = task_to_file[challenges[id].task]
-    var place = Math.floor((idx2-idx1)/2)
-    getLocation(fname, place, function (hash) {
-        var res = hash == otherhash ? 0 : 1
-        iactive.query(id, idx1, idx2, res, function (err,tx) {
+    var place = Math.floor((idx2-idx1)/2 + idx1)
+    getLocation(fname, place, verifier_error, function (hash) {
+        var res = hash == otherhash ? 1 : 0
+        iactive.query(id, idx1, idx2, res, send_opt, function (err,tx) {
             if (err) console.log(err)
-            else console.log("Sent query", tx)
+            else console.log("Sent query", tx, " it was ", res)
         })
     })
 }
@@ -294,42 +338,66 @@ iactive.StartChallenge("latest").watch(function (err,ev) {
         console.log(err)
         return
     }
-    contract.queryChallenge.call(ev.uniq, function (err, id) {
+    console.log("Got challenge")
+    console.log(ev)
+    io.emit("challenge", {
+            prover: ev.args.p,
+            challenger: ev.args.c,
+            uniq: ev.args.uniq,
+            init: ev.args.s,
+            result: ev.args.e,
+            size: ev.args.par.toNumber(),
+        })
+    contract.queryChallenge.call(ev.args.uniq, function (err, id) {
         if (err) {
             console.log(err)
             return
         }
+        console.log("Got task id ", id)
         var id = id.toString()
-        challenges[ev.uniq] = {
-            prover: ev.p,
-            task: id.toString(),
-            challenger: ev.c,
-            init: ev.s,
-            result: ev.e,
-            size: ev.par,
+        challenges[ev.args.uniq] = {
+            prover: ev.args.p,
+            task: id,
+            challenger: ev.args.c,
+            init: ev.args.s,
+            result: ev.args.e,
+            size: ev.args.par.toNumber(),
         }
-        if (ev.p == base) replyChallenge(ev.uniq, ev.idx1.toNumber(), ev.idx2.toNumber())
+        if (ev.args.p == base) replyChallenge(ev.args.uniq, ev.args.idx1.toNumber(), ev.args.idx2.toNumber())
+        else console.log("Not for me")
     })
 })
 
 iactive.Reported("latest").watch(function (err,ev) {
     if (err) { console.log(err) ; return }
-    replyReported(ev.uniq, ev.idx1.toNumber(), ev.idx2.toNumber(), ev.arr[0])
+    ev = ev.args
+    console.log("Reported ", ev)
+    io.emit("reply", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber(), hash:ev.arr[0]})
+    replyReported(ev.id, ev.idx1.toNumber(), ev.idx2.toNumber(), ev.arr[0])
 })
 
 iactive.Queried("latest").watch(function (err,ev) {
     if (err) { console.log(err) ; return }
-    replyChallenge(ev.uniq, ev.idx1.toNumber(), ev.idx2.toNumber())
+    ev = ev.args
+    console.log("Query ", ev)
+    io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber()})
+    replyChallenge(ev.id, ev.idx1.toNumber(), ev.idx2.toNumber())
 })
 
 iactive.PostedPhases("latest").watch(function (err,ev) {
     if (err) { console.log(err) ; return }
-    replyPhases(ev.uniq, ev.idx1.toNumber(), ev.arr)
+    ev = ev.args
+    console.log("Phases ", ev)
+    io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
+    replyPhases(ev.id, ev.idx1.toNumber(), ev.arr)
 })
 
 iactive.SelectedPhase("latest").watch(function (err,ev) {
     if (err) { console.log(err) ; return }
-    submitProof(ev.uniq, ev.idx1.toNumber(), ev.phase.toString())
+    ev = ev.args
+    console.log("Challenger selected phase ", ev)
+    io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+    submitProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
 })
 
 http.listen(22448, function(){
