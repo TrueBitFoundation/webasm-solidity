@@ -46,7 +46,9 @@
         return res + "</ul>"
     }
     
-    var socket = io("localhost:22448")
+    var host = document.location.host
+    
+    var socket = io(host + ":22448")
     socket.on("client", () => console.log("Got message!"))
     socket.on("posted", function (obj) {
         console.log(obj)
