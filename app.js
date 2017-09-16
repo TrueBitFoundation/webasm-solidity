@@ -1,6 +1,5 @@
 
 var fs = require("fs")
-// var exec = require('child_process').exec
 var http = require('http').createServer()
 var io = require("socket.io")(http)
 var Web3 = require('web3')
