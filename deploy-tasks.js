@@ -3,7 +3,9 @@ var fs = require("fs")
 var Web3 = require('web3')
 var web3 = new Web3()
 
-web3.setProvider(new web3.providers.HttpProvider('http://programming-progress.com:8545'))
+var host = process.argv[2] || "localhost"
+
+web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
 
 var base = web3.eth.coinbase
 

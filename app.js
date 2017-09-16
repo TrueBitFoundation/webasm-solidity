@@ -8,10 +8,12 @@ var web3 = new Web3()
 var execFile = require('child_process').execFile
 var ipfsAPI = require('ipfs-api')
 
-// connect to ipfs daemon API server
-var ipfs = ipfsAPI('programming-progress.com', '5001', {protocol: 'http'})
+var host = process.argv[2] || "localhost"
 
-web3.setProvider(new web3.providers.HttpProvider('http://programming-progress.com:8545'))
+// connect to ipfs daemon API server
+var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
+
+web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
 
 var solver_error = true
 var verifier_error = false
