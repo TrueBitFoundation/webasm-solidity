@@ -15,25 +15,30 @@ var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 var code2 = fs.readFileSync("contracts/Interactive2.bin")
 var abi2 = JSON.parse(fs.readFileSync("contracts/Interactive2.abi"))
 
+var code3 = fs.readFileSync("contracts/Instruction.bin")
+var abi3 = JSON.parse(fs.readFileSync("contracts/Instruction.abi"))
+
 var send_opt = {from:base, gas: 4000000}
 
 // var sol_testContract = new web3.eth.Contract(abi)
 var contract = web3.eth.contract(abi)
 var contract2 = web3.eth.contract(abi2)
+var contract3 = web3.eth.contract(abi3)
 
-/*
-sol_testContract.deploy({data:"0x"+code}).send(send_opt).then(function (contract) {
-  console.log('Contract mined! address: ' + contract.options.address)
-})
-*/
-contract2.new({from: base, data: '0x' + code2, gas: '4000000'}, function (e, contr) {
+contract3.new({from: base, data: '0x' + code3, gas: '5000000'}, function (e, judge) {
     if (e) console.error(e)
-    if (typeof contr.address !== 'undefined') {
-        contract.new(contr.address, {from: base, data: '0x' + code, gas: '4000000'}, function (e, contract){
+    if (typeof judge.address !== 'undefined') {
+        contract2.new(judge.address, {from: base, data: '0x' + code2, gas: '4000000'}, function (e, contr) {
             if (e) console.error(e)
-            if (typeof contract.address !== 'undefined') {
-                console.log('{ "interactive": "' + contr.address + '", "tasks" : "' + contract.address + '" }')
+            if (typeof contr.address !== 'undefined') {
+                contract.new(contr.address, {from: base, data: '0x' + code, gas: '4000000'}, function (e, contract){
+                    if (e) console.error(e)
+                    if (typeof contract.address !== 'undefined') {
+                        console.log('{ "interactive": "' + contr.address + '", "tasks" : "' + contract.address + '" }')
+                    }
+                })
             }
         })
     }
 })
+
