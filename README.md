@@ -19,7 +19,7 @@ sh ./test.sh
 
 Starting up the test server:
 ```
-testrpc
+testrpc -d test
 ```
 
 Copy one of the generated addresses, and this line in modify `test.js`
@@ -50,6 +50,11 @@ Install Parity, then run it with
 echo > passfile
 parity --chain dev --unlock=0x00a329c0648769a73afac7f9381e08fb43dbea72 --reseal-min-period 0 --password passfile
 ```
+If Parity complains about password or missing account, try
+```
+parity --chain dev --unlock=0x00a329c0648769a73afac7f9381e08fb43dbea72
+```
+and then exit Parity. Now it should have created the development account.
 
 Run the test node:
 ```
@@ -57,3 +62,5 @@ npm install
 node deploy-tasks.js > config.json
 node app.js
 ```
+
+For user interface, `app.html` and `socketio.js` have to be on a web server in the same machine as the test node is running.
