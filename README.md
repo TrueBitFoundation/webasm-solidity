@@ -22,12 +22,6 @@ Starting up the test server:
 testrpc -d test
 ```
 
-Copy one of the generated addresses, and this line in modify `test.js`
-```
-var base = "0xb29e66c60114e5ddc9a60e61e38e6b60a7448c25"
-```
-so that it has one of the generated addresses.
-
 Change the line
 ```
 var test = JSON.parse(fs.readFileSync("load.json"))
@@ -38,7 +32,7 @@ Comment and uncomment the lines in the end of `test.js` to select which phase is
 
 Running the test:
 ```
-npm install web3
+npm install
 node test.js
 ```
 If the test doesn't output an error, it should have passed. If the proof was wrong, then it will complain about invalid EVM opcode (this is how reverting the state is currently handled in the EVM).
