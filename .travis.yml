@@ -19,10 +19,10 @@ install:
   - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
   - node --version
   - npm --version
-  - npm install npm@latest -g
+    #- npm install npm@latest -g
     #- npm --version
-  - sudo npm install web3 -y
-  - sudo npm install ethereumjs-testrpc -y
+    #- sudo npm install web3 -y
+    #- sudo npm install ethereumjs-testrpc -y
     #- sudo npm install -g web3 -y
     #- sudo npm install -g ethereumjs-testrpc -y
 
