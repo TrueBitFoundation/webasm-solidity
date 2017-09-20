@@ -219,7 +219,7 @@ contract Instruction {
     }
 
     function writePosition(uint hint) returns (uint) {
-        assert(hint > 1);
+        assert(hint > 0);
         if (hint == 1) return vm.break_ptr;
         else if (hint == 2) return vm.stack_ptr-m.reg1;
         else if (hint == 3) return vm.stack_ptr;
@@ -253,14 +253,14 @@ contract Instruction {
     }
     
     function writeRoot(uint hint) returns (bytes32) {
-        assert(hint > 1);
-        if (hint == 1) return vm_r.break_stack1;
+        assert(hint > 0);
+        if (hint == 1) return vm_r.break_stack2;
         else if (hint == 2) return vm_r.stack;
         else if (hint == 3) return vm_r.stack;
         else if (hint == 4) return vm_r.stack;
         else if (hint == 5) return vm_r.mem;
         else if (hint == 6) return vm_r.call_stack;
-        else if (hint == 7) return vm_r.break_stack2;
+        else if (hint == 7) return vm_r.break_stack1;
         else if (hint == 8) return vm_r.globals;
         else if (hint == 9) return vm_r.stack;
         else return vm_r.mem;
@@ -280,8 +280,8 @@ contract Instruction {
         if (hint == 0) return 0;
         if (hint == 1) return m.ireg;
         if (hint == 2) return vm.pc+1;
-        if (hint == 3) return vm.memsize;
-        if (hint == 4) return vm.stack_ptr;
+        if (hint == 3) return vm.stack_ptr;
+        if (hint == 4) return vm.memsize;
         return uint(getLeaf(proof, loc));
     }
     
@@ -307,6 +307,7 @@ contract Instruction {
         uint hint = (uint(m.op)/2**(8*1))&0xff;
         require(checkReadProof(proof, loc, hint));
         m.reg2 = readFromProof(proof, loc, hint);
+        // debug = hint;
         require(state2 == hashMachine());
         winner = prover;
         return true;
@@ -577,13 +578,13 @@ contract Instruction {
         else if (hint & 0xc0 == 0xc0) root = makeMemChange2(proof, loc, v, hint);
         else root = makeChange(proof, loc, v);
         
-        if (hint == 1) vm_r.break_stack1 = root;
+        if (hint == 1) vm_r.break_stack2 = root;
         else if (hint == 2) vm_r.stack = root;
         else if (hint == 3) vm_r.stack = root;
         else if (hint == 4) vm_r.stack = root;
         else if (hint == 5) vm_r.mem = root;
         else if (hint == 6) vm_r.call_stack = root;
-        else if (hint == 7) vm_r.break_stack2 = root;
+        else if (hint == 7) vm_r.break_stack1 = root;
         else if (hint == 8) vm_r.globals = root;
         else if (hint == 9) vm_r.stack = root;
         else vm_r.mem = root;
@@ -597,6 +598,7 @@ contract Instruction {
         require(state1 == hashMachine());
         uint target = (uint(m.op)/2**(8*4))&0xff;
         uint hint = (uint(m.op)/2**(8*5))&0xff;
+        debug = hint;
         require(checkWriteProof(proof, loc, hint));
         uint v;
         if (target == 1) v = m.reg1;
@@ -617,6 +619,7 @@ contract Instruction {
         require(state1 == hashMachine());
         uint target = (uint(m.op)/2**(8*6))&0xff;
         uint hint = (uint(m.op)/2**(8*7))&0xff;
+        debug = hint;
         require(checkWriteProof(proof, loc, hint));
         
         uint v;
@@ -803,7 +806,7 @@ contract Instruction {
         setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
         setVM2(roots, pointers);
         provePhase(proof, loc, fetched_op);
-        return q;
+        return debug;
     }
 
 }

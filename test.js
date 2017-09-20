@@ -22,7 +22,7 @@ if (process.argv.length < 3) {
 
 var code = fs.readFileSync("contracts/Instruction.bin")
 var abi = JSON.parse(fs.readFileSync("contracts/Instruction.abi"))
-var test = JSON.parse(fs.readFileSync("test.json"))
+var test = JSON.parse(fs.readFileSync(process.argv[2]))
 
 // console.log(test.states)
 
@@ -44,9 +44,9 @@ var phase_table = {
     12: "memsize",
 }
 
-function handleResult(err, res) {
+function handleResult(phase, err, res) {
         if (err) {
-            console.log(err)
+            console.log("Phase", phase, err)
             process.exit(-1)
         }
         else console.log(res)
@@ -64,7 +64,7 @@ function testPhase(contr, phase) {
                           pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
     contr.judge.call(test.states, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                      [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
-                     [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, handleResult)
+                     [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, (err,res) => handleResult(phase,err,res))
 }
 
 function doTest() {
