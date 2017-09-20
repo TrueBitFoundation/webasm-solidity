@@ -37,4 +37,8 @@ install:
 script: 
   - testrpc -d test &
   - chmod +x ./runtests.sh
+  - cd solidity
+  - chmod +x ./test.sh
+  - ./test.sh
+  - cd ..
   - ./runtests.sh
