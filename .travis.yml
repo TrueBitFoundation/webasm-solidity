@@ -27,6 +27,6 @@ install:
   - npm install -g ethereumjs-testrpc -y
 
 script: 
-  - testrpc -d test
+  - testrpc -d test &
   - chmod +x ./runtests.sh
   - ./runtests.sh
