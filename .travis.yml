@@ -9,8 +9,16 @@ matrix:
     - os: linux
       dist: trusty
       before_install: 
+      - sudo add-apt-repository ppa:ethereum/ethereum
+      - sudo apt-get update
+      - sudo apt-get install solc
     - os: osx
       before_install:
+      - brew update
+      - brew upgrade
+      - brew tap ethereum/ethereum
+      - brew install solidity
+      - brew linkapps solidity
 
 install: 
   - travis_retry sudo apt-get update -y
