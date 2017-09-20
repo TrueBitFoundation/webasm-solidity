@@ -1,0 +1,21 @@
+dist: trusty
+sudo: required
+language: javascript
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      before_install: 
+    - os: osx
+      before_install:
+
+install: 
+  - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+  - sudo npm install -g web3js -y
+  - sudo npm install -g ethereumjs-testrpc -y
+
+script: 
+  - testrpc -d test
+  - chmod +x ./runtests.sh
+  - ./runtests.sh
