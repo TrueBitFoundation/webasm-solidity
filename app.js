@@ -117,6 +117,7 @@ function solveTask(obj, make_error) {
             return
         }
         taskResult(filename, ifilename, make_error, function (res) {
+            task_to_steps[obj.id] = res.steps
             contract.solve(obj.id, res.result, res.steps, send_opt, function (err, tr) {
                 if (err) console.log(err)
                 else {
@@ -141,6 +142,7 @@ function verifyTask(obj, make_error) {
             return
         }
         taskResult(filename, ifilename, make_error, function (res) {
+            task_to_steps[obj.id] = res.steps
             if (res.result != obj.hash) {
                 console.log("Result mismatch")
                 contract.challenge(obj.id, send_opt, function (err, tx) {
@@ -177,6 +179,7 @@ function getFile(fileid, cont) {
 }
 
 var task_to_file = {}
+var task_to_steps = {}
 var task_to_inputfile = {}
 
 // We should listen to contract events
@@ -337,9 +340,16 @@ function replyReported(id, idx1, idx2, otherhash) {
         return
     }
     var fname = task_to_file[challenges[id].task]
+    var steps = task_to_steps[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     var place = Math.floor((idx2-idx1)/2 + idx1)
-    getLocation(fname, ifname, place, verifier_error, function (hash) {
+    if (steps < place) {
+        iactive.query(id, idx1, idx2, 0, send_opt, function (err,tx) {
+            if (err) console.log(err)
+            else console.log("Sent query", tx, " it was ", res)
+        })
+    }
+    else getLocation(fname, ifname, place, verifier_error, function (hash) {
         var res = hash == otherhash ? 1 : 0
         iactive.query(id, idx1, idx2, res, send_opt, function (err,tx) {
             if (err) console.log(err)
