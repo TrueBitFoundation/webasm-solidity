@@ -1,6 +1,9 @@
 dist: trusty
 sudo: required
-language: cpp
+language: node_js
+node_js:
+  - "iojs"
+  - "7"
 
 matrix:
   include:
@@ -13,7 +16,7 @@ matrix:
 install: 
   - travis_retry sudo apt-get update -y
   - sudo apt-get install npm
-    #- curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+  - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
   - node --version
   - npm --version
   - npm install npm@latest -g
