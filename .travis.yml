@@ -13,6 +13,7 @@ matrix:
       - sudo apt-get update
       - sudo apt-get install solc
     - os: osx
+      osx_image: xcode8.3
       before_install:
       - brew update
       - brew upgrade
@@ -22,16 +23,7 @@ matrix:
 
 install: 
   - travis_retry sudo apt-get update -y
-    #- sudo apt-get install npm
-    #- curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-  - node --version
-  - npm --version
   - npm install
-    #- npm install npm@latest -g
-    #- npm --version
-    #- sudo npm install web3 -y
-    #- sudo npm install ethereumjs-testrpc -y
-    #- sudo npm install -g web3 -y
   - npm install -g ethereumjs-testrpc -y
 
 script: 
