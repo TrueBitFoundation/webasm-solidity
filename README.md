@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bloodstalker/webasm-solidity.svg?branch=master)](https://travis-ci.org/bloodstalker/webasm-solidity)
+
 # On-chain interpreter
 
 ## Testing on-chain interpreter

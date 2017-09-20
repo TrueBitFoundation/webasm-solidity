@@ -12,6 +12,8 @@ matrix:
 
 install: 
   - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+  - sudo apt-get install npm
+  - npm install npm@latest -g
   - sudo npm install -g web3js -y
   - sudo npm install -g ethereumjs-testrpc -y
 
