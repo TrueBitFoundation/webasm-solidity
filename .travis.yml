@@ -24,7 +24,7 @@ install:
     #- sudo npm install web3 -y
     #- sudo npm install ethereumjs-testrpc -y
     #- sudo npm install -g web3 -y
-  - sudo npm install -g ethereumjs-testrpc -y
+  - npm install -g ethereumjs-testrpc -y
 
 script: 
   - testrpc -d test
