@@ -803,7 +803,7 @@ contract Instruction {
         setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
         setVM2(roots, pointers);
         provePhase(proof, loc, fetched_op);
-        return 123;
+        return q;
     }
 
 }
