@@ -11,6 +11,7 @@ matrix:
       before_install:
 
 install: 
+  - node --version
   - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
   - sudo apt-get install npm
   - npm install npm@latest -g
