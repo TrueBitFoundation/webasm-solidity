@@ -11,10 +11,11 @@ matrix:
       before_install:
 
 install: 
-  - node --version
-  - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+  - sudo apt-get update -y
   - sudo apt-get install npm
   - npm install npm@latest -g
+  - curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+  - node --version
   - sudo npm install -g web3js -y
   - sudo npm install -g ethereumjs-testrpc -y
 
