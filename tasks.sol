@@ -7,8 +7,8 @@ interface Interactive {
 
 contract Tasks {
     
-    event Posted(address giver, bytes32 hash, string file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file);
+    event Posted(address giver, bytes32 hash, string file, string input, uint id);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input);
     
     Interactive iactive;
     
@@ -24,6 +24,7 @@ contract Tasks {
         address giver;
         bytes32 init;
         string file;
+        string input;
         
         address solver;
         bytes32 result;
@@ -34,9 +35,9 @@ contract Tasks {
     
     mapping (bytes32 => uint) challenges;
     
-    function add(bytes32 init, string file) {
-        tasks.push(Task(msg.sender, init, file, 0, 0, 0));
-        Posted(msg.sender, init, file, tasks.length-1);
+    function add(bytes32 init, string file, string input) {
+        tasks.push(Task(msg.sender, init, file, input, 0, 0, 0));
+        Posted(msg.sender, init, file, input, tasks.length-1);
     }
     
     function solve(uint id, bytes32 result, uint steps) {
@@ -44,7 +45,7 @@ contract Tasks {
         tasks[id].solver = msg.sender;
         tasks[id].result = result;
         tasks[id].steps = steps;
-        Solved(id, result, steps, tasks[id].init, tasks[id].file);
+        Solved(id, result, steps, tasks[id].init, tasks[id].file, tasks[id].input);
     }
     
     function challenge(uint id) {
