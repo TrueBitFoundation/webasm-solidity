@@ -18,9 +18,10 @@ install:
   - npm --version
   - npm install npm@latest -g
   - npm --version
-  - sudo npm install -g ethereumjs-testrpc -y
   - sudo npm install web3js -y
+  - sudo npm install ethereumjs-testrpc -y
   - sudo npm install -g web3js -y
+  - sudo npm install -g ethereumjs-testrpc -y
 
 script: 
   - testrpc -d test
