@@ -35,10 +35,6 @@ install:
   - npm install -g ethereumjs-testrpc -y
 
 script: 
-  - testrpc -d test &
+#- solc ./instruction.sol --bin --abi
   - chmod +x ./runtests.sh
-  - cd solidity
-  - chmod +x ./test.sh
-  - ./test.sh
-  - cd ..
   - ./runtests.sh
