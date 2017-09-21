@@ -350,7 +350,7 @@ function replyErrorPhases(id, idx1, arr) {
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are checking the intermediate states
     getErrorStep(fname, ifname, idx1, solver_error, function (obj) {
-        for (var i = 1; i < arr.length; i++) {
+        for (var i = 1; i < obj.states.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.selectErrorPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
                     if (err) console.log(err)
@@ -359,6 +359,10 @@ function replyErrorPhases(id, idx1, arr) {
                 return
             }
         }
+        iactive.selectErrorPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
+            if (err) console.log(err)
+            else console.log("Selected wrong phase", tx)
+        })
     })
 }
 
