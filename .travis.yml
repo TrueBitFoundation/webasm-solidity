@@ -18,7 +18,7 @@ matrix:
       - brew update
         #- brew upgrade
       - brew tap ethereum/ethereum
-      - travis_wait brew install solidity
+      - travis_wait 60 brew install solidity
       - brew linkapps solidity
 
 install: 
