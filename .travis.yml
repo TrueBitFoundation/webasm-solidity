@@ -12,14 +12,15 @@ matrix:
       - sudo add-apt-repository ppa:ethereum/ethereum -y
       - sudo apt-get update
       - sudo apt-get install solc
-        #- os: osx
-        #osx_image: xcode8.3
-        #before_install:
-        #- brew update
-        #- brew upgrade
-        #- brew tap ethereum/ethereum
-        #- travis_wait 60 brew install solidity
-        #- brew linkapps solidity
+      - os: osx
+  exclude:
+      osx_image: xcode8.3
+      before_install:
+      - brew update
+      - brew upgrade
+      - brew tap ethereum/ethereum
+      - travis_wait 60 brew install solidity
+      - brew linkapps solidity
 
 install: 
   - travis_retry sudo apt-get update -y
