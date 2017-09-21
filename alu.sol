@@ -183,17 +183,17 @@ library ALU {
         return res;
     }
 
-  function popcnt32(uint32 r1) returns (uint) {
+  function popcnt32(uint32 r1) returns (uint8) {
     uint32 temp = r1;
     temp = (temp & 0x55555555) + ((temp >> 1) & 0x55555555);
     temp = (temp & 0x33333333) + ((temp >> 2) & 0x33333333);
     temp = (temp & 0x0f0f0f0f) + ((temp >> 4) & 0x0f0f0f0f);
     temp = (temp & 0x00ff00ff) + ((temp >> 8) & 0x00ff00ff);
     temp = (temp & 0x0000ffff) + ((temp >> 16) & 0x0000ffff);
-    return temp;
+    return uint8(temp);
   }
 
-  function popcnt64(uint64 r1) returns (uint) {
+  function popcnt64(uint64 r1) returns (uint8) {
     uint64 temp = r1;
     temp = (temp & 0x5555555555555555) + ((temp >> 1) & 0x5555555555555555);
     temp = (temp & 0x3333333333333333) + ((temp >> 2) & 0x3333333333333333);
@@ -201,7 +201,7 @@ library ALU {
     temp = (temp & 0x00ff00ff00ff00ff) + ((temp >> 8) & 0x00ff00ff00ff00ff);
     temp = (temp & 0x0000ffff0000ffff) + ((temp >> 16) & 0x0000ffff0000ffff);
     temp = (temp & 0x00000000ffffffff) + ((temp >> 32) & 0x00000000ffffffff);
-    return temp;
+    return uint8(temp);
   }
 
   function clz32(uint32 r1) returns (uint8) {
