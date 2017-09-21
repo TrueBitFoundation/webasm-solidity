@@ -91,27 +91,21 @@ library ALU {
             else res = 1;
         }
         else if (hint == 0x67) {
-            // clz: count leading zeros 32
             res = clz32(uint32(r1));
         }
         else if (hint == 0x68) {
-            // ctz: count trailing zeros 32
             res = ctz32(uint32(r1));
         }
         else if (hint == 0x69) {
-            // popcnt: count ones 32
             res = popcnt32(uint32(r1));
         }
         else if (hint == 0x79) {
-            // clz: count leading zeros 64
             res = clz64(uint64(r1))
         }
         else if (hint == 0x7a) {
-            // ctz: count trailing zeros 64
             res = ctz64(uint64(r1));
         }
         else if (hint == 0x7b) {
-            // popcnt: count ones 64
             res = popcnt64(uint64(r1));
         }
         else if (hint == 0x6a || hint == 0x7c) {
