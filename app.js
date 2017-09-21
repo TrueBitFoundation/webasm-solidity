@@ -129,6 +129,8 @@ function solveTask(obj, make_error) {
     })
 }
 
+var error_hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+
 function verifyTask(obj, make_error) {
     var filename = obj.filehash + ".wast"
     var ifilename = obj.inputhash + ".json"
@@ -143,14 +145,27 @@ function verifyTask(obj, make_error) {
         }
         taskResult(filename, ifilename, make_error, function (res) {
             task_to_steps[obj.id] = res.steps
-            if (res.result != obj.hash) {
-                console.log("Result mismatch")
+            if (res.steps < obj.steps) {
+                console.log("Too many steps")
                 contract.challenge(obj.id, send_opt, function (err, tx) {
                     if (!err) console.log(tx, "challenge initiated")
                 })
             }
-            else if (res.steps != obj.steps) {
-                console.log("Wrong number of steps")
+            // Check if the posted state is a correct intermediate state
+            else if (res.steps > obj.steps) {
+                console.log("Too few steps")
+                getLocation(filename, ifilename, obj.steps, verifier_error, function (hash) {
+                    if (hash != obj.hash) contract.challenge(obj.id, send_opt, function (err, tx) {
+                        if (!err) console.log(tx, "challenge initiated")
+                    })
+                    else contract.challengeFinality(obj.id, send_opt, function (err, tx) {
+                            if (!err) console.log(tx, "challenge initiated for final state")
+                        })
+                    })
+                })
+            }
+            else if (res.result != obj.hash) {
+                console.log("Result mismatch")
                 contract.challenge(obj.id, send_opt, function (err, tx) {
                     if (!err) console.log(tx, "challenge initiated")
                 })
@@ -241,6 +256,14 @@ function getStep(fname, ifname, place, make_error, cont) {
     })
 }
 
+function getFinality(fname, ifname, place, make_error, cont) {
+    var args = insertError(["-m", "-input-file", ifname, "-final-step", place, "-case", "0", fname], make_error)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
+        if (error) console.error('stderr', stderr)
+        else cont(JSON.parse(stdout))
+    })
+}
+
 function replyChallenge(id, idx1, idx2) {
     if (!challenges[id]) {
         console.log("No such task " + id)
@@ -267,6 +290,24 @@ function replyChallenge(id, idx1, idx2) {
         iactive.report.call(id, idx1, idx2, [hash], send_opt, function (err, res) {
             if (err) console.log(err)
             else console.log("Testing reporting:", res)
+        })
+    })
+}
+
+function replyFinalityChallenge(id, idx1, idx2) {
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
+    var fname = task_to_file[challenges[id].task]
+    var ifname = task_to_inputfile[challenges[id].task]
+    // Now we are sending the intermediate states
+    getStepFinality(fname, ifname, idx1, solver_error, function (obj) {
+        iactive.callJudge(id, idx1, obj.merkle, obj.fetched,
+                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
+                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
+            if (err) console.log(err)
+            else console.log("Judging success " + res)
         })
     })
 }
@@ -343,6 +384,7 @@ function replyReported(id, idx1, idx2, otherhash) {
     var steps = task_to_steps[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     var place = Math.floor((idx2-idx1)/2 + idx1)
+    // Solver has posted too many steps
     if (steps < place) {
         iactive.query(id, idx1, idx2, 0, send_opt, function (err,tx) {
             if (err) console.log(err)
@@ -389,6 +431,39 @@ iactive.StartChallenge("latest").watch(function (err,ev) {
             size: ev.args.par.toNumber(),
         }
         if (ev.args.p == base) replyChallenge(ev.args.uniq, ev.args.idx1.toNumber(), ev.args.idx2.toNumber())
+        else console.log("Not for me")
+    })
+})
+
+iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
+    if (err) {
+        console.log(err)
+        return
+    }
+    console.log("Got finality challenge")
+    console.log(ev)
+    io.emit("challenge", {
+            prover: ev.args.p,
+            challenger: ev.args.c,
+            uniq: ev.args.uniq,
+            init: ev.args.s,
+            result: ev.args.e,
+        })
+    contract.queryChallenge.call(ev.args.uniq, function (err, id) {
+        if (err) {
+            console.log(err)
+            return
+        }
+        console.log("Got task id ", id)
+        var id = id.toString()
+        challenges[ev.args.uniq] = {
+            prover: ev.args.p,
+            task: id,
+            challenger: ev.args.c,
+            init: ev.args.s,
+            result: ev.args.e,
+        }
+        if (ev.args.p == base) replyFinalityChallenge(ev.args.uniq, ev.args.steps.toNumber())
         else console.log("Not for me")
     })
 })

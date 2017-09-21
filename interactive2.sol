@@ -71,16 +71,63 @@ contract Interactive2 {
         r.idx1 = 0;
         r.idx2 = r.steps-1;
         r.proof.length = r.steps;
+        r.proof[0] = s;
+        r.proof[r.steps-1] = e;
         r.phase = 16;
         StartChallenge(p, c, s, e, r.idx1, r.idx2, r.size, to, uniq);
         return uniq;
     }
+
+    event StartFinalityChallenge(address p, address c, bytes32 s, bytes32 e, uint256 step, uint to, bytes32 uniq);
+
+    // Solver thinks this is a final state, verifier disagrees
+    // Solver has to post a proof that the next instruction is the "EXIT" opcode
+    function makeFinality(address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) returns (bytes32) {
+        bytes32 uniq = sha3(p, c, s, e, _steps, to);
+        Record storage r = records[uniq];
+        r.prover = p;
+        r.challenger = c;
+        r.start_state = s;
+        r.end_state = e;
+        r.steps = _steps;
+        r.timeout = to;
+        r.clock = block.number;
+        r.next = r.prover;
+        r.phase = 20;
+        r.size = 0;
+        StartFinalityChallenge(p, c, s, e, _steps, to, uniq);
+        return uniq;
+    }
+
+    // event StartErrorChallenge(address p, address c, bytes32 s, bytes32 e, uint256 step, uint to, bytes32 uniq);
+    
+    // Solver thinks there will be error, verifier thinks there will be no error
+    // Verifier has posted the intermediate states for phases
+    /*
+    function makeError(address p, address c, bytes32 s, bytes32 e, uint256 _steps, bytes32[14] phases, uint to) returns (bytes32) {
+        bytes32 uniq = sha3(p, c, s, e, _steps, par, to);
+        Record storage r = records[uniq];
+        r.prover = p;
+        r.challenger = c;
+        r.start_state = s;
+        r.end_state = e;
+        r.steps = _steps;
+        r.timeout = to;
+        r.clock = block.number;
+        r.next = r.prover;
+        r.phase = 21;
+        r.result = phases;
+        StartErrorChallenge(p, c, s, e, _steps, phases, to, uniq);
+        return uniq;
+    }
+    */
 
     function gameOver(bytes32 id) {
         Record storage r = records[id];
         require(block.number >= r.clock + r.timeout);
         if (r.next == r.prover) r.winner = r.challenger;
         else r.winner = r.prover;
+        WinnerSelected(id);
     }
     
     function getIter(bytes32 id) returns (uint it, uint i1, uint i2) {
@@ -120,6 +167,7 @@ contract Interactive2 {
     }
 
     event Queried(bytes32 id, uint idx1, uint idx2);
+    event NeedErrorPhases(bytes32 id, uint idx1);
 
     function query(bytes32 id, uint i1, uint i2, uint num) {
         Record storage r = records[id];
@@ -132,8 +180,16 @@ contract Interactive2 {
         if (num != r.size) r.idx2 = r.idx1+iter;
         if (r.size > r.idx2-r.idx1-1) r.size = r.idx2-r.idx1-1;
         // size eventually becomes zero here
-        r.next = r.prover;
-        Queried(id, r.idx1, r.idx2);
+        // check if they disagree on the last state being an error state
+        if (r.size == 0 && r.idx2 == r.steps-1 && r.proof[r.idx2] == bytes32(0)) {
+            r.next = r.challenger;
+            // Challenger will have to post the phases
+            NeedErrorPhases(id, r.idx1);
+        }
+        else {
+            r.next = r.prover;
+            Queried(id, r.idx1, r.idx2);
+        }
     }
 
     function getStep(bytes32 id, uint idx) returns (bytes32) {
@@ -146,10 +202,21 @@ contract Interactive2 {
     function postPhases(bytes32 id, uint i1, bytes32[14] arr) {
         Record storage r = records[id];
         require(r.size == 0 && msg.sender == r.prover && r.next == r.prover && r.idx1 == i1 &&
-                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[13]);
+                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[13] && arr[13] != bytes32(0));
         r.result = arr;
         r.next = r.challenger;
         PostedPhases(id, i1, arr);
+    }
+
+    event PostedErrorPhases(bytes32 id, uint idx1, bytes32[14] arr);
+    
+    function postErrorPhases(bytes32 id, uint i1, bytes32[14] arr) {
+        Record storage r = records[id];
+        require(r.size == 0 && msg.sender == r.challenger && r.next == r.challenger && r.idx1 == i1 &&
+                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == bytes32(0));
+        r.result = arr;
+        r.next = r.prover;
+        PostedErrorPhases(id, i1, arr);
     }
 
     function getResult(bytes32 id) returns (bytes32[14]) {
@@ -162,11 +229,24 @@ contract Interactive2 {
     function selectPhase(bytes32 id, uint i1, bytes32 st, uint q) {
         Record storage r = records[id];
         require(r.phase == 16 && msg.sender == r.challenger && r.idx1 == i1 && r.result[q] == st &&
-                r.next == r.challenger);
+                r.next == r.challenger && q < 13);
         r.phase = q;
         SelectedPhase(id, i1, q);
         r.next = r.prover;
     }
+    
+    event SelectedErrorPhase(bytes32 id, uint idx1, uint phase);
+    
+    function selectErrorPhase(bytes32 id, uint i1, bytes32 st, uint q) {
+        Record storage r = records[id];
+        require(r.phase == 16 && msg.sender == r.prover && r.idx1 == i1 && r.result[q] == st &&
+                r.next == r.prover && q < 13);
+        r.phase = q;
+        SelectedErrorPhase(id, i1, q);
+        r.next = r.challenger;
+    }
+    
+    event WinnerSelected(bytes32 id);
     
     function callJudge(bytes32 id, uint i1, uint q,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
@@ -179,6 +259,39 @@ contract Interactive2 {
         judge.setMachine(vm, op, regs[0], regs[1], regs[2], regs[3]);
         judge.setVM2(roots, pointers);
         judge.provePhase(proof, loc, fetched_op);
+        WinnerSelected(id);
+        r.winner = r.prover;
+    }
+
+    function callFinalityJudge(bytes32 id, uint i1,
+                        bytes32[] proof, uint loc, bytes32 fetched_op,
+                        bytes32 vm, bytes32 op, uint[4] regs,
+                        bytes32[9] roots, uint[5] pointers) {
+        Record storage r = records[id];
+        require(r.phase == 20 && msg.sender == r.prover && r.idx1 == i1 &&
+                r.next == r.prover);
+        judge.setup(r.result, r.challenger, r.prover, 0);
+        require(fetched_op == 0x0000000000000000000000000000000000000000040606060001000106000000);
+        judge.setMachine(vm, op, regs[0], regs[1], regs[2], regs[3]);
+        judge.setVM2(roots, pointers);
+        judge.provePhase(proof, loc, fetched_op);
+        WinnerSelected(id);
+        r.winner = r.prover;
+    }
+
+    function callErrorJudge(bytes32 id, uint i1, uint q,
+                        bytes32[] proof, uint loc, bytes32 fetched_op,
+                        bytes32 vm, bytes32 op, uint[4] regs,
+                        bytes32[9] roots, uint[5] pointers) {
+        Record storage r = records[id];
+        require(r.phase == q && msg.sender == r.challenger && r.idx1 == i1 &&
+                r.next == r.prover);
+        judge.setup(r.result, r.challenger, r.prover, r.phase);
+        judge.setMachine(vm, op, regs[0], regs[1], regs[2], regs[3]);
+        judge.setVM2(roots, pointers);
+        judge.provePhase(proof, loc, fetched_op);
+        WinnerSelected(id);
+        r.winner = r.challenger;
     }
 
 }
