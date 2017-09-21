@@ -160,7 +160,6 @@ function verifyTask(obj, make_error) {
                     })
                     else contract.challengeFinality(obj.id, send_opt, function (err, tx) {
                             if (!err) console.log(tx, "challenge initiated for final state")
-                        })
                     })
                 })
             }
@@ -256,8 +255,16 @@ function getStep(fname, ifname, place, make_error, cont) {
     })
 }
 
+function getErrorStep(fname, ifname, place, make_error, cont) {
+    var args = insertError(["-m", "-input-file", ifname, "-error-step", place, "-case", "0", fname], make_error)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
+        if (error) console.error('stderr', stderr)
+        else cont(JSON.parse(stdout))
+    })
+}
+
 function getFinality(fname, ifname, place, make_error, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-final-step", place, "-case", "0", fname], make_error)
+    var args = insertError(["-m", "-input-file", ifname, "-final", place, "-case", "0", fname], make_error)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
@@ -302,12 +309,13 @@ function replyFinalityChallenge(id, idx1, idx2) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are sending the intermediate states
-    getStepFinality(fname, ifname, idx1, solver_error, function (obj) {
-        iactive.callJudge(id, idx1, obj.merkle, obj.fetched,
+    getFinality(fname, ifname, idx1, solver_error, function (obj) {
+        var vm = obj.vm
+        iactive.callFinalityJudge(id, idx1, obj.location,
                            [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
                            [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
             if (err) console.log(err)
-            else console.log("Judging success " + res)
+            else console.log("Judging (finality) success " + res)
         })
     })
 }
@@ -324,6 +332,27 @@ function replyPhases(id, idx1, arr) {
         for (var i = 1; i < arr.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.selectPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
+                    if (err) console.log(err)
+                    else console.log("Selected wrong phase", tx)
+                })
+                return
+            }
+        }
+    })
+}
+
+function replyErrorPhases(id, idx1, arr) {
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
+    var fname = task_to_file[challenges[id].task]
+    var ifname = task_to_inputfile[challenges[id].task]
+    // Now we are checking the intermediate states
+    getErrorStep(fname, ifname, idx1, solver_error, function (obj) {
+        for (var i = 1; i < arr.length; i++) {
+            if (obj.states[i] != arr[i]) {
+                iactive.selectErrorPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
                     if (err) console.log(err)
                     else console.log("Selected wrong phase", tx)
                 })
@@ -371,6 +400,32 @@ function submitProof(id, idx1, phase) {
                            [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
             if (err) console.log(err)
             else console.log("Judging success " + res)
+        })
+    })
+}
+
+function submitErrorProof(id, idx1, phase) {
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
+    var fname = task_to_file[challenges[id].task]
+    var ifname = task_to_inputfile[challenges[id].task]
+    // Now we are checking the intermediate states
+    getStep(fname, ifname, idx1, verifier_error, function (obj) {
+        var proof = obj[phase_table[phase]]
+        var merkle = proof.proof || []
+        var loc = proof.location || 0
+        var fetched = proof.op || 0
+        var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
+        var vm = proof.vm || { code: "0x00", stack:"0x00", break_stack1:"0x00", break_stack2:"0x00", call_stack:"0x00", calltable:"0x00",
+                               globals : "0x00", memory:"0x00", calltypes:"0x00", input:"0x00",
+                               pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
+        iactive.callErrorJudge(id, idx1, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
+                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
+            if (err) console.log(err)
+            else console.log("Judging (error) success " + res)
         })
     })
 }
@@ -476,6 +531,30 @@ iactive.Reported("latest").watch(function (err,ev) {
     replyReported(ev.id, ev.idx1.toNumber(), ev.idx2.toNumber(), ev.arr[0])
 })
 
+function postErrorPhases(id, idx1) {
+    if (!challenges[id]) {
+        console.log("No such task " + id)
+        return
+    }
+    var fname = task_to_file[challenges[id].task]
+    var ifname = task_to_inputfile[challenges[id].task]
+    // Now we are sending the intermediate states
+    getStep(fname, ifname, idx1, verifier_error, function (obj) {
+        iactive.postErrorPhases(id, idx1, obj.states, send_opt, function (err,tx) {
+            if (err) console.log(err)
+            else console.log("Posted error phases", tx)
+        })
+    })
+}
+
+iactive.NeedErrorPhases("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Query ", ev)
+    io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber()})
+    postErrorPhases(ev.id, ev.idx1.toNumber())
+})
+
 iactive.Queried("latest").watch(function (err,ev) {
     if (err) { console.log(err) ; return }
     ev = ev.args
@@ -492,12 +571,28 @@ iactive.PostedPhases("latest").watch(function (err,ev) {
     replyPhases(ev.id, ev.idx1.toNumber(), ev.arr)
 })
 
+iactive.PostedErrorPhases("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Error phases ", ev)
+    io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
+    replyErrorPhases(ev.id, ev.idx1.toNumber(), ev.arr)
+})
+
 iactive.SelectedPhase("latest").watch(function (err,ev) {
     if (err) { console.log(err) ; return }
     ev = ev.args
     console.log("Challenger selected phase ", ev)
     io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
     submitProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
+})
+
+iactive.SelectedErrorPhase("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Prover selected error phase ", ev)
+    io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+    submitErrorProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
 })
 
 http.listen(22448, function(){

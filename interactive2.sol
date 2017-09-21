@@ -99,29 +99,6 @@ contract Interactive2 {
         return uniq;
     }
 
-    // event StartErrorChallenge(address p, address c, bytes32 s, bytes32 e, uint256 step, uint to, bytes32 uniq);
-    
-    // Solver thinks there will be error, verifier thinks there will be no error
-    // Verifier has posted the intermediate states for phases
-    /*
-    function makeError(address p, address c, bytes32 s, bytes32 e, uint256 _steps, bytes32[14] phases, uint to) returns (bytes32) {
-        bytes32 uniq = sha3(p, c, s, e, _steps, par, to);
-        Record storage r = records[uniq];
-        r.prover = p;
-        r.challenger = c;
-        r.start_state = s;
-        r.end_state = e;
-        r.steps = _steps;
-        r.timeout = to;
-        r.clock = block.number;
-        r.next = r.prover;
-        r.phase = 21;
-        r.result = phases;
-        StartErrorChallenge(p, c, s, e, _steps, phases, to, uniq);
-        return uniq;
-    }
-    */
-
     function gameOver(bytes32 id) {
         Record storage r = records[id];
         require(block.number >= r.clock + r.timeout);
