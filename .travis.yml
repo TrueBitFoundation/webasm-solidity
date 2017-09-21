@@ -16,7 +16,7 @@ matrix:
       osx_image: xcode8.3
       before_install:
       - brew update
-      - brew upgrade
+        #- brew upgrade
       - brew tap ethereum/ethereum
       - brew install solidity
       - brew linkapps solidity
