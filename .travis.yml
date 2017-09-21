@@ -1,0 +1,33 @@
+dist: trusty
+sudo: required
+language: node_js
+node_js:
+  - "7"
+
+matrix:
+  include:
+    - os: linux
+      dist: trusty
+      before_install: 
+      - sudo add-apt-repository ppa:ethereum/ethereum -y
+      - sudo apt-get update
+      - sudo apt-get install solc
+  exclude:
+    - os: osx
+      osx_image: xcode8.3
+      before_install:
+      - brew update
+      - brew upgrade
+      - brew tap ethereum/ethereum
+      - travis_wait 60 brew install solidity
+      - brew linkapps solidity
+
+install: 
+  - travis_retry sudo apt-get update -y
+  - npm install
+  - npm install -g ethereumjs-testrpc -y
+
+script: 
+  - solc ./instruction.sol --bin --abi -o ./contracts
+  - chmod +x ./runtests.sh
+  - ./runtests.sh
