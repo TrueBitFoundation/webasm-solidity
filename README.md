@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/bloodstalker/webasm-solidity.svg?branch=master)](https://travis-ci.org/bloodstalker/webasm-solidity)
+[![Build Status](https://travis-ci.org/TrueBitFoundation/webasm-solidity.svg?branch=master)](https://travis-ci.org/TrueBitFoundation/webasm-solidity)
 
 # On-chain interpreter
 
