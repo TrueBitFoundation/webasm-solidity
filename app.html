@@ -16,9 +16,13 @@
     )
   )
 )
-(assert_return (invoke "fac-rec" (i64.const 25)) (i64.const 7034535277573963776))
+(invoke "fac-rec" (i64.const 25))
 </textarea>
 <p>
+
+<h2>Simulate input from blockchain</h2>
+
+<div id="inputs"></div>
 
 <button onclick="newTask();">New task</button>
 
@@ -37,6 +41,27 @@
 <script src="socketio.js"></script>
 
 <script>
+    
+    function makeInputs() {
+        var elem = document.querySelector("#inputs")
+        var res = ""
+        for (var i = 0; i < 64; i++) {
+            res += i + ': <input type="text" value="0x0000000000000000">'
+            if (i % 4 == 3) res += '<br>'
+        }
+        elem.innerHTML += res
+    }
+    
+    makeInputs()
+    
+    function getInput() {
+        var elems = document.querySelectorAll("#inputs input")
+        var res = []
+        for (var i = 0; i < elems.length; i++) {
+            res.push(elems[i].value)
+        }
+        return res
+    }
     
     function printObject(obj) {
         var res = "<p>Message <ul>"
@@ -81,7 +106,7 @@
     })
     
     function newTask() {
-        socket.emit("new_task", document.querySelector("#module").value)
+        socket.emit("new_task", {task:document.querySelector("#module").value, input:getInput()})
     }
     
 </script>

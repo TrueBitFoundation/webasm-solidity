@@ -2,4 +2,5 @@ contracts
 node_modules
 *~
 config.json
+Q*.json
 *.wast

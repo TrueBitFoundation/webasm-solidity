@@ -15,8 +15,8 @@ contract Instruction {
         init = i;
         winner = challenger;
     }
-
-    struct VM {
+    
+    struct Roots {
         bytes32 code;
         bytes32 stack;
         bytes32 mem;
@@ -26,7 +26,10 @@ contract Instruction {
         bytes32 calltable;
         bytes32 calltypes;
         bytes32 call_stack;
-        
+        bytes32 input;
+    }
+
+    struct VM {
         uint pc;
         uint stack_ptr;
         uint break_ptr;
@@ -35,6 +38,7 @@ contract Instruction {
     }
     
     VM vm;
+    Roots vm_r;
     
     struct Machine {
         bytes32 vm;
@@ -44,7 +48,7 @@ contract Instruction {
         uint reg3;
         uint ireg;
     }
-    
+    /*
     function setVM(
         bytes32 code,
         bytes32 stack,
@@ -55,6 +59,7 @@ contract Instruction {
         bytes32 call_stack,
         bytes32 calltable,
         bytes32 calltypes,
+        bytes32 input,
         
         uint pc,
         uint stack_ptr,
@@ -62,33 +67,35 @@ contract Instruction {
         uint call_ptr,
         uint memsize) {
         require(msg.sender == prover);
-        vm.code = code;
-        vm.stack = stack;
-        vm.mem = mem;
-        vm.call_stack = call_stack;
-        vm.break_stack1 = break_stack1;
-        vm.break_stack2 = break_stack2;
-        vm.globals = globals;
-        vm.calltable = calltable;
-        vm.calltypes = calltypes;
+        vm.r.code = code;
+        vm.r.stack = stack;
+        vm.r.mem = mem;
+        vm.r.input = input;
+        vm.r.call_stack = call_stack;
+        vm.r.break_stack1 = break_stack1;
+        vm.r.break_stack2 = break_stack2;
+        vm.r.globals = globals;
+        vm.r.calltable = calltable;
+        vm.r.calltypes = calltypes;
         vm.pc = pc;
         vm.stack_ptr = stack_ptr;
         vm.break_ptr = break_ptr;
         vm.call_ptr = call_ptr;
         vm.memsize = memsize;
-    }
+    }*/ 
     
-    function setVM2(bytes32[9] roots, uint[5] pointers) {
+    function setVM2(bytes32[10] roots, uint[5] pointers) {
         require(msg.sender == prover);
-        vm.code = roots[0];
-        vm.stack = roots[1];
-        vm.mem = roots[2];
-        vm.call_stack = roots[3];
-        vm.break_stack1 = roots[4];
-        vm.break_stack2 = roots[5];
-        vm.globals = roots[6];
-        vm.calltable = roots[7];
-        vm.calltypes = roots[8];
+        vm_r.code = roots[0];
+        vm_r.stack = roots[1];
+        vm_r.mem = roots[2];
+        vm_r.call_stack = roots[3];
+        vm_r.break_stack1 = roots[4];
+        vm_r.break_stack2 = roots[5];
+        vm_r.globals = roots[6];
+        vm_r.calltable = roots[7];
+        vm_r.calltypes = roots[8];
+        vm_r.input = roots[9];
 
         vm.pc = pointers[0];
         vm.stack_ptr = pointers[1];
@@ -98,9 +105,26 @@ contract Instruction {
     }
     
     function hashVM() returns (bytes32) {
-        return sha3(vm.code, vm.mem, vm.stack, vm.globals, vm.call_stack, vm.break_stack1,
-                    vm.break_stack2, vm.calltable, vm.calltypes,
-                    vm.pc, vm.stack_ptr, vm.call_ptr, vm.break_ptr, vm.memsize);
+        bytes32[] memory arr = new bytes32[](15);
+        arr[0] = vm_r.code;
+        arr[1] = vm_r.mem;
+        arr[2] = vm_r.stack;
+        arr[3] = vm_r.globals;
+        arr[4] = vm_r.call_stack;
+        arr[5] = vm_r.break_stack1;
+        arr[6] = vm_r.break_stack2;
+        arr[7] = vm_r.calltable;
+        arr[8] = vm_r.calltypes;
+        arr[9] = vm_r.input;
+        arr[10] = bytes32(vm.pc);
+        arr[11] = bytes32(vm.stack_ptr);
+        arr[12] = bytes32(vm.call_ptr);
+        arr[13] = bytes32(vm.break_ptr);
+        arr[14] = bytes32(vm.memsize);
+        return sha3(arr);
+/*        return sha3(vm_r.code, vm_r.mem, vm_r.stack, vm_r.globals, vm_r.call_stack, vm_r.break_stack1,
+                    vm_r.break_stack2, vm_r.calltable, vm_r.calltypes, vm_r.input,
+                    vm.pc, vm.stack_ptr, vm.call_ptr, vm.break_ptr, vm.memsize); */
     }
     
     Machine m;
@@ -149,7 +173,7 @@ contract Instruction {
         bytes32 op = getLeaf(proof, vm.pc);
         require(state1 == hashVM());
         require(state2 == sha3(state1, op));
-        require(vm.code == getRoot(proof, vm.pc));
+        require(vm_r.code == getRoot(proof, vm.pc));
         winner = prover;
         return true;
     }
@@ -191,10 +215,11 @@ contract Instruction {
         else if (hint == 16) return m.reg1;
         else if (hint == 17) return (m.reg1+m.ireg)/8 + 1;
         else if (hint == 18) return m.reg1;
+        else if (hint == 19) return m.reg1;
     }
 
     function writePosition(uint hint) returns (uint) {
-        assert(hint > 1);
+        assert(hint > 0);
         if (hint == 1) return vm.break_ptr;
         else if (hint == 2) return vm.stack_ptr-m.reg1;
         else if (hint == 3) return vm.stack_ptr;
@@ -210,34 +235,35 @@ contract Instruction {
 
     function readRoot(uint hint) returns (bytes32) {
         assert(hint > 4);
-        if (hint == 5) return vm.globals;
-        else if (hint == 6) return vm.stack;
-        else if (hint == 7) return vm.stack;
-        else if (hint == 8) return vm.stack;
-        else if (hint == 9) return vm.stack;
-        else if (hint == 10) return vm.break_stack1;
-        else if (hint == 11) return vm.break_stack2;
-        else if (hint == 12) return vm.break_stack1;
-        else if (hint == 13) return vm.break_stack2;
-        else if (hint == 14) return vm.call_stack;
-        else if (hint == 15) return vm.mem;
-        else if (hint == 16) return vm.calltable;
-        else if (hint == 17) return vm.mem;
-        else if (hint == 16) return vm.calltypes;
+        if (hint == 5) return vm_r.globals;
+        else if (hint == 6) return vm_r.stack;
+        else if (hint == 7) return vm_r.stack;
+        else if (hint == 8) return vm_r.stack;
+        else if (hint == 9) return vm_r.stack;
+        else if (hint == 10) return vm_r.break_stack1;
+        else if (hint == 11) return vm_r.break_stack2;
+        else if (hint == 12) return vm_r.break_stack1;
+        else if (hint == 13) return vm_r.break_stack2;
+        else if (hint == 14) return vm_r.call_stack;
+        else if (hint == 15) return vm_r.mem;
+        else if (hint == 16) return vm_r.calltable;
+        else if (hint == 17) return vm_r.mem;
+        else if (hint == 18) return vm_r.calltypes;
+        else if (hint == 19) return vm_r.input;
     }
     
     function writeRoot(uint hint) returns (bytes32) {
-        assert(hint > 1);
-        if (hint == 1) return vm.break_stack1;
-        else if (hint == 2) return vm.stack;
-        else if (hint == 3) return vm.stack;
-        else if (hint == 4) return vm.stack;
-        else if (hint == 5) return vm.mem;
-        else if (hint == 6) return vm.call_stack;
-        else if (hint == 7) return vm.break_stack2;
-        else if (hint == 8) return vm.globals;
-        else if (hint == 9) return vm.stack;
-        else return vm.mem;
+        assert(hint > 0);
+        if (hint == 1) return vm_r.break_stack2;
+        else if (hint == 2) return vm_r.stack;
+        else if (hint == 3) return vm_r.stack;
+        else if (hint == 4) return vm_r.stack;
+        else if (hint == 5) return vm_r.mem;
+        else if (hint == 6) return vm_r.call_stack;
+        else if (hint == 7) return vm_r.break_stack1;
+        else if (hint == 8) return vm_r.globals;
+        else if (hint == 9) return vm_r.stack;
+        else return vm_r.mem;
     }
     
     function checkReadProof(bytes32[] proof, uint loc, uint hint) returns (bool) {
@@ -254,8 +280,8 @@ contract Instruction {
         if (hint == 0) return 0;
         if (hint == 1) return m.ireg;
         if (hint == 2) return vm.pc+1;
-        if (hint == 3) return vm.memsize;
-        if (hint == 4) return vm.stack_ptr;
+        if (hint == 3) return vm.stack_ptr;
+        if (hint == 4) return vm.memsize;
         return uint(getLeaf(proof, loc));
     }
     
@@ -281,6 +307,7 @@ contract Instruction {
         uint hint = (uint(m.op)/2**(8*1))&0xff;
         require(checkReadProof(proof, loc, hint));
         m.reg2 = readFromProof(proof, loc, hint);
+        // debug = hint;
         require(state2 == hashMachine());
         winner = prover;
         return true;
@@ -551,16 +578,16 @@ contract Instruction {
         else if (hint & 0xc0 == 0xc0) root = makeMemChange2(proof, loc, v, hint);
         else root = makeChange(proof, loc, v);
         
-        if (hint == 1) vm.break_stack1 = root;
-        else if (hint == 2) vm.stack = root;
-        else if (hint == 3) vm.stack = root;
-        else if (hint == 4) vm.stack = root;
-        else if (hint == 5) vm.mem = root;
-        else if (hint == 6) vm.call_stack = root;
-        else if (hint == 7) vm.break_stack2 = root;
-        else if (hint == 8) vm.globals = root;
-        else if (hint == 9) vm.stack = root;
-        else vm.mem = root;
+        if (hint == 1) vm_r.break_stack2 = root;
+        else if (hint == 2) vm_r.stack = root;
+        else if (hint == 3) vm_r.stack = root;
+        else if (hint == 4) vm_r.stack = root;
+        else if (hint == 5) vm_r.mem = root;
+        else if (hint == 6) vm_r.call_stack = root;
+        else if (hint == 7) vm_r.break_stack1 = root;
+        else if (hint == 8) vm_r.globals = root;
+        else if (hint == 9) vm_r.stack = root;
+        else vm_r.mem = root;
     }
     
     function proveWrite1(bytes32[] proof, uint loc) returns (uint) {
@@ -571,6 +598,7 @@ contract Instruction {
         require(state1 == hashMachine());
         uint target = (uint(m.op)/2**(8*4))&0xff;
         uint hint = (uint(m.op)/2**(8*5))&0xff;
+        debug = hint;
         require(checkWriteProof(proof, loc, hint));
         uint v;
         if (target == 1) v = m.reg1;
@@ -591,6 +619,7 @@ contract Instruction {
         require(state1 == hashMachine());
         uint target = (uint(m.op)/2**(8*6))&0xff;
         uint hint = (uint(m.op)/2**(8*7))&0xff;
+        debug = hint;
         require(checkWriteProof(proof, loc, hint));
         
         uint v;
@@ -772,12 +801,12 @@ contract Instruction {
     function judge(bytes32[14] res, uint q,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
                         bytes32 vm_, bytes32 op, uint[4] regs,
-                        bytes32[9] roots, uint[5] pointers) returns (uint) {
+                        bytes32[10] roots, uint[5] pointers) returns (uint) {
         setup(res,msg.sender,msg.sender,q);
         setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
         setVM2(roots, pointers);
         provePhase(proof, loc, fetched_op);
-        return 123;
+        return debug;
     }
 
 }
