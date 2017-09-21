@@ -69,7 +69,10 @@ function testPhase(contr, phase) {
 
 function doTest() {
     web3.eth.contract(abi).new({from: base, data: '0x' + code, gas: '4500000'}, function (e, contr) {
-        if (e) console.log(e)
+        if (e) {
+            console.log(e)
+            process.exit(-1)
+        }
         if (contr && typeof contr.address !== 'undefined') {
             console.log('Contract mined! address: ' + contr.address)
             for (var i = 0; i < 13; i++) testPhase(contr, i)

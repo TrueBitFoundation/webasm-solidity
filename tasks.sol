@@ -3,6 +3,7 @@ pragma solidity ^0.4.16;
 interface Interactive {
     function make(address p, address c, bytes32 s, bytes32 e, uint256 steps,
         uint256 par, uint to) returns (bytes32);
+    function makeFinality(address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) returns (bytes32);
 }
 
 contract Tasks {
@@ -51,6 +52,20 @@ contract Tasks {
     function challenge(uint id) {
         Task storage t = tasks[id];
         bytes32 uniq = iactive.make(t.solver, msg.sender, t.init, t.result, t.steps, 1, 10);
+        challenges[uniq] = id;
+    }
+    
+    /*
+    function challengeError(uint id, bytes32[14] phases) {
+        Task storage t = tasks[id];
+        bytes32 uniq = iactive.makeError(t.solver, msg.sender, t.init, t.result, t.steps, phases, 10);
+        challenges[uniq] = id;
+    }
+    */
+    
+    function challengeFinality(uint id) {
+        Task storage t = tasks[id];
+        bytes32 uniq = iactive.makeFinality(t.solver, msg.sender, t.init, t.result, t.steps, 10);
         challenges[uniq] = id;
     }
     

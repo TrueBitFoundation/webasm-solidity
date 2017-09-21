@@ -28,6 +28,7 @@ install:
   - npm install -g ethereumjs-testrpc -y
 
 script: 
-  - solc ./instruction.sol --bin --abi -o ./contracts
+  - chmod +x ./compile.sh
+  - ./compile.sh
   - chmod +x ./runtests.sh
   - ./runtests.sh
