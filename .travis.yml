@@ -13,7 +13,7 @@ matrix:
       - sudo apt-get update
       - sudo apt-get install solc
   exclude:
-      - os: osx
+    - os: osx
       osx_image: xcode8.3
       before_install:
       - brew update
