@@ -17,10 +17,14 @@ var base = web3.eth.coinbase
 
 var data = fs.readFileSync(file)
 
+var abi = JSON.parse(fs.readFileSync("contracts/GetCode.abi"))
+var code = fs.readFileSync("contracts/GetCode.bin")
+
 var send_opt = {from:base, gas: 4000000}
 
-// var sol_testContract = new web3.eth.Contract(abi)
 var contract = web3.eth.contract([])
+
+var check_contract = web3.eth.contract(abi)
 
 // Assume the length is two bytes
 var sz = (data.length/2).toString(16)
@@ -50,6 +54,16 @@ contract.new({from: base, data: '0x' + init_code + data, gas: '4000000'}, functi
     if (e) console.error(e)
     if (typeof c.address !== 'undefined') {
         console.log("storage added to", c.address)
+        check_contract.new({from: base, data: '0x' + code, gas: '4000000'}, function (e, check) {
+            if (e) console.error(e)
+            if (typeof check.address !== 'undefined') {
+                console.log("checking storage with", check.address)
+                check.get.call(c.address, function (err,res) {
+                    if (err) console.error(err)
+                    else console.log(res)
+                })
+            }
+        })
     }
 })
 
