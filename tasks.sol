@@ -2,8 +2,8 @@ pragma solidity ^0.4.16;
 
 interface Interactive {
     function make(address p, address c, bytes32 s, bytes32 e, uint256 steps,
-        uint256 par, uint to) returns (bytes32);
-    function makeFinality(address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) returns (bytes32);
+        uint256 par, uint to) public returns (bytes32);
+    function makeFinality(address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
 }
 
 contract Tasks {
@@ -13,11 +13,11 @@ contract Tasks {
     
     Interactive iactive;
     
-    function Tasks(address contr) {
+    function Tasks(address contr) public {
         iactive = Interactive(contr);
     }
     
-    function getInteractive() returns (address) {
+    function getInteractive() public view returns (address) {
         return address(iactive);
     }
     
@@ -36,12 +36,12 @@ contract Tasks {
     
     mapping (bytes32 => uint) challenges;
     
-    function add(bytes32 init, string file, string input) {
+    function add(bytes32 init, string file, string input) public {
         tasks.push(Task(msg.sender, init, file, input, 0, 0, 0));
         Posted(msg.sender, init, file, input, tasks.length-1);
     }
     
-    function solve(uint id, bytes32 result, uint steps) {
+    function solve(uint id, bytes32 result, uint steps) public {
         require(tasks[id].solver == 0);
         tasks[id].solver = msg.sender;
         tasks[id].result = result;
@@ -49,27 +49,19 @@ contract Tasks {
         Solved(id, result, steps, tasks[id].init, tasks[id].file, tasks[id].input);
     }
     
-    function challenge(uint id) {
+    function challenge(uint id) public {
         Task storage t = tasks[id];
         bytes32 uniq = iactive.make(t.solver, msg.sender, t.init, t.result, t.steps, 1, 10);
         challenges[uniq] = id;
     }
     
-    /*
-    function challengeError(uint id, bytes32[14] phases) {
-        Task storage t = tasks[id];
-        bytes32 uniq = iactive.makeError(t.solver, msg.sender, t.init, t.result, t.steps, phases, 10);
-        challenges[uniq] = id;
-    }
-    */
-    
-    function challengeFinality(uint id) {
+    function challengeFinality(uint id) public {
         Task storage t = tasks[id];
         bytes32 uniq = iactive.makeFinality(t.solver, msg.sender, t.init, t.result, t.steps, 10);
         challenges[uniq] = id;
     }
     
-    function queryChallenge(bytes32 uniq) constant returns (uint) {
+    function queryChallenge(bytes32 uniq) constant public returns (uint) {
         return challenges[uniq];
     }
 
