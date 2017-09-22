@@ -30,11 +30,15 @@
 
 <h1>Solver</h1>
 
+<input type="checkbox" class="error" id="solver_error">Make an error at position <input type="number" id="solver_location"  class="error" value="100">
+
 <div id="posted"></div>
 
 <div id="solve_success"></div>
 
 <h1>Verifier</h1>
+
+<input type="checkbox" class="error" id="verifier_error">Make an error at position <input type="number" id="verifier_location"   class="error" value="100">
 
 <div id="solved"></div>
 
@@ -104,6 +108,26 @@
     socket.on("phase_selected", function (obj) {
         document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
     })
+    
+    function handleErrorUI() {
+        var e1 = document.querySelector("#solver_error")
+        var e2 = document.querySelector("#solver_location")
+        var e3 = document.querySelector("#verifier_error")
+        var e4 = document.querySelector("#verifier_location")
+        socket.emit("setup_error", {
+            solver_error: e1.checked, solver_location: e2.value,
+            verifier_error: e3.checked, verifier_location: e4.value
+        })
+        console.log("changed configuration")
+    }
+    
+    function initErrorUI() {
+        var lst = document.querySelectorAll(".error");
+        for (var i = 0; i < lst.length; i++) lst[i].onchange = handleErrorUI
+    }
+    
+    initErrorUI()
+    
     
     function newTask() {
         socket.emit("new_task", {task:document.querySelector("#module").value, input:getInput()})

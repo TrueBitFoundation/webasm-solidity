@@ -8,7 +8,7 @@ contract Instruction {
     uint init;
     address winner;
 
-    function setup(bytes32[14] arr, address c, address p, uint i) {
+    function setup(bytes32[14] arr, address c, address p, uint i) internal {
         phases = arr;
         challenger = c;
         prover = p;
@@ -48,43 +48,8 @@ contract Instruction {
         uint reg3;
         uint ireg;
     }
-    /*
-    function setVM(
-        bytes32 code,
-        bytes32 stack,
-        bytes32 mem,
-        bytes32 break_stack1,
-        bytes32 break_stack2,
-        bytes32 globals,
-        bytes32 call_stack,
-        bytes32 calltable,
-        bytes32 calltypes,
-        bytes32 input,
-        
-        uint pc,
-        uint stack_ptr,
-        uint break_ptr,
-        uint call_ptr,
-        uint memsize) {
-        require(msg.sender == prover);
-        vm.r.code = code;
-        vm.r.stack = stack;
-        vm.r.mem = mem;
-        vm.r.input = input;
-        vm.r.call_stack = call_stack;
-        vm.r.break_stack1 = break_stack1;
-        vm.r.break_stack2 = break_stack2;
-        vm.r.globals = globals;
-        vm.r.calltable = calltable;
-        vm.r.calltypes = calltypes;
-        vm.pc = pc;
-        vm.stack_ptr = stack_ptr;
-        vm.break_ptr = break_ptr;
-        vm.call_ptr = call_ptr;
-        vm.memsize = memsize;
-    }*/ 
     
-    function setVM2(bytes32[10] roots, uint[5] pointers) {
+    function setVM2(bytes32[10] roots, uint[5] pointers) internal {
         require(msg.sender == prover);
         vm_r.code = roots[0];
         vm_r.stack = roots[1];
@@ -104,7 +69,7 @@ contract Instruction {
         vm.memsize = pointers[4];
     }
     
-    function hashVM() returns (bytes32) {
+    function hashVM() internal view returns (bytes32) {
         bytes32[] memory arr = new bytes32[](15);
         arr[0] = vm_r.code;
         arr[1] = vm_r.mem;
@@ -121,10 +86,7 @@ contract Instruction {
         arr[12] = bytes32(vm.call_ptr);
         arr[13] = bytes32(vm.break_ptr);
         arr[14] = bytes32(vm.memsize);
-        return sha3(arr);
-/*        return sha3(vm_r.code, vm_r.mem, vm_r.stack, vm_r.globals, vm_r.call_stack, vm_r.break_stack1,
-                    vm_r.break_stack2, vm_r.calltable, vm_r.calltypes, vm_r.input,
-                    vm.pc, vm.stack_ptr, vm.call_ptr, vm.break_ptr, vm.memsize); */
+        return keccak256(arr);
     }
     
     Machine m;
@@ -135,7 +97,7 @@ contract Instruction {
         uint reg1,
         uint reg2,
         uint reg3,
-        uint ireg) {
+        uint ireg) internal {
         m.vm = vm_;
         m.op = op;
         m.reg1 = reg1;
@@ -144,46 +106,46 @@ contract Instruction {
         m.ireg = ireg;
     }
     
-    function hashMachine() returns (bytes32) {
-        return sha3(m.vm, m.op, m.reg1, m.reg2, m.reg3, m.ireg);
+    function hashMachine() internal view returns (bytes32) {
+        return keccak256(m.vm, m.op, m.reg1, m.reg2, m.reg3, m.ireg);
     }
     
-    function getLeaf(bytes32[] proof, uint loc) returns (bytes32) {
+    function getLeaf(bytes32[] proof, uint loc) internal pure returns (bytes32) {
         require(proof.length >= 2);
         if (loc%2 == 0) return proof[0];
         else return proof[1];
     }
     
-    function getRoot(bytes32[] proof, uint loc) returns (bytes32) {
+    function getRoot(bytes32[] proof, uint loc) internal pure returns (bytes32) {
         require(proof.length >= 2);
-        bytes32 res = sha3(proof[0], proof[1]);
+        bytes32 res = keccak256(proof[0], proof[1]);
         for (uint i = 2; i < proof.length; i++) {
             loc = loc/2;
-            if (loc%2 == 0) res = sha3(res, proof[i]);
-            else res = sha3(proof[i], res);
+            if (loc%2 == 0) res = keccak256(res, proof[i]);
+            else res = keccak256(proof[i], res);
         }
         require(loc < 2);
         return res;
     }
 
-    function proveFetch(bytes32[] proof) returns (bool) {
+    function proveFetch(bytes32[] proof) internal returns (bool) {
         require(init == 0 && msg.sender == prover);
         bytes32 state1 = phases[0];
         bytes32 state2 = phases[1];
         bytes32 op = getLeaf(proof, vm.pc);
         require(state1 == hashVM());
-        require(state2 == sha3(state1, op));
+        require(state2 == keccak256(state1, op));
         require(vm_r.code == getRoot(proof, vm.pc));
         winner = prover;
         return true;
     }
 
-    function getImmed(bytes32 op) internal returns (uint256) {
+    function getImmed(bytes32 op) internal pure returns (uint256) {
         // it is the first 8 bytes
         return uint(op)/(2**(13*8));
     }
 
-    function proveInit(bytes32 op) returns (bool) {
+    function proveInit(bytes32 op) internal returns (bool) {
         require(init == 1 && msg.sender == prover);
         bytes32 state1 = phases[1];
         bytes32 state2 = phases[2];
@@ -193,13 +155,13 @@ contract Instruction {
         m.reg2 = 0;
         m.reg3 = 0;
         m.ireg = getImmed(op);
-        require(state1 == sha3(m.vm, op));
+        require(state1 == keccak256(m.vm, op));
         require(state2 == hashMachine());
         winner = prover;
         return true;
     }
     
-    function readPosition(uint hint) returns (uint) {
+    function readPosition(uint hint) internal view returns (uint) {
         assert(hint > 4);
         if (hint == 5) return m.reg1;
         else if (hint == 6) return vm.stack_ptr-1;
@@ -218,7 +180,7 @@ contract Instruction {
         else if (hint == 19) return m.reg1;
     }
 
-    function writePosition(uint hint) returns (uint) {
+    function writePosition(uint hint) internal view returns (uint) {
         assert(hint > 0);
         if (hint == 1) return vm.break_ptr;
         else if (hint == 2) return vm.stack_ptr-m.reg1;
@@ -233,7 +195,7 @@ contract Instruction {
         else if (hint & 0xc0 == 0xc0) return (m.reg1+m.ireg)/8 + 1;
     }
 
-    function readRoot(uint hint) returns (bytes32) {
+    function readRoot(uint hint) internal view returns (bytes32) {
         assert(hint > 4);
         if (hint == 5) return vm_r.globals;
         else if (hint == 6) return vm_r.stack;
@@ -252,7 +214,7 @@ contract Instruction {
         else if (hint == 19) return vm_r.input;
     }
     
-    function writeRoot(uint hint) returns (bytes32) {
+    function writeRoot(uint hint) internal view returns (bytes32) {
         assert(hint > 0);
         if (hint == 1) return vm_r.break_stack2;
         else if (hint == 2) return vm_r.stack;
@@ -266,17 +228,17 @@ contract Instruction {
         else return vm_r.mem;
     }
     
-    function checkReadProof(bytes32[] proof, uint loc, uint hint) returns (bool) {
+    function checkReadProof(bytes32[] proof, uint loc, uint hint) internal view returns (bool) {
         if (hint <= 4) return true;
         return readPosition(hint) == loc && readRoot(hint) == getRoot(proof, loc);
     }
     
-    function checkWriteProof(bytes32[] proof, uint loc, uint hint) returns (bool) {
+    function checkWriteProof(bytes32[] proof, uint loc, uint hint) internal view returns (bool) {
         if (hint == 0) return true;
         return writePosition(hint) == loc && writeRoot(hint) == getRoot(proof, loc);
     }
     
-    function readFromProof(bytes32[] proof, uint loc, uint hint) returns (uint) {
+    function readFromProof(bytes32[] proof, uint loc, uint hint) internal view returns (uint) {
         if (hint == 0) return 0;
         if (hint == 1) return m.ireg;
         if (hint == 2) return vm.pc+1;
@@ -285,7 +247,7 @@ contract Instruction {
         return uint(getLeaf(proof, loc));
     }
     
-    function proveRead1(bytes32[] proof, uint loc) returns (bool) {
+    function proveRead1(bytes32[] proof, uint loc) internal returns (bool) {
         require(init == 2 && msg.sender == prover);
         bytes32 state1 = phases[2];
         bytes32 state2 = phases[3];
@@ -298,7 +260,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function proveRead2(bytes32[] proof, uint loc) returns (bool) {
+    function proveRead2(bytes32[] proof, uint loc) internal returns (bool) {
         require(init == 3 && msg.sender == prover);
         bytes32 state1 = phases[3];
         bytes32 state2 = phases[4];
@@ -312,7 +274,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function proveRead3(bytes32[] proof, uint loc) returns (bool) {
+    function proveRead3(bytes32[] proof, uint loc) internal returns (bool) {
         require(init == 4 && msg.sender == prover);
         bytes32 state1 = phases[4];
         bytes32 state2 = phases[5];
@@ -325,7 +287,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) returns (uint) {
+    function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
         uint res;
         if (hint == 0) return r1;
         else if (hint == 1 || hint == 6) revert(); // Trap
@@ -520,7 +482,7 @@ contract Instruction {
         return res;
     }
     
-    function proveALU() returns (uint) {
+    function proveALU() internal returns (uint) {
         require(init == 5 && msg.sender == prover);
         bytes32 state1 = phases[5];
         bytes32 state2 = phases[6];
@@ -533,7 +495,7 @@ contract Instruction {
         return debug;
     }
     
-    function makeChange(bytes32[] proof, uint loc, uint v) returns (bytes32) {
+    function makeChange(bytes32[] proof, uint loc, uint v) internal pure returns (bytes32) {
         assert(proof.length >= 2);
         if (loc%2 == 0) proof[0] = bytes32(v);
         else proof[1] = bytes32(v);
@@ -542,7 +504,7 @@ contract Instruction {
 
     uint debug;
 
-    function makeMemChange1(bytes32[] proof, uint loc, uint v, uint hint) returns (bytes32) {
+    function makeMemChange1(bytes32[] proof, uint loc, uint v, uint hint) internal view returns (bytes32) {
         assert(proof.length >= 2);
         
         uint old = uint(getLeaf(proof, loc));
@@ -550,14 +512,13 @@ contract Instruction {
         storeX(mem, (m.reg1+m.ireg)%8, v, hint);
         uint res; uint extra;
         (res, extra) = fromMemory(mem);
-        debug = res;
         
         if (loc%2 == 0) proof[0] = bytes32(res);
         else proof[1] = bytes32(res);
         return getRoot(proof, loc);
     }
     
-    function makeMemChange2(bytes32[] proof, uint loc, uint v, uint hint) returns (bytes32) {
+    function makeMemChange2(bytes32[] proof, uint loc, uint v, uint hint) internal view returns (bytes32) {
         assert(proof.length >= 2);
         
         uint old = uint(getLeaf(proof, loc));
@@ -571,7 +532,7 @@ contract Instruction {
         return getRoot(proof, loc);
     }
     
-    function writeStuff(uint hint, bytes32[] proof, uint loc, uint v) {
+    function writeStuff(uint hint, bytes32[] proof, uint loc, uint v) internal {
         if (hint == 0) return;
         bytes32 root;
         if (hint & 0xc0 == 0x80) root = makeMemChange1(proof, loc, v, hint);
@@ -590,7 +551,7 @@ contract Instruction {
         else vm_r.mem = root;
     }
     
-    function proveWrite1(bytes32[] proof, uint loc) returns (uint) {
+    function proveWrite1(bytes32[] proof, uint loc) internal returns (uint) {
         require(init == 6 && msg.sender == prover);
         bytes32 state1 = phases[6];
         bytes32 state2 = phases[7];
@@ -611,7 +572,7 @@ contract Instruction {
         winner = prover;
         return debug;
     }
-    function proveWrite2(bytes32[] proof, uint loc) returns (bool) {
+    function proveWrite2(bytes32[] proof, uint loc) internal returns (bool) {
         require(init == 7 && msg.sender == prover);
         bytes32 state1 = phases[7];
         bytes32 state2 = phases[8];
@@ -634,7 +595,7 @@ contract Instruction {
         return true;
     }
     
-    function handlePointer(uint hint, uint ptr) returns (uint) {
+    function handlePointer(uint hint, uint ptr) internal view returns (uint) {
         if (hint == 0) return ptr - m.reg1;
         else if (hint == 1) return m.reg1;
         else if (hint == 2) return m.reg2;
@@ -646,7 +607,7 @@ contract Instruction {
         else if (hint == 8) return ptr-1-m.ireg;
     }
 
-    function proveUpdatePC() returns (bool) {
+    function proveUpdatePC() internal returns (bool) {
         require(init == 8 && msg.sender == prover);
         bytes32 state1 = phases[8];
         bytes32 state2 = phases[9];
@@ -659,7 +620,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function proveUpdateBreakPtr() returns (bool) {
+    function proveUpdateBreakPtr() internal returns (bool) {
         require(init == 9 && msg.sender == prover);
         bytes32 state1 = phases[9];
         bytes32 state2 = phases[10];
@@ -672,7 +633,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function proveUpdateStackPtr() returns (bool) {
+    function proveUpdateStackPtr() internal returns (bool) {
         require(init == 10 && msg.sender == prover);
         bytes32 state1 = phases[10];
         bytes32 state2 = phases[11];
@@ -685,7 +646,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function proveUpdateCallPtr() returns (bool) {
+    function proveUpdateCallPtr() internal returns (bool) {
         require(init == 11 && msg.sender == prover);
         bytes32 state1 = phases[11];
         bytes32 state2 = phases[12];
@@ -698,7 +659,7 @@ contract Instruction {
         winner = prover;
         return true;
     }
-    function proveUpdateMemsize() returns (bool) {
+    function proveUpdateMemsize() internal returns (bool) {
         require(init == 12 && msg.sender == prover);
         bytes32 state1 = phases[12];
         bytes32 state2 = phases[13];
@@ -712,7 +673,7 @@ contract Instruction {
         return true;
     }
     
-    function provePhase(bytes32[] proof, uint loc, bytes32 op) {
+    function provePhase(bytes32[] proof, uint loc, bytes32 op) internal {
         if (init == 0) proveFetch(proof);
         if (init == 1) proveInit(op);
         if (init == 2) proveRead1(proof, loc);
@@ -729,19 +690,19 @@ contract Instruction {
     }
     
     // a and b are integer values that represent 8 bytes each
-    function toMemory(uint a, uint b) returns (uint8[]) {
+    function toMemory(uint a, uint b) internal pure returns (uint8[]) {
         uint8[] memory arr = new uint8[](16);
         storeN(arr, 0, 8, a);
         storeN(arr, 8, 8, b);
         return arr;
     }
-    function storeN(uint8[] mem, uint addr, uint n, uint v) {
+    function storeN(uint8[] mem, uint addr, uint n, uint v) internal pure {
         for (uint i = 0; i < n; i++) {
             mem[addr+i] = uint8(v);
             v = v/256;
         }
     }
-    function loadN(uint8[] mem, uint addr, uint n) returns (uint) {
+    function loadN(uint8[] mem, uint addr, uint n) internal pure returns (uint) {
         uint res = 0;
         uint exp = 1;
         for (uint i = 0; i < n; i++) {
@@ -750,19 +711,19 @@ contract Instruction {
         }
         return res;
     }
-    function fromMemory(uint8[] mem) returns (uint a, uint b) {
+    function fromMemory(uint8[] mem) internal pure returns (uint a, uint b) {
         a = loadN(mem, 0, 8);
         b = loadN(mem, 8, 8);
     }
     
-    function typeSize(uint ty) internal returns (uint) {
+    function typeSize(uint ty) internal pure returns (uint) {
         if (ty == 0) return 4; // I32
         else if (ty == 1) return 8; // I64
         else if (ty == 2) return 4; // F32
         else if (ty == 3) return 8; // F64
     }
     
-    function store(uint8[] mem, uint addr, uint v, uint ty, uint packing) {
+    function store(uint8[] mem, uint addr, uint v, uint ty, uint packing) internal pure {
         if (packing == 0) storeN(mem, addr, typeSize(ty), v);
         else {
             // Only integers can be packed, also cannot pack I32 to 32-bit?
@@ -771,11 +732,11 @@ contract Instruction {
         }
     }
     
-    function storeX(uint8[] mem, uint addr, uint v, uint hint) {
+    function storeX(uint8[] mem, uint addr, uint v, uint hint) internal pure {
         store(mem, addr, v, (hint/2**3)&0x3, hint&0x7);
     }
     
-    function load(uint8[] mem, uint addr, uint ty, uint packing, bool sign_extend) returns (uint) {
+    function load(uint8[] mem, uint addr, uint ty, uint packing, bool sign_extend) internal pure returns (uint) {
         if (packing == 0) return loadN(mem, addr, typeSize(ty));
         else {
             require(ty < 2 && !(ty == 0 && packing == 4));
@@ -785,23 +746,23 @@ contract Instruction {
             }
             if (ty == 0) res = res % (2**32);
             else res = res % (2**64);
-            debug = res;
             return res;
         }
     }
     
-    function loadX(uint8[] mem, uint addr, uint hint) returns (uint) {
+    function loadX(uint8[] mem, uint addr, uint hint) internal pure returns (uint) {
         return load(mem, addr, (hint/2**4)&0x3, (hint/2)&0x7, hint&0x1 == 1);
     }
     
+    /*
     function test(uint a, uint b) returns (uint, uint) {
         return fromMemory(toMemory(a,b));
-    }
+    }*/
     
     function judge(bytes32[14] res, uint q,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
                         bytes32 vm_, bytes32 op, uint[4] regs,
-                        bytes32[10] roots, uint[5] pointers) returns (uint) {
+                        bytes32[10] roots, uint[5] pointers) public returns (uint) {
         setup(res,msg.sender,msg.sender,q);
         setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
         setVM2(roots, pointers);

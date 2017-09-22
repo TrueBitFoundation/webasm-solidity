@@ -53,6 +53,9 @@ function initTask(fname, task, ifname, inp, cont) {
     })
 }
 
+var solver = { error: false, error_location: 0 }
+var verifier = { error: false, error_location: 0 }
+
 io.on("connection", function(socket) {
     console.log("Got client")
     io.emit("client", {})
@@ -81,18 +84,24 @@ io.on("connection", function(socket) {
             })
         })
     })
+    socket.on("setup_error", function (obj) {
+        verifier.error = obj.verifier_error
+        solver.error = obj.solver_error
+        verifier.error_location = obj.verifier_location
+        solver.error_location = obj.solver_location
+    })
 })
 
-function insertError(args, make_error) {
-    if (make_error) {
+function insertError(args, actor) {
+    if (actor.error) {
         args.push("-insert-error")
-        args.push("100")
+        args.push("" + actor.error_location)
     }
     return args
 }
 
-function taskResult(filename, ifilename, make_error, cont) {
-    var args = insertError(["-m", "-result", "-input-file", ifilename, "-case", "0", filename], make_error)
+function taskResult(filename, ifilename, actor, cont) {
+    var args = insertError(["-m", "-result", "-input-file", ifilename, "-case", "0", filename], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             console.error('stderr', stderr)
@@ -104,7 +113,7 @@ function taskResult(filename, ifilename, make_error, cont) {
 }
 
 
-function solveTask(obj, make_error) {
+function solveTask(obj, actor) {
     var filename = obj.filehash + ".wast"
     var ifilename = obj.inputhash + ".json"
     // store into filesystem
@@ -116,7 +125,7 @@ function solveTask(obj, make_error) {
             console.log("Initial hash was wrong")
             return
         }
-        taskResult(filename, ifilename, make_error, function (res) {
+        taskResult(filename, ifilename, actor, function (res) {
             task_to_steps[obj.id] = res.steps
             contract.solve(obj.id, res.result, res.steps, send_opt, function (err, tr) {
                 if (err) console.log(err)
@@ -131,7 +140,7 @@ function solveTask(obj, make_error) {
 
 var error_hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-function verifyTask(obj, make_error) {
+function verifyTask(obj, actor) {
     var filename = obj.filehash + ".wast"
     var ifilename = obj.inputhash + ".json"
     // store into filesystem
@@ -143,7 +152,7 @@ function verifyTask(obj, make_error) {
             console.log("Initial hash was wrong")
             return
         }
-        taskResult(filename, ifilename, make_error, function (res) {
+        taskResult(filename, ifilename, actor, function (res) {
             task_to_steps[obj.id] = res.steps
             if (res.steps < obj.steps) {
                 console.log("Too many steps")
@@ -154,7 +163,7 @@ function verifyTask(obj, make_error) {
             // Check if the posted state is a correct intermediate state
             else if (res.steps > obj.steps) {
                 console.log("Too few steps")
-                getLocation(filename, ifilename, obj.steps, verifier_error, function (hash) {
+                getLocation(filename, ifilename, obj.steps, actor, function (hash) {
                     if (hash != obj.hash) contract.challenge(obj.id, send_opt, function (err, tx) {
                         if (!err) console.log(tx, "challenge initiated")
                     })
@@ -211,7 +220,7 @@ contract.Posted("latest").watch(function (err, ev) {
     // download file from IPFS
     getFile(ev.args.file, function (filestr) {
         getFile(ev.args.input, function (input) {
-            solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id, input:JSON.parse(input), inputhash:ev.args.input}, solver_error)
+            solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id, input:JSON.parse(input), inputhash:ev.args.input}, solver)
         })
     })
 })
@@ -229,15 +238,15 @@ contract.Solved("latest").watch(function (err, ev) {
     getFile(ev.args.file, function (filestr) {
         getFile(ev.args.input, function (input) {
             verifyTask({hash: ev.args.hash, file: filestr, filehash:ev.args.file, init: ev.args.init, id:id, input:JSON.parse(input), inputhash:ev.args.input,
-                        steps:ev.args.steps.toString()}, verifier_error)
+                        steps:ev.args.steps.toString()}, verifier)
         })
     })
 })
 
 var challenges = {}
 
-function getLocation(fname, ifname, place, make_error, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-location", place, "-case", "0", fname], make_error)
+function getLocation(fname, ifname, place, actor, cont) {
+    var args = insertError(["-m", "-input-file", ifname, "-location", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else {
@@ -247,24 +256,24 @@ function getLocation(fname, ifname, place, make_error, cont) {
     })
 }
 
-function getStep(fname, ifname, place, make_error, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-step", place, "-case", "0", fname], make_error)
+function getStep(fname, ifname, place, actor, cont) {
+    var args = insertError(["-m", "-input-file", ifname, "-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
     })
 }
 
-function getErrorStep(fname, ifname, place, make_error, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-error-step", place, "-case", "0", fname], make_error)
+function getErrorStep(fname, ifname, place, actor, cont) {
+    var args = insertError(["-m", "-input-file", ifname, "-error-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
     })
 }
 
-function getFinality(fname, ifname, place, make_error, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-final", place, "-case", "0", fname], make_error)
+function getFinality(fname, ifname, place, actor, cont) {
+    var args = insertError(["-m", "-input-file", ifname, "-final", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
@@ -281,7 +290,7 @@ function replyChallenge(id, idx1, idx2) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
     if (idx1 + 1 == idx2) {
         // Now we are sending the intermediate states
-        getStep(fname, ifname, idx1, solver_error, function (obj) {
+        getStep(fname, ifname, idx1, solver, function (obj) {
             iactive.postPhases(id, idx1, obj.states, send_opt, function (err,tx) {
                 if (err) console.log(err)
                 else console.log("Posted phases", tx)
@@ -289,7 +298,7 @@ function replyChallenge(id, idx1, idx2) {
         })
         return
     }
-    getLocation(fname, ifname, place, solver_error, function (hash) {
+    getLocation(fname, ifname, place, solver, function (hash) {
         iactive.report(id, idx1, idx2, [hash], send_opt, function (err,tx) {
             if (err) console.log(err)
             else console.log("Replied to challenge", tx)
@@ -309,7 +318,7 @@ function replyFinalityChallenge(id, idx1, idx2) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are sending the intermediate states
-    getFinality(fname, ifname, idx1, solver_error, function (obj) {
+    getFinality(fname, ifname, idx1, solver, function (obj) {
         var vm = obj.vm
         iactive.callFinalityJudge(id, idx1, obj.location,
                            [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
@@ -328,7 +337,7 @@ function replyPhases(id, idx1, arr) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are checking the intermediate states
-    getStep(fname, ifname, idx1, verifier_error, function (obj) {
+    getStep(fname, ifname, idx1, verifier, function (obj) {
         for (var i = 1; i < arr.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.selectPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
@@ -349,7 +358,7 @@ function replyErrorPhases(id, idx1, arr) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are checking the intermediate states
-    getErrorStep(fname, ifname, idx1, solver_error, function (obj) {
+    getErrorStep(fname, ifname, idx1, solver, function (obj) {
         for (var i = 1; i < obj.states.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.selectErrorPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
@@ -390,7 +399,7 @@ function submitProof(id, idx1, phase) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are checking the intermediate states
-    getStep(fname, ifname, idx1, solver_error, function (obj) {
+    getStep(fname, ifname, idx1, solver, function (obj) {
         var proof = obj[phase_table[phase]]
         var merkle = proof.proof || []
         var loc = proof.location || 0
@@ -416,7 +425,7 @@ function submitErrorProof(id, idx1, phase) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are checking the intermediate states
-    getStep(fname, ifname, idx1, verifier_error, function (obj) {
+    getStep(fname, ifname, idx1, verifier, function (obj) {
         var proof = obj[phase_table[phase]]
         var merkle = proof.proof || []
         var loc = proof.location || 0
@@ -450,7 +459,7 @@ function replyReported(id, idx1, idx2, otherhash) {
             else console.log("Sent query", tx, " it was ", res)
         })
     }
-    else getLocation(fname, ifname, place, verifier_error, function (hash) {
+    else getLocation(fname, ifname, place, verifier, function (hash) {
         var res = hash == otherhash ? 1 : 0
         iactive.query(id, idx1, idx2, res, send_opt, function (err,tx) {
             if (err) console.log(err)
@@ -543,7 +552,7 @@ function postErrorPhases(id, idx1) {
     var fname = task_to_file[challenges[id].task]
     var ifname = task_to_inputfile[challenges[id].task]
     // Now we are sending the intermediate states
-    getStep(fname, ifname, idx1, verifier_error, function (obj) {
+    getStep(fname, ifname, idx1, verifier, function (obj) {
         iactive.postErrorPhases(id, idx1, obj.states, send_opt, function (err,tx) {
             if (err) console.log(err)
             else console.log("Posted error phases", tx)
