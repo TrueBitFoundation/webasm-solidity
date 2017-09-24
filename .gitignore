@@ -1,5 +1,6 @@
 contracts
 node_modules
+upload_tests
 *~
 config.json
 Q*.json
