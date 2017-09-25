@@ -50,7 +50,7 @@ else if (sz.length == 3) sz = "0" + sz
 
 var init_code = "61"+sz+"600061"+sz+"600e600039f3"
 
-contract.new({from: base, data: '0x' + init_code + data, gas: '4000000'}, function (e, c) {
+contract.new({from: base, data: '0x' + init_code + data, gas: '90000000'}, function (e, c) {
     if (e) console.error(e)
     if (typeof c.address !== 'undefined') {
         console.log("storage added to", c.address)

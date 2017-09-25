@@ -4,6 +4,16 @@
 
 ## Testing on-chain interpreter
 
+You can download a Docker image and run the tests inside of a container:
+
+```
+docker run --name wasm-solidity-test -ti hswick/wasm-solidity:latest
+cd webasm-solidity
+sh runtests.sh
+```
+
+Or if you want to build the dependencies yourself:
+
 Install the test server. Testrpc seems to require a recent version of Node.js:
 ```
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
@@ -15,8 +25,7 @@ Install Solidity compiler from https://github.com/ethereum/solidity/releases
 
 Compiling `instruction.sol` to EVM bytecodes:
 ```
-cd solidity
-sh ./test.sh
+sh compile.sh
 ```
 
 Starting up the test server:

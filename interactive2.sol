@@ -2,8 +2,8 @@ pragma solidity ^0.4.16;
 
 interface Judge {
     function setMachine(bytes32 vm, bytes32 op, uint reg1, uint reg2, uint reg3, uint ireg) public;
-    function setVM2(bytes32[9] roots, uint[5] pointers) public;
-    function setup(bytes32[14] arr, address c, address p, uint i) public;
+    function setVM2(bytes32[8] roots, uint[4] pointers) public;
+    function setup(bytes32[13] arr, address c, address p, uint i) public;
     function provePhase(bytes32[] proof, uint loc, bytes32 op) public;
 }
 
@@ -34,7 +34,7 @@ contract Interactive2 {
         uint256 phase;
         
         bytes32[] proof;
-        bytes32[14] result;
+        bytes32[13] result;
         
     }
     
@@ -174,20 +174,20 @@ contract Interactive2 {
         return r.proof[idx];
     }
     
-    event PostedPhases(bytes32 id, uint idx1, bytes32[14] arr);
+    event PostedPhases(bytes32 id, uint idx1, bytes32[13] arr);
 
-    function postPhases(bytes32 id, uint i1, bytes32[14] arr) public {
+    function postPhases(bytes32 id, uint i1, bytes32[13] arr) public {
         Record storage r = records[id];
         require(r.size == 0 && msg.sender == r.prover && r.next == r.prover && r.idx1 == i1 &&
-                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[13] && arr[13] != bytes32(0));
+                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[12] && arr[12] != bytes32(0));
         r.result = arr;
         r.next = r.challenger;
         PostedPhases(id, i1, arr);
     }
 
-    event PostedErrorPhases(bytes32 id, uint idx1, bytes32[14] arr);
+    event PostedErrorPhases(bytes32 id, uint idx1, bytes32[13] arr);
     
-    function postErrorPhases(bytes32 id, uint i1, bytes32[14] arr) public {
+    function postErrorPhases(bytes32 id, uint i1, bytes32[13] arr) public {
         Record storage r = records[id];
         require(r.size == 0 && msg.sender == r.challenger && r.next == r.challenger && r.idx1 == i1 &&
                 r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == bytes32(0));
@@ -196,7 +196,7 @@ contract Interactive2 {
         PostedErrorPhases(id, i1, arr);
     }
 
-    function getResult(bytes32 id)  public view returns (bytes32[14]) {
+    function getResult(bytes32 id)  public view returns (bytes32[13]) {
         Record storage r = records[id];
         return r.result;
     }
@@ -228,7 +228,7 @@ contract Interactive2 {
     function callJudge(bytes32 id, uint i1, uint q,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
                         bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[9] roots, uint[5] pointers) public {
+                        bytes32[8] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.phase == q && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
@@ -243,7 +243,7 @@ contract Interactive2 {
     function callFinalityJudge(bytes32 id, uint i1,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
                         bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[9] roots, uint[5] pointers) public {
+                        bytes32[8] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.phase == 20 && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
@@ -259,7 +259,7 @@ contract Interactive2 {
     function callErrorJudge(bytes32 id, uint i1, uint q,
                         bytes32[] proof, uint loc, bytes32 fetched_op,
                         bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[9] roots, uint[5] pointers) public {
+                        bytes32[8] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.phase == q && msg.sender == r.challenger && r.idx1 == i1 &&
                 r.next == r.prover);
