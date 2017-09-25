@@ -20,8 +20,8 @@ if (process.argv.length < 3) {
     process.exit(0)
 }
 
-var code = fs.readFileSync("contracts/Instruction.bin")
-var abi = JSON.parse(fs.readFileSync("contracts/Instruction.abi"))
+var code = fs.readFileSync("contracts/Judge.bin")
+var abi = JSON.parse(fs.readFileSync("contracts/Judge.abi"))
 var test = JSON.parse(fs.readFileSync(process.argv[2]))
 
 // console.log(test.states)

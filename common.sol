@@ -53,8 +53,6 @@ contract REPLACEME, ALU {
         else if (hint == 19) return getInput(loc);
     }
     
-    uint debug;
-
     function makeMemChange1(uint loc, uint v, uint hint) internal  {
         uint old = getMemory(loc);
         uint8[] memory mem = toMemory(old, 0);
@@ -107,7 +105,7 @@ contract REPLACEME, ALU {
     }
 
     function performFetch() internal {
-        setOp(getCode(vm.pc));
+        setOp(getCode(getPC()));
     }
 
     function performInit() internal  {
@@ -133,6 +131,7 @@ contract REPLACEME, ALU {
     
     function performALU() internal {
         setReg1(handleALU(getHint(3), getReg1(), getReg2(), getReg3(), getIreg()));
+        debug = getHint(3);
     }
     
     function performWrite1() internal {

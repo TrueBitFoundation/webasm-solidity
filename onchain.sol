@@ -2,6 +2,8 @@ pragma solidity ^0.4.15;
 
 contract Onchain {
 
+   uint debug;
+
     struct Roots {
         bytes32 code;
         bytes32 stack;
@@ -254,6 +256,7 @@ contract Onchain {
     
     function setReg1(uint v) internal  {
         m.reg1 = v;
+        debug = v;
         state = hashMachine();
     }
     

@@ -1,6 +1,6 @@
 pragma solidity ^0.4.15;
 
-import "contracts/common-onchain.sol";
+import "common-onchain.sol";
 
 contract Judge is CommonOnchain {
 
@@ -10,10 +10,13 @@ contract Judge is CommonOnchain {
                         bytes32[] _proof, uint /* loc */, bytes32 fetched_op,
                         bytes32 vm_, bytes32 op, uint[4] regs,
                         bytes32[8] roots, uint[4] pointers) public returns (uint) {
-        // setup(res,msg.sender,msg.sender,q);
         setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
         setVM2(roots, pointers);
-        state = hashMachine();
+        // m.vm = hashVM();
+        if (q == 0 || q == 1) {
+            m.vm = hashVM();
+            state = hashMachine();
+        }
         // state = res[q];
         phase = q;
         if (fetched_op != 0) m.op = fetched_op;
@@ -24,6 +27,7 @@ contract Judge is CommonOnchain {
         if (q == 11) state = m.vm;
         require (state == res[q+1]);
         winner = msg.sender;
-        return debug;
+        return q;
+        // return (q, state, debug);
     }
 }
