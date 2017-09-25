@@ -1,17 +1,34 @@
 pragma solidity ^0.4.15;
 
-library ALU {
-    function handleALU(uint hint, uint r1, uint r2, uint r3) returns (uint) {
+import "vmmemory.sol";
+
+contract ALU is VMMemory {
+    function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
         uint res;
-        if (hint == 0) return 0;
-        else if (hint == 1) revert(); // Trap
+        if (hint == 0) return r1;
+        else if (hint == 1 || hint == 6) revert(); // Trap
+        // Loading from memory
+        else if (hint & 0xc0 == 0xc0) {
+            uint8[] memory arr = toMemory(r2, r3);
+            res = loadX(arr, (r1+ireg)%8, hint);
+        }
         else if (hint == 2) {
             if (r1 < r2) res = r1;
             else res = r2;
         }
+        // Calculate conditional jump
         else if (hint == 3) {
             if (r1 == 0) res = r2;
             else res = r3;
+        }
+        // Calculate jump to jump table
+        else if (hint == 4) {
+            res = r2 + (r1 >= ireg ? ireg : r1);
+        }
+        // Check dynamic call
+        else if (hint == 7) {
+            if (ireg != r2) revert();
+            res = 0;
         }
         else if (hint == 0x45 || hint == 0x50) {
             if (r1 == 0) res = 1;
@@ -100,7 +117,7 @@ library ALU {
             res = popcnt32(uint32(r1));
         }
         else if (hint == 0x79) {
-            res = clz64(uint64(r1))
+            res = clz64(uint64(r1));
         }
         else if (hint == 0x7a) {
             res = ctz64(uint64(r1));
@@ -153,7 +170,7 @@ library ALU {
         else if (hint == 0x76 || hint == 0x88) {
             res = r1/2**r2;
         }
-        // rol, ror
+        // rol, ror -- fix
         else if (hint == 0x77) {
             res = (r1*2**r2) | (r1/2**32);
         }
@@ -176,8 +193,8 @@ library ALU {
         
         return res;
     }
-
-  function popcnt32(uint32 r1) returns (uint8) {
+    
+  function popcnt32(uint32 r1) internal pure returns (uint8) {
     uint32 temp = r1;
     temp = (temp & 0x55555555) + ((temp >> 1) & 0x55555555);
     temp = (temp & 0x33333333) + ((temp >> 2) & 0x33333333);
@@ -187,7 +204,7 @@ library ALU {
     return uint8(temp);
   }
 
-  function popcnt64(uint64 r1) returns (uint8) {
+  function popcnt64(uint64 r1) internal pure returns (uint8) {
     uint64 temp = r1;
     temp = (temp & 0x5555555555555555) + ((temp >> 1) & 0x5555555555555555);
     temp = (temp & 0x3333333333333333) + ((temp >> 2) & 0x3333333333333333);
@@ -198,7 +215,7 @@ library ALU {
     return uint8(temp);
   }
 
-  function clz32(uint32 r1) returns (uint8) {
+  function clz32(uint32 r1) internal pure returns (uint8) {
     if (r1 == 0) return 32;
     uint32 temp_r1 = r1;
     uint8 n = 0;
@@ -224,7 +241,7 @@ library ALU {
     return n;
   }
 
-  function clz64(uint64 r1) returns (uint8) {
+  function clz64(uint64 r1) internal pure returns (uint8) {
     if (r1 == 0) return 64;
     uint64 temp_r1 = r1;
     uint8 n = 0;
@@ -254,7 +271,7 @@ library ALU {
     return n;
   }
 
-  function ctz32(uint32 r1) returns (uint8) {
+  function ctz32(uint32 r1) internal pure returns (uint8) {
     if (r1 == 0) return 32;
     uint32 temp_r1 = r1;
     uint8 n = 0;
@@ -280,7 +297,7 @@ library ALU {
     return n;
   }
 
-  function ctz64(uint64 r1) returns (uint8) {
+  function ctz64(uint64 r1) internal pure returns (uint8) {
     if (r1 == 0) return 64;
     uint64 temp_r1 = r1;
     uint8 n = 0;
@@ -308,5 +325,5 @@ library ALU {
       n += 1;
     }
     return n;
-  }   
+  }
 }

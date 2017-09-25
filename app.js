@@ -321,8 +321,8 @@ function replyFinalityChallenge(id, idx1, idx2) {
     getFinality(fname, ifname, idx1, solver, function (obj) {
         var vm = obj.vm
         iactive.callFinalityJudge(id, idx1, obj.location,
-                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
-                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
+                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes, vm.input],
+                           [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
             if (err) console.log(err)
             else console.log("Judging (finality) success " + res)
         })
@@ -385,10 +385,9 @@ var phase_table = {
     6: "write1",
     7: "write2",
     8: "pc",
-    9: "break_ptr",
-    10: "stack_ptr",
-    11: "call_ptr",
-    12: "memsize",
+    9: "stack_ptr",
+    10: "call_ptr",
+    11: "memsize",
 }
 
 function submitProof(id, idx1, phase) {
@@ -405,12 +404,12 @@ function submitProof(id, idx1, phase) {
         var loc = proof.location || 0
         var fetched = proof.op || 0
         var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
-        var vm = proof.vm || { code: "0x00", stack:"0x00", break_stack1:"0x00", break_stack2:"0x00", call_stack:"0x00", calltable:"0x00",
+        var vm = proof.vm || { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
                                globals : "0x00", memory:"0x00", calltypes:"0x00", input:"0x00",
-                               pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
+                               pc:0, stack_ptr:0, call_ptr:0, memsize:0}
         iactive.callJudge(id, idx1, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
-                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
+                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes, vm.input],
+                           [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
             if (err) console.log(err)
             else console.log("Judging success " + res)
         })
@@ -431,12 +430,12 @@ function submitErrorProof(id, idx1, phase) {
         var loc = proof.location || 0
         var fetched = proof.op || 0
         var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
-        var vm = proof.vm || { code: "0x00", stack:"0x00", break_stack1:"0x00", break_stack2:"0x00", call_stack:"0x00", calltable:"0x00",
+        var vm = proof.vm || { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
                                globals : "0x00", memory:"0x00", calltypes:"0x00", input:"0x00",
-                               pc:0, stack_ptr:0, break_ptr:0, call_ptr:0, memsize:0}
+                               pc:0, stack_ptr:0, call_ptr:0, memsize:0}
         iactive.callErrorJudge(id, idx1, phase, merkle, loc, fetched, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.break_stack1, vm.break_stack2, vm.globals, vm.calltable, vm.calltypes, vm.input],
-                           [vm.pc, vm.stack_ptr, vm.break_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
+                           [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes, vm.input],
+                           [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize], send_opt, function (err, res) {
             if (err) console.log(err)
             else console.log("Judging (error) success " + res)
         })
