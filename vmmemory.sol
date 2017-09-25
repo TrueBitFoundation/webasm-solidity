@@ -1,6 +1,7 @@
 pragma solidity ^0.4.15;
 
 contract VMMemory {
+
     // a and b are integer values that represent 8 bytes each
     function toMemory(uint a, uint b) internal pure returns (uint8[]) {
         uint8[] memory arr = new uint8[](16);
