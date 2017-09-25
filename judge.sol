@@ -17,7 +17,7 @@ contract Judge is CommonOnchain {
             m.vm = hashVM();
             state = hashMachine();
         }
-        // state = res[q];
+        else state = res[q];
         phase = q;
         if (fetched_op != 0) m.op = fetched_op;
         proof = _proof;
