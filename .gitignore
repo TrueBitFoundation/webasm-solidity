@@ -5,3 +5,5 @@ upload_tests
 config.json
 Q*.json
 *.wast
+common-offchain.sol
+common-onchain.sol
