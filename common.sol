@@ -184,8 +184,6 @@ contract REPLACEME, ALU {
         phase = (phase+1) % 12;
     }
     
-    function run(uint steps) public {
-        while (steps > 0) performPhase();
-    }
+
 }
 
