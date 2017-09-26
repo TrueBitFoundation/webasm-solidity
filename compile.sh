@@ -12,7 +12,7 @@ solc --abi --optimize --overwrite --bin -o contracts instruction.sol
 solc --abi --optimize --overwrite --bin -o contracts tasks.sol
 solc --abi --optimize --overwrite --bin -o contracts interactive2.sol
 solc --abi --optimize --overwrite --bin -o contracts memory.sol
-solc --abi --optimize --overwrite --bin -o contracts common-offchain.sol
+solc --abi --optimize --overwrite --bin -o contracts interpreter.sol
 solc --abi --optimize --overwrite --bin -o contracts judge.sol
 
 
