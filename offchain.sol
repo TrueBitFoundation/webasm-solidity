@@ -31,6 +31,8 @@ contract Offchain {
     VM vm;
     Roots vm_r;
     Machine m;
+    
+    uint debug;
 
     function getCode(uint loc) internal view returns (bytes32) {
         return vm_r.code[loc];
