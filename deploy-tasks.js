@@ -35,6 +35,7 @@ contract3.new({from: base, data: '0x' + code3, gas: '5000000'}, function (e, jud
                     if (e) console.error(e)
                     if (typeof contract.address !== 'undefined') {
                         console.log('{ "interactive": "' + contr.address + '", "tasks" : "' + contract.address + '" }')
+                        process.exit(0)
                     }
                 })
             }
