@@ -1,6 +1,6 @@
 pragma solidity ^0.4.15;
 
-import "common-offchain.sol";
+import "./common-offchain.sol";
 
 contract Interpreter is CommonOffchain {
     function run(bytes32[] code, bytes32[] stack, bytes32[] mem, bytes32[] globals, bytes32[] calltable,

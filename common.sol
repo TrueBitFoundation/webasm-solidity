@@ -1,8 +1,8 @@
 pragma solidity ^0.4.15;
 
-import "offchain.sol";
-import "onchain.sol";
-import "alu.sol";
+import "./offchain.sol";
+import "./onchain.sol";
+import "./alu.sol";
 
 contract REPLACEME, ALU {
     function readPosition(uint hint) internal view returns (uint) {
