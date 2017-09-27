@@ -1,6 +1,6 @@
 pragma solidity ^0.4.15;
 
-import "common-onchain.sol";
+import "./common-onchain.sol";
 
 contract Judge is CommonOnchain {
 

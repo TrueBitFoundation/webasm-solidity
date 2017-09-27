@@ -1,6 +1,6 @@
 pragma solidity ^0.4.15;
 
-import "alu.sol";
+import "./alu.sol";
 
 contract Instruction is ALU {
 

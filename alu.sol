@@ -1,6 +1,6 @@
 pragma solidity ^0.4.15;
 
-import "vmmemory.sol";
+import "./vmmemory.sol";
 
 contract ALU is VMMemory {
     function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
