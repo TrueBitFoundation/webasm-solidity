@@ -61,6 +61,20 @@ parity --chain dev --unlock=0x00a329c0648769a73afac7f9381e08fb43dbea72
 ```
 and then exit Parity. Now it should have created the development account.
 
+Currently the test node uses ipfs. It can be installed with
+```
+wget https://dist.ipfs.io/go-ipfs/v0.4.10/go-ipfs_v0.4.10_linux-amd64.tar.gz
+tar xf go-ipfs_v0.4.10_linux-amd64.tar.gz
+cd go-ipfs
+./install.sh
+ipfs init
+```
+
+And then the daemon can be started with:
+```
+ipfs daemon
+```
+
 Run the test node:
 ```
 npm install
