@@ -13,7 +13,7 @@ contract Interpreter is CommonOffchain {
         vm_r.calltable = calltable;
         vm_r.calltypes = calltypes;
         vm_r.call_stack = call_stack;
-        vm_r.input = input;
+        vm_r.input_size = input;
         vm.pc = pc;
         vm.stack_ptr = stack_ptr;
         vm.call_ptr = call_ptr;
@@ -35,7 +35,7 @@ contract Interpreter is CommonOffchain {
         vm_r.calltable.length = roots[3];
         vm_r.calltypes.length = roots[4];
         vm_r.call_stack.length = roots[5];
-        vm_r.input.length = roots[6];
+        vm_r.input_size.length = roots[6];
         vm.pc = pc;
         vm.stack_ptr = stack_ptr;
         vm.call_ptr = call_ptr;

@@ -10,7 +10,9 @@ contract Offchain {
         bytes32[] calltable;
         bytes32[] calltypes;
         bytes32[] call_stack;
-        bytes32[] input;
+        bytes32[] input_size;
+        bytes32[][] input_name;
+        bytes32[][] input_data;
     }
 
     struct VM {
@@ -79,7 +81,7 @@ contract Offchain {
     }
 
     function getInput(uint loc) internal view returns (uint) {
-        return uint(vm_r.input[loc]);
+        return uint(vm_r.input_size[loc]);
     }
     
     function getPC() internal view returns (uint) {
