@@ -1,15 +1,17 @@
 pragma solidity ^0.4.16;
 
-interface Judge {
-    function setMachine(bytes32 vm, bytes32 op, uint reg1, uint reg2, uint reg3, uint ireg) public;
-    function setVM2(bytes32[8] roots, uint[4] pointers) public;
-    function setup(bytes32[13] arr, address c, address p, uint i) public;
-    function provePhase(bytes32[] proof, uint loc, bytes32 op) public;
+interface JudgeInterface {
+    function judge(bytes32[13] res, uint q,
+                        bytes32[] _proof,
+                        bytes32 vm_, bytes32 op, uint[4] regs,
+                        bytes32[10] roots, uint[4] pointers) public returns (uint);
+    function judgeFinality(bytes32[13] res, bytes32[] _proof,
+                        bytes32[10] roots, uint[4] pointers) public returns (uint);
 }
 
 contract Interactive2 {
 
-    Judge judge;
+    JudgeInterface judge;
     
     struct Record {
         address prover;
@@ -39,7 +41,7 @@ contract Interactive2 {
     }
     
     function Interactive2(address addr) public {
-        judge = Judge(addr);
+        judge = JudgeInterface(addr);
     }
 
     // perhaps they should be indexed by end state ?
@@ -226,47 +228,38 @@ contract Interactive2 {
     event WinnerSelected(bytes32 id);
     
     function callJudge(bytes32 id, uint i1, uint q,
-                        bytes32[] proof, uint loc, bytes32 fetched_op,
+                        bytes32[] proof, uint,
                         bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[8] roots, uint[4] pointers) public {
+                        bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.phase == q && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
-        judge.setup(r.result, r.challenger, r.prover, r.phase);
-        judge.setMachine(vm, op, regs[0], regs[1], regs[2], regs[3]);
-        judge.setVM2(roots, pointers);
-        judge.provePhase(proof, loc, fetched_op);
+        judge.judge(r.result, r.phase, proof, vm, op, regs, roots, pointers);
         WinnerSelected(id);
         r.winner = r.prover;
     }
 
+    // Challenger has claimed that the state is not final
     function callFinalityJudge(bytes32 id, uint i1,
-                        bytes32[] proof, uint loc, bytes32 fetched_op,
-                        bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[8] roots, uint[4] pointers) public {
+                        bytes32[] proof,
+                        bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.phase == 20 && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
-        judge.setup(r.result, r.challenger, r.prover, 0);
-        require(fetched_op == 0x0000000000000000000000000000000000000000040606060001000106000000);
-        judge.setMachine(vm, op, regs[0], regs[1], regs[2], regs[3]);
-        judge.setVM2(roots, pointers);
-        judge.provePhase(proof, loc, fetched_op);
+        // bytes32 fetched_op = 0x0000000000000000000000000000000000000000040606060001000106000000;
+        judge.judgeFinality(r.result, proof, roots, pointers);
         WinnerSelected(id);
         r.winner = r.prover;
     }
 
     function callErrorJudge(bytes32 id, uint i1, uint q,
-                        bytes32[] proof, uint loc, bytes32 fetched_op,
+                        bytes32[] proof, uint,
                         bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[8] roots, uint[4] pointers) public {
+                        bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.phase == q && msg.sender == r.challenger && r.idx1 == i1 &&
                 r.next == r.prover);
-        judge.setup(r.result, r.challenger, r.prover, r.phase);
-        judge.setMachine(vm, op, regs[0], regs[1], regs[2], regs[3]);
-        judge.setVM2(roots, pointers);
-        judge.provePhase(proof, loc, fetched_op);
+        judge.judge(r.result, r.phase, proof, vm, op, regs, roots, pointers);
         WinnerSelected(id);
         r.winner = r.challenger;
     }

@@ -12,7 +12,9 @@ contract Onchain {
         bytes32 calltable;
         bytes32 calltypes;
         bytes32 call_stack;
-        bytes32 input;
+        bytes32 input_size;
+        bytes32 input_name;
+        bytes32 input_data;
     }
 
     struct VM {
@@ -38,7 +40,7 @@ contract Onchain {
     
     bytes32 state;
     
-    function setVM2(bytes32[8] roots, uint[4] pointers) internal {
+    function setVM2(bytes32[10] roots, uint[4] pointers) internal {
         vm_r.code = roots[0];
         vm_r.stack = roots[1];
         vm_r.mem = roots[2];
@@ -46,7 +48,9 @@ contract Onchain {
         vm_r.globals = roots[4];
         vm_r.calltable = roots[5];
         vm_r.calltypes = roots[6];
-        vm_r.input = roots[7];
+        vm_r.input_size = roots[7];
+        vm_r.input_name = roots[8];
+        vm_r.input_data = roots[9];
 
         vm.pc = pointers[0];
         vm.stack_ptr = pointers[1];
@@ -55,7 +59,7 @@ contract Onchain {
     }
     
     function hashVM() internal view returns (bytes32) {
-        bytes32[] memory arr = new bytes32[](12);
+        bytes32[] memory arr = new bytes32[](14);
         arr[0] = vm_r.code;
         arr[1] = vm_r.mem;
         arr[2] = vm_r.stack;
@@ -63,11 +67,13 @@ contract Onchain {
         arr[4] = vm_r.call_stack;
         arr[5] = vm_r.calltable;
         arr[6] = vm_r.calltypes;
-        arr[7] = vm_r.input;
-        arr[8] = bytes32(vm.pc);
-        arr[9] = bytes32(vm.stack_ptr);
-        arr[10] = bytes32(vm.call_ptr);
-        arr[11] = bytes32(vm.memsize);
+        arr[7] = vm_r.input_size;
+        arr[8] = vm_r.input_name;
+        arr[9] = vm_r.input_data;
+        arr[10] = bytes32(vm.pc);
+        arr[11] = bytes32(vm.stack_ptr);
+        arr[12] = bytes32(vm.call_ptr);
+        arr[13] = bytes32(vm.memsize);
         return keccak256(arr);
     }
     
@@ -158,7 +164,7 @@ contract Onchain {
 
     function getInput(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input);
+        require(getRoot(loc) == vm_r.input_size);
         return getLeaf(loc);
     }
     
