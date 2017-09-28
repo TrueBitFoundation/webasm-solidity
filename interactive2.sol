@@ -228,7 +228,7 @@ contract Interactive2 {
     event WinnerSelected(bytes32 id);
     
     function callJudge(bytes32 id, uint i1, uint q,
-                        bytes32[] proof, uint,
+                        bytes32[] proof,
                         bytes32 vm, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
