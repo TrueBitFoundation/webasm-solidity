@@ -34,8 +34,7 @@ var contract = contractABI.at(addresses.tasks)
 var iactiveABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")))
 var iactive = iactiveABI.at(addresses.interactive)
 
-var wasm_path = "../webasm/interpreter/wasm"
-
+var wasm_path = "ocaml-offchain/interpreter/wasm"
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {

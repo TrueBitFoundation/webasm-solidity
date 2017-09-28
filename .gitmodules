@@ -1,0 +1,3 @@
+[submodule "ocaml-offchain"]
+	path = ocaml-offchain
+	url = https://github.com/TrueBitFoundation/ocaml-offchain
