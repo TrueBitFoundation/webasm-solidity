@@ -4,6 +4,16 @@
 
 ## Testing on-chain interpreter
 
+You can download a Docker image and run the tests inside of a container:
+
+```
+docker run --name wasm-solidity-test -ti hswick/wasm-solidity:latest
+cd webasm-solidity
+sh runtests.sh
+```
+
+Or if you want to build the dependencies yourself:
+
 Install the test server. Testrpc seems to require a recent version of Node.js:
 ```
 curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
@@ -15,8 +25,7 @@ Install Solidity compiler from https://github.com/ethereum/solidity/releases
 
 Compiling `instruction.sol` to EVM bytecodes:
 ```
-cd solidity
-sh ./test.sh
+sh compile.sh
 ```
 
 Starting up the test server:
@@ -51,6 +60,20 @@ If Parity complains about password or missing account, try
 parity --chain dev --unlock=0x00a329c0648769a73afac7f9381e08fb43dbea72
 ```
 and then exit Parity. Now it should have created the development account.
+
+Currently the test node uses ipfs. It can be installed with
+```
+wget https://dist.ipfs.io/go-ipfs/v0.4.10/go-ipfs_v0.4.10_linux-amd64.tar.gz
+tar xf go-ipfs_v0.4.10_linux-amd64.tar.gz
+cd go-ipfs
+./install.sh
+ipfs init
+```
+
+And then the daemon can be started with:
+```
+ipfs daemon
+```
 
 Run the test node:
 ```
