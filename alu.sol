@@ -3,11 +3,12 @@ pragma solidity ^0.4.15;
 import "./vmmemory.sol";
 
 /**
-  * @brief the ALU for the solidity interpreter.
+  * @title the ALU for the solidity interpreter.
+  * @author Sami Mäkelä
 */
 contract ALU is VMMemory {
   /**
-    * @brief handles the ALU operations of the WASM machine i.e. the WASM instructions are implemented and run here
+    * @dev handles the ALU operations of the WASM machine i.e. the WASM instructions are implemented and run here
   *
     * @param hint
     * @param r1 register one
@@ -209,7 +210,7 @@ contract ALU is VMMemory {
     }
     
     /**
-      * @brief counts the number of set bits for a 32 bit value
+      * @dev counts the number of set bits for a 32 bit value
     *
       * @param r1 the input value
     *
@@ -226,7 +227,7 @@ contract ALU is VMMemory {
   }
 
   /**
-    * @brief counts the number of set bits for a 64 bit value
+    * @dev counts the number of set bits for a 64 bit value
   *
     * @param r1 the input value
   *
@@ -244,7 +245,7 @@ contract ALU is VMMemory {
   }
 
   /**
-    * @brief counts the number of leading zeroes for a 32-bit value using a binary search
+    * @dev counts the number of leading zeroes for a 32-bit value using a binary search
   *
     * @param r1 the input
   *
@@ -277,7 +278,7 @@ contract ALU is VMMemory {
   }
 
   /**
-    * @brief counts the number of leading zeroes for a 64-bit value using a binary search
+    * @dev counts the number of leading zeroes for a 64-bit value using a binary search
   *
     * @param r1 the input value
   *
@@ -314,7 +315,7 @@ contract ALU is VMMemory {
   }
 
   /**
-    * @brief counts the number of trailing zeroes for a 32-bit value using a binary search
+    * @dev counts the number of trailing zeroes for a 32-bit value using a binary search
   *
     * @param r1 the input value
   *
@@ -347,7 +348,7 @@ contract ALU is VMMemory {
   }
 
   /**
-    * @brief returns the number of trailing zeroes for a 64-bit input value using a binary search
+    * @dev returns the number of trailing zeroes for a 64-bit input value using a binary search
   *
     * @param r1 the input value
   *

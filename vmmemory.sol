@@ -1,12 +1,13 @@
 pragma solidity ^0.4.15;
 
 /**
-* @brief base class for ALU. holds a plethora of load and store methods that the WASM VM needs.
+* @title base class for ALU. holds a plethora of load and store methods that the WASM VM needs.
+* @author Sami Mäkelä
 */
 contract VMMemory {
 
     /**
-    * @brief stores a and b in an array in memory(EVM memory), then returns the array instance
+    * @dev stores a and b in an array in memory(EVM memory), then returns the array instance
     *
       * @param a int value representing 8 bytes
       * @param b int value representing 8 bytes
@@ -21,7 +22,7 @@ contract VMMemory {
     }
 
     /**
-      * @brief takes v and stores it in mem byte by byte lsB-first
+      * @dev takes v and stores it in mem byte by byte lsB-first
     *
       * @param mem where v is going to be stored
       * @param addr address where v is going to be stored
@@ -38,7 +39,7 @@ contract VMMemory {
     }
 
     /**
-    * @brief loads from mem
+    * @dev loads from mem
     *
       * @param mem where to load from
       * @param addr where to load the value from-the offset
@@ -57,7 +58,7 @@ contract VMMemory {
     }
 
     /**
-      * @brief loads the first two 8-byte values from memory
+      * @dev loads the first two 8-byte values from memory
     *
       * @param mem where to load the values from
     *
@@ -69,7 +70,7 @@ contract VMMemory {
     }
     
     /**
-      * @brief returns the sizes of different WASM types in bytes
+      * @dev returns the sizes of different WASM types in bytes
     *
       * @param ty uint value represeting a WASM type
     *
@@ -83,7 +84,7 @@ contract VMMemory {
     }
     
     /**
-      * @brief stores v in mem with the given packing
+      * @dev stores v in mem with the given packing
     *
       * @param mem where to store v
       * @param addr the offset at which to store v inside mem
@@ -103,7 +104,7 @@ contract VMMemory {
     }
     
     /**
-      * @brief 
+      * @dev 
     *
       * @param mem where to store v
       * @param addr the offset at which to store v inside mem
@@ -117,7 +118,7 @@ contract VMMemory {
     }
     
     /**
-      * @brief load a value from mem with the proper type and packing
+      * @dev load a value from mem with the proper type and packing
     *
       * @param mem where to load the value from
       * @param addr the offset at which to start reading the value from mem
@@ -142,7 +143,7 @@ contract VMMemory {
     }
     
     /**
-      * @brief load a value from mem from offset address, uses extended hint filed for packing value
+      * @dev load a value from mem from offset address, uses extended hint filed for packing value
     *
       * @param mem where to load the value from
       * @param addr the offset at which to start loading the value from
