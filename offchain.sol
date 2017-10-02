@@ -80,8 +80,31 @@ contract Offchain {
         vm_r.globals[loc] = bytes32(v);
     }
 
-    function getInput(uint loc) internal view returns (uint) {
+    function getInputSize(uint loc) internal view returns (uint) {
         return uint(vm_r.input_size[loc]);
+    }
+    
+    function getInputName(uint loc, uint loc2) internal view returns (uint) {
+        return uint(vm_r.input_name[loc][loc2]);
+    }
+    
+    function getInputData(uint loc, uint loc2) internal view returns (uint) {
+        return uint(vm_r.input_data[loc][loc2]);
+    }
+    
+    function createInputData(uint loc, uint sz) internal {
+        vm_r.input_data[loc].length = sz;
+    }
+    
+    function setInputSize(uint loc, uint v) internal {
+        vm_r.input_size[loc] = bytes32(v);
+    }
+    
+    function setInputName(uint loc, uint loc2, uint v) internal {
+        vm_r.input_name[loc][loc2] = bytes32(v);
+    }
+    function setInputData(uint loc, uint loc2, uint v) internal {
+        vm_r.input_data[loc][loc2] = bytes32(v);
     }
     
     function getPC() internal view returns (uint) {

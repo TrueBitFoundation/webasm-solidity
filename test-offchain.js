@@ -36,6 +36,10 @@ function handleResult(err, res) {
             process.exit(-1)
         }
         else console.log(res)
+        if (res[0].toString() != "7034535277573963776") {
+            console.log("wrong result")
+            process.exit(-1)
+        }
 }
 
 function testInterpreter(contr) {
