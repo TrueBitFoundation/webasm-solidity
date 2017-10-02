@@ -18,19 +18,7 @@ contract REPLACEME, ALU {
         else if (hint == 17) return (getReg1()+getIreg())/8 + 1;
         else if (hint == 18) return getReg1();
         else if (hint == 19) return getReg1();
-    }
-
-    function writePosition(uint hint) internal view returns (uint) {
-        assert(hint > 0);
-        if (hint == 2) return getStackPtr()-getReg1();
-        else if (hint == 3) return getStackPtr();
-        else if (hint == 4) return getStackPtr()-1;
-        else if (hint == 5) return getReg1()+getReg2();
-        else if (hint == 6) return getCallPtr();
-        else if (hint == 8) return getReg1();
-        else if (hint == 9) return getStackPtr()-2;
-        else if (hint & 0xc0 == 0x80) return (getReg1()+getIreg())/8;
-        else if (hint & 0xc0 == 0xc0) return (getReg1()+getIreg())/8 + 1;
+        else if (hint == 0x16) return getStackPtr()-3;
     }
 
     function readFrom(uint hint) internal view returns (uint) {
@@ -39,6 +27,9 @@ contract REPLACEME, ALU {
         else if (hint == 2) return getPC()+1;
         else if (hint == 3) return getStackPtr();
         else if (hint == 4) return getMemsize();
+        // Add special cases for input data, input name
+        else if (hint == 0x14) return getInputName(getReg1(), getReg2());
+        else if (hint == 0x15) return getInputData(getReg1(), getReg2());
         uint loc = readPosition(hint);
         if (hint == 5) return getGlobal(loc);
         else if (hint == 6) return getStack(loc);
@@ -50,9 +41,10 @@ contract REPLACEME, ALU {
         else if (hint == 16) return getCallTable(loc);
         else if (hint == 17) return getMemory(loc);
         else if (hint == 18) return getCallTypes(loc);
-        else if (hint == 19) return getInput(loc);
+        else if (hint == 19) return getInputSize(loc);
+        else if (hint == 0x16) return getStack(loc);
     }
-    
+
     function makeMemChange1(uint loc, uint v, uint hint) internal  {
         uint old = getMemory(loc);
         uint8[] memory mem = toMemory(old, 0);
@@ -72,19 +64,37 @@ contract REPLACEME, ALU {
         
     }
     
+    function writePosition(uint hint) internal view returns (uint) {
+        assert(hint > 0);
+        if (hint == 2) return getStackPtr()-getReg1();
+        else if (hint == 3) return getStackPtr();
+        else if (hint == 4) return getStackPtr()-1;
+        else if (hint == 5) return getReg1()+getReg2();
+        else if (hint == 6) return getCallPtr();
+        else if (hint == 8) return getReg1();
+        else if (hint == 9) return getStackPtr()-2;
+        else if (hint == 0x0a) return getReg1();
+        else if (hint == 0x0c) return getReg1();
+        else if (hint & 0xc0 == 0x80) return (getReg1()+getIreg())/8;
+        else if (hint & 0xc0 == 0xc0) return (getReg1()+getIreg())/8 + 1;
+    }
+
     function writeStuff(uint hint, uint v) internal {
         if (hint == 0) return;
+        // Special cases for creation, other output
+        if (hint == 0x0b) setInputName(getReg1(), getReg2(), v);
+        if (hint == 0x0c) createInputData(getReg1(), v);
+        if (hint == 0x0b) setInputData(getReg1(), getReg2(), v);
         uint loc = writePosition(hint);
         if (hint & 0xc0 == 0x80) makeMemChange1(loc, v, hint);
         else if (hint & 0xc0 == 0xc0) makeMemChange2(loc, v, hint);
         else if (hint == 2) setStack(loc, v);
         else if (hint == 3) setStack(loc, v);
         else if (hint == 4) setStack(loc, v);
-        else if (hint == 5) setMemory(loc, v);
         else if (hint == 6) setCallStack(loc, v);
         else if (hint == 8) setGlobal(loc, v);
         else if (hint == 9) setStack(loc, v);
-        else setMemory(loc, v);
+        else if (hint == 0x0a) setInputSize(loc, v);
     }
     
     function handlePointer(uint hint, uint ptr) internal view returns (uint) {
