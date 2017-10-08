@@ -10,13 +10,13 @@ contract ALU is VMMemory {
   /**
     * @dev handles the ALU operations of the WASM machine i.e. the WASM instructions are implemented and run here
   *
-    * @param hint
+    * @param hint the actual opcode
     * @param r1 register one
     * @param r2 register two
     * @param r3 register three
-    * @param ireg the other register
+    * @param ireg the register holding the immediate value
   *
-    * @return returns the result
+    * @return returns the result of the operation
   */
     function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
         uint res;

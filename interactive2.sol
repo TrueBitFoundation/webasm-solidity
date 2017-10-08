@@ -1,18 +1,54 @@
 pragma solidity ^0.4.16;
 
+/**
+  * @title
+  * @author Sami Mäkelä
+*/
 interface JudgeInterface {
+  /**
+    * @dev
+  *
+    * @param res
+    * @param q
+    * @param _proof
+    * @param vm_
+    * @param op
+    * @param regs
+    * @param roots
+    * @param pointers
+  *
+ * @return 
+ */
     function judge(bytes32[13] res, uint q,
                         bytes32[] _proof,
                         bytes32 vm_, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
+
+                        /**
+                          * @dev
+                        *
+                          * @param res
+                          * @param _proof
+                          * @param roots
+                          * @param pointers
+                        *
+                       * @return 
+                       */
     function judgeFinality(bytes32[13] res, bytes32[] _proof,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
 }
 
+/**
+  * @dev
+  * @author Sami Mäkelä
+*/
 contract Interactive2 {
 
     JudgeInterface judge;
     
+    /**
+      * @dev
+    */
     struct Record {
         address prover;
         address challenger;
