@@ -4,7 +4,18 @@ import "./offchain.sol";
 import "./onchain.sol";
 import "./alu.sol";
 
+/**
+  * @title
+  * @author Sami Mäkelä
+*/
 contract REPLACEME, ALU {
+  /**
+    * @dev
+  *
+    * @param 
+  *
+    * @return 
+  */
     function readPosition(uint hint) internal view returns (uint) {
         assert(hint > 4);
         if (hint == 5) return getReg1();
@@ -21,6 +32,33 @@ contract REPLACEME, ALU {
         else if (hint == 0x16) return getStackPtr()-3;
     }
 
+    /**
+      * @dev  
+    *
+      * @param 
+    *
+      * @return 
+    */
+    function writePosition(uint hint) internal view returns (uint) {
+        assert(hint > 0);
+        if (hint == 2) return getStackPtr()-getReg1();
+        else if (hint == 3) return getStackPtr();
+        else if (hint == 4) return getStackPtr()-1;
+        else if (hint == 5) return getReg1()+getReg2();
+        else if (hint == 6) return getCallPtr();
+        else if (hint == 8) return getReg1();
+        else if (hint == 9) return getStackPtr()-2;
+        else if (hint & 0xc0 == 0x80) return (getReg1()+getIreg())/8;
+        else if (hint & 0xc0 == 0xc0) return (getReg1()+getIreg())/8 + 1;
+    }
+
+    /**
+      * @dev  
+    *
+      * @param 
+    *
+      * @return 
+    */
     function readFrom(uint hint) internal view returns (uint) {
         if (hint == 0) return 0;
         else if (hint == 1) return getIreg();
@@ -153,6 +191,12 @@ contract REPLACEME, ALU {
         if (target == 3) v = getReg3();
         writeStuff(hint, v);
     }
+
+    /**
+      * @dev
+    *
+      * @return 
+    */
     function performWrite2() internal {
         uint target = getHint(6);
         uint hint = getHint(7);
@@ -163,21 +207,49 @@ contract REPLACEME, ALU {
         writeStuff(hint, v);
     }
     
+    /**
+      * @dev updates the programm counter
+    *
+      * @return none
+    */
     function performUpdatePC() internal {
         setPC(handlePointer(getHint(11), getPC()));
     }
+
+    /**
+      * @dev updates the stack pointer
+    *
+      * @return none
+    */
     function performUpdateStackPtr() internal {
         setStackPtr(handlePointer(getHint(9), getStackPtr()));
     }
+
+    /**
+      * @dev updates the call pointer
+    *
+      * @return none
+    */
     function performUpdateCallPtr() internal {
         setCallPtr(handlePointer(getHint(8), getCallPtr()));
     }
+
+    /**
+      * @dev updates the linear memory size
+    *
+      * @return 
+    */
     function performUpdateMemsize() internal {
         if (getHint(12) == 1) setMemsize(getMemsize()+getReg1());
     }
     
     uint phase;
     
+    /**
+      * @dev runs the phases of the Truebit register machine
+    *
+      * @return none
+    */
     function performPhase() internal {
         if (phase == 0) performFetch();
         if (phase == 1) performInit();
@@ -193,7 +265,5 @@ contract REPLACEME, ALU {
         if (phase == 11) performUpdateMemsize();
         phase = (phase+1) % 12;
     }
-    
-
 }
 
