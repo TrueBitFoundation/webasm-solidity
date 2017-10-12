@@ -86,7 +86,7 @@ contract REPLACEME, ALU {
         // Special cases for creation, other output
         if (hint == 0x0b) setInputName(getReg1(), getReg2(), v);
         if (hint == 0x0c) createInputData(getReg1(), v);
-        if (hint == 0x0b) setInputData(getReg1(), getReg2(), v);
+        if (hint == 0x0d) setInputData(getReg1(), getReg2(), v);
         uint loc = writePosition(hint);
         if (hint & 0xc0 == 0x80) makeMemChange1(loc, v, hint);
         else if (hint & 0xc0 == 0xc0) makeMemChange2(loc, v, hint);
