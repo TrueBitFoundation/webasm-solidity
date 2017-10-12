@@ -4,7 +4,7 @@ import "./vmmemory.sol";
 
 contract ALU is VMMemory {
     function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
-        uint res;
+        uint res = r1;
         if (hint == 0) return r1;
         else if (hint == 1 || hint == 6) revert(); // Trap
         // Loading from memory

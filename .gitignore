@@ -8,3 +8,5 @@ Q*.json
 *.wast
 common-offchain.sol
 common-onchain.sol
+vm
+*.bin
