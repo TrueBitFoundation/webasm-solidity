@@ -28,8 +28,8 @@ contract REPLACEME, ALU {
         else if (hint == 3) return getStackPtr();
         else if (hint == 4) return getMemsize();
         // Add special cases for input data, input name
-        else if (hint == 0x14) return getInputName(getReg1(), getReg2());
-        else if (hint == 0x15) return getInputData(getReg1(), getReg2());
+        else if (hint == 0x14) return getInputName(getReg2(), getReg1());
+        else if (hint == 0x15) return getInputData(getReg2(), getReg1());
         uint loc = readPosition(hint);
         if (hint == 5) return getGlobal(loc);
         else if (hint == 6) return getStack(loc);

@@ -1,6 +1,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 uint8_t popcnt32(uint32_t r1)  {
@@ -28,23 +29,23 @@ uint8_t clz32(uint32_t r1) {
     if (r1 == 0) return 32;
     uint32_t temp_r1 = r1;
     uint8_t n = 0;
-    if (temp_r1 & 0xffff0000 == 0) {
+    if ((temp_r1 & 0xffff0000) == 0) {
       n += 16;
       temp_r1 = temp_r1 << 16;
     }
-    if (temp_r1 & 0xff000000 == 0) {
+    if ((temp_r1 & 0xff000000) == 0) {
       n += 8;
       temp_r1 = temp_r1 << 8;
     }
-    if (temp_r1 & 0xf0000000 == 0) {
+    if ((temp_r1 & 0xf0000000) == 0) {
       n += 4;
       temp_r1 = temp_r1 << 4;
     }
-    if (temp_r1 & 0xc0000000 == 0) {
+    if ((temp_r1 & 0xc0000000) == 0) {
       n += 2;
       temp_r1 = temp_r1 << 2;
     }
-    if (temp_r1 & 0x8000000 == 0) {
+    if ((temp_r1 & 0x8000000) == 0) {
       n++;
     }
     return n;
@@ -54,27 +55,27 @@ uint8_t clz64(uint64_t r1) {
     if (r1 == 0) return 64;
     uint64_t temp_r1 = r1;
     uint8_t n = 0;
-    if (temp_r1 & 0xffffffff00000000 == 0) {
+    if ((temp_r1 & 0xffffffff00000000) == 0) {
       n += 32;
       temp_r1 = temp_r1 << 32;
     }
-    if (temp_r1 & 0xffff000000000000 == 0) {
+    if ((temp_r1 & 0xffff000000000000) == 0) {
       n += 16;
       temp_r1 == temp_r1 << 16;
     }
-    if (temp_r1 & 0xff00000000000000 == 0) {
+    if ((temp_r1 & 0xff00000000000000) == 0) {
       n+= 8;
       temp_r1 = temp_r1 << 8;
     }
-    if (temp_r1 & 0xf000000000000000 == 0) {
+    if ((temp_r1 & 0xf000000000000000) == 0) {
       n += 4;
       temp_r1 = temp_r1 << 4;
     }
-    if (temp_r1 & 0xc000000000000000 == 0) {
+    if ((temp_r1 & 0xc000000000000000) == 0) {
       n += 2;
       temp_r1 = temp_r1 << 2;
     }
-    if (temp_r1 & 0x8000000000000000 == 0) {
+    if ((temp_r1 & 0x8000000000000000) == 0) {
       n += 1;
     }
     return n;
@@ -84,23 +85,23 @@ uint8_t ctz32(uint32_t r1) {
     if (r1 == 0) return 32;
     uint32_t temp_r1 = r1;
     uint8_t n = 0;
-    if (temp_r1 & 0x0000ffff == 0) {
+    if ((temp_r1 & 0x0000ffff) == 0) {
       n += 16;
       temp_r1 = temp_r1 >> 16;
     }
-    if (temp_r1 & 0x000000ff == 0) {
+    if ((temp_r1 & 0x000000ff) == 0) {
       n += 8;
       temp_r1 = temp_r1 >> 8;
     }
-    if (temp_r1 & 0x0000000f == 0) {
+    if ((temp_r1 & 0x0000000f) == 0) {
       n += 4;
       temp_r1 = temp_r1 >> 4;
     }
-    if (temp_r1 & 0x00000003 == 0) {
+    if ((temp_r1 & 0x00000003) == 0) {
       n += 2;
       temp_r1 = temp_r1 >> 2;
     }
-    if (temp_r1 & 0x00000001 == 0) {
+    if ((temp_r1 & 0x00000001) == 0) {
       n += 1;
     }
     return n;
@@ -158,6 +159,7 @@ uint64_t loadN(uint8_t *mem, uint64_t addr, uint64_t n) {
         uint64_t res = 0;
         uint64_t exp = 1;
         for (int i = 0; i < n; i++) {
+            // printf("Byte %02x\n", mem[addr+i]);
             res += mem[addr+i]*exp;
             exp = exp << 8;
         }
@@ -171,12 +173,6 @@ uint64_t fromMemory1(uint8_t *mem) {
 uint64_t fromMemory2(uint8_t *mem) {
         return loadN(mem, 8, 8);
 }
-
-/*
-function fromMemory(uint8[] mem) internal pure returns (uint a, uint b) {
-        a = loadN(mem, 0, 8);
-        b = loadN(mem, 8, 8);
-}*/
 
 uint64_t typeSize(uint64_t ty) {
         if (ty == 0) return 4; // I32
@@ -218,13 +214,14 @@ uint64_t loadX(uint8_t *mem, uint64_t addr, uint64_t hint) {
 
 uint64_t handleALU(uint8_t hint, uint64_t r1, uint64_t r2, uint64_t r3, uint64_t ireg) {
         uint64_t res;
+        // fprintf(stderr, "ALU %x, R1 %ld, R2 %ld\n", hint, r1, r2);
         if (hint == 0) return r1;
         else if (hint == 1 || hint == 6) {
            error_code = 1; // Trap
            return 0;
         }
         // Loading from memory
-        else if (hint & 0xc0 == 0xc0) {
+        else if ((hint & 0xc0) == 0xc0) {
             uint8_t *arr = toMemory(r2, r3);
             res = loadX(arr, (r1+ireg)&0x7, hint);
         }
@@ -236,6 +233,7 @@ uint64_t handleALU(uint8_t hint, uint64_t r1, uint64_t r2, uint64_t r3, uint64_t
         else if (hint == 3) {
             if (r2 != 0) res = r1;
             else res = r3;
+            // fprintf(stderr, "JumpI to %d. R2 was %ld\n", res, r2);
         }
         // Calculate jump to jump table
         else if (hint == 4) {
@@ -255,73 +253,74 @@ uint64_t handleALU(uint8_t hint, uint64_t r1, uint64_t r2, uint64_t r3, uint64_t
             else res = 0;
         }
         else if (hint == 0x47 || hint == 0x52) {
-            if (r1 == r2) res = 1;
+            if (r1 != r2) res = 1;
             else res = 0;
         }
         else if (hint == 0x48) {
-            if ((int32_t)r1 < (int32_t)r2) res = 0;
-            else res = 1;
+            if ((int32_t)r1 < (int32_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x49) {
-            if ((uint32_t)r1 < (uint32_t)r2) res = 0;
-            else res = 1;
+            if ((uint32_t)r1 < (uint32_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4a) {
-            if ((int32_t)r1 > (int32_t)r2) res = 0;
-            else res = 1;
+            if ((int32_t)r1 > (int32_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4b) {
-            if ((uint32_t)r1 > (uint32_t)r2) res = 0;
-            else res = 1;
+            if ((uint32_t)r1 > (uint32_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4c) {
-            if ((int32_t)r1 <= (int32_t)r2) res = 0;
-            else res = 1;
+            if ((int32_t)r1 <= (int32_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4d) {
-            if ((uint32_t)r1 <= (uint32_t)r2) res = 0;
-            else res = 1;
+            if ((uint32_t)r1 <= (uint32_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4e) {
-            if ((int32_t)r1 >= (int32_t)r2) res = 0;
-            else res = 1;
+            if ((int32_t)r1 >= (int32_t)r2) res = 1;
+            else res = 0;
+            // printf("Result %d\n", res);
         }
         else if (hint == 0x4f) {
-            if ((uint32_t)r1 >= (uint32_t)r2) res = 0;
-            else res = 1;
+            if ((uint32_t)r1 >= (uint32_t)r2) res = 1;
+            else res = 0;
         }
 
         else if (hint == 0x53) {
-            if ((int64_t)r1 < (int64_t)r2) res = 0;
-            else res = 1;
+            if ((int64_t)r1 < (int64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x54) {
-            if ((uint64_t)r1 < (uint64_t)r2) res = 0;
-            else res = 1;
+            if ((uint64_t)r1 < (uint64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x55) {
-            if ((int64_t)r1 > (int64_t)r2) res = 0;
-            else res = 1;
+            if ((int64_t)r1 > (int64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x56) {
-            if ((uint64_t)r1 > (uint64_t)r2) res = 0;
-            else res = 1;
+            if ((uint64_t)r1 > (uint64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x57) {
-            if ((int64_t)r1 <= (int64_t)r2) res = 0;
-            else res = 1;
+            if ((int64_t)r1 <= (int64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x58) {
-            if ((uint64_t)r1 <= (uint64_t)r2) res = 0;
-            else res = 1;
+            if ((uint64_t)r1 <= (uint64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x59) {
-            if ((int64_t)r1 >= (int64_t)r2) res = 0;
-            else res = 1;
+            if ((int64_t)r1 >= (int64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x5a) {
-            if ((uint64_t)r1 >= (uint64_t)r2) res = 0;
-            else res = 1;
+            if ((uint64_t)r1 >= (uint64_t)r2) res = 1;
+            else res = 0;
         }
         else if (hint == 0x67) {
             res = clz32((uint32_t)r1);
@@ -415,6 +414,8 @@ struct vm_t {
   uint64_t reg3;
   uint64_t ireg;
   
+  uint8_t *op;
+  
   uint64_t stack_ptr;
   uint64_t call_ptr;
   uint64_t pc;
@@ -432,7 +433,6 @@ struct vm_t {
   uint8_t **inputdata;
 
   uint8_t *code;
-  uint8_t *op;
 };
 
 struct vm_t vm;
@@ -455,14 +455,18 @@ uint64_t readPosition(uint8_t hint) {
 }
 
 uint64_t readFrom(uint8_t hint) {
+  // fprintf(stderr, "read hint %x\n", hint);
         if (hint == 0) return 0;
         else if (hint == 1) return vm.ireg;
         else if (hint == 2) return vm.pc+1;
         else if (hint == 3) return vm.stack_ptr;
         else if (hint == 4) return vm.memsize;
         // Add special cases for input data, input name
-        else if (hint == 0x14) return vm.inputname[vm.reg1][vm.reg2];
-        else if (hint == 0x15) return vm.inputdata[vm.reg1][vm.reg2];
+        else if (hint == 0x14) {
+          fprintf(stderr, "Getting from name %s\n", vm.inputname[vm.reg2]);
+          return vm.inputname[vm.reg2][vm.reg1];
+        }
+        else if (hint == 0x15) return vm.inputdata[vm.reg2][vm.reg1];
         uint64_t loc = readPosition(hint);
         if (hint == 5) return vm.globals[loc];
         else if (hint == 6) return vm.stack[loc];
@@ -482,14 +486,14 @@ uint64_t readFrom(uint8_t hint) {
 void makeMemChange1(uint64_t loc, uint64_t v, uint8_t hint) {
         uint64_t old = vm.memory[loc];
         uint8_t *mem = toMemory(old, 0);
-        storeX(mem, (vm.reg1+vm.ireg)>>3, v, hint);
+        storeX(mem, (vm.reg1+vm.ireg)&0x7, v, hint);
         vm.memory[loc] = fromMemory1(mem);
 }
-    
+
 void makeMemChange2(uint64_t loc, uint64_t v, uint8_t hint) {
         uint64_t old = vm.memory[loc];
         uint8_t *mem = toMemory(0, old);
-        storeX(mem, (vm.reg1+vm.ireg)>>3, v, hint);
+        storeX(mem, (vm.reg1+vm.ireg)&0x7, v, hint);
         vm.memory[loc] = fromMemory2(mem);
 }
 
@@ -506,32 +510,47 @@ uint64_t writePosition(uint8_t hint) {
         else if (hint == 0x0c) return vm.reg1;
         else if (hint == 0x0e) return vm.ireg;
         else if (hint == 0x0f) return vm.ireg;
-        else if (hint & 0xc0 == 0x80) return (vm.reg1+vm.ireg) >> 3;
-        else if (hint & 0xc0 == 0xc0) return (vm.reg1+vm.ireg) >> 3 + 1;
+        else if ((hint & 0xc0) == 0x80) return (vm.reg1+vm.ireg) >> 3;
+        else if ((hint & 0xc0) == 0xc0) return (vm.reg1+vm.ireg) >> 3 + 1;
         assert(0);
     }
     
 void writeStuff(uint8_t hint, uint64_t v) {
         if (hint == 0) return;
         // Special cases for creation, other output
-        if (hint == 0x0b) vm.inputname[vm.reg1][vm.reg2] = v;
+        if (hint == 0x0b) {
+          vm.inputname[vm.reg1][vm.reg2] = v;
+          return;
+        }
         if (hint == 0x0c) {
           vm.inputdata[vm.reg1] = (uint8_t*)malloc(v*sizeof(uint8_t));
           vm.inputsize[vm.reg1] = v;
+          return;
         }
-        if (hint == 0x0e) vm.inputdata[vm.reg1][vm.reg2] = v;
+        if (hint == 0x0d) {
+          vm.inputdata[vm.reg1][vm.reg2] = v;
+          return;
+        }
         uint64_t loc = writePosition(hint);
-        if (hint & 0xc0 == 0x80) makeMemChange1(loc, v, hint);
-        else if (hint & 0xc0 == 0xc0) makeMemChange2(loc, v, hint);
+        // fprintf(stderr, "Loc: %ld, hint %x\n", loc, hint);
+        if ((hint & 0xc0) == 0x80) makeMemChange1(loc, v, hint);
+        else if ((hint & 0xc0) == 0xc0) makeMemChange2(loc, v, hint);
         else if (hint == 2) vm.stack[loc] = v;
-        else if (hint == 3) vm.stack[loc] = v;
+        else if (hint == 3) {
+          vm.stack[loc] = v;
+        }
         else if (hint == 4) vm.stack[loc] = v;
         else if (hint == 6) vm.callstack[loc] = v;
         else if (hint == 8) vm.globals[loc] = v;
         else if (hint == 9) vm.stack[loc] = v;
         else if (hint == 0x0a) vm.inputsize[loc] = v;
-        else if (hint == 0x0e) vm.calltable[loc] = v;
+        else if (hint == 0x0e) {
+          // fprintf(stderr, "Call t %x\n", (uint)vm.calltable);
+          vm.calltable[loc] = v;
+          // fprintf(stderr, "Call t %x\n", (uint)vm.calltable);
+        }
         else if (hint == 0x0f) vm.calltypes[loc] = v;
+        // fprintf(stderr, "worked?\n");
 }
     
 uint64_t handlePointer(uint8_t hint, uint64_t ptr) {
@@ -547,14 +566,24 @@ uint64_t handlePointer(uint8_t hint, uint64_t ptr) {
 }
     
 uint64_t getImmed(uint8_t *op) {
-        // it is the first 8 bytes
-        return loadN(op, 0, 8);
+   // it is the first 8 bytes
+   uint64_t res = 0;
+   for (int i = 0; i < 8; i++) {
+     res = (res<<8) + op[11+i];
+   }
+   return res;
 }
 
 void performFetch() {
-  vm.op = &vm.code[vm.pc];
+  vm.op = &vm.code[vm.pc*32];
 }
 
+void printOp() {
+  for (int i = 0; i < 32; i++) {
+    printf("%02x", vm.op[i]);
+  }
+  printf(" <- this is the op, immed %lx\n", getImmed(vm.op));
+}
 
 void performInit() {
    vm.reg1 = 0;
@@ -569,6 +598,7 @@ uint8_t getHint(uint8_t n) {
 
 void performRead1() {
    vm.reg1 = readFrom(getHint(0));
+   // fprintf(stderr, "reg1 %lx\n", vm.reg1);
 }
 void performRead2() {
    vm.reg2 = readFrom(getHint(1));
@@ -582,23 +612,32 @@ void performALU() {
 }
 
 void performWrite1() {
-        uint target = getHint(4);
-        uint hint = getHint(5);
-        uint v;
-        if (target == 1) v = vm.reg1;
-        else if (target == 2) v = vm.reg2;
+        uint8_t target = getHint(4);
+        uint8_t hint = getHint(5);
+        uint64_t v;
+        // printf("target %d, hint %x\n", target, hint);
+        // printf("reg1: %ld\n", vm.reg1);
+        if (target == 1) {
+          v = vm.reg1;
+        }
+        else if (target == 2) {
+          v = vm.reg2;
+        }
         else if (target == 3) v = vm.reg3;
-        else assert(0);
+        else {
+          assert(0);
+        }
+        // printf("what is it ???\n");
         writeStuff(hint, v);
 }
 
 void performWrite2() {
-        uint target = getHint(6);
-        uint hint = getHint(7);
-        uint v;
+        uint8_t target = getHint(6);
+        uint8_t hint = getHint(7);
+        uint64_t v;
         if (target == 1) v = vm.reg1;
-        if (target == 2) v = vm.reg2;
-        if (target == 3) v = vm.reg3;
+        else if (target == 2) v = vm.reg2;
+        else if (target == 3) v = vm.reg3;
         else assert(0);
         writeStuff(hint, v);
 }
@@ -608,6 +647,7 @@ void performUpdatePC() {
 }
 
 void performUpdateStackPtr() {
+    // fprintf(stderr, "stack hint %x\n", getHint(9));
     vm.stack_ptr = handlePointer(getHint(9), vm.stack_ptr);
 }
 
@@ -621,17 +661,94 @@ void performUpdateMemsize() {
     
 void performStep() {
         performFetch();
+        if (getHint() == 0x06) return;
         performInit();
+        // printf("Reading\n");
         performRead1();
         performRead2();
         performRead3();
         performALU();
+        // printf("Writing 1\n");
         performWrite1();
+        // printf("Writing 2\n");
         performWrite2();
+        // printf("Updating\n");
         performUpdatePC();
         performUpdateStackPtr();
         performUpdateCallPtr();
         performUpdateMemsize();
 }
 
+void init() {
+  vm.globals = malloc(sizeof(uint64_t)*1024);
+  vm.stack = malloc(sizeof(uint64_t)*1024*1024*10);
+  vm.callstack = malloc(sizeof(uint64_t)*1024*1024);
+  vm.memory = malloc(sizeof(uint64_t)*1024*1024*100);
+  vm.calltable = malloc(sizeof(uint64_t)*1024*1024);
+  vm.calltypes = malloc(sizeof(uint64_t)*1024*1024);
+  
+  vm.inputsize = malloc(sizeof(uint64_t)*1024);
+  vm.inputname = malloc(sizeof(uint64_t*)*1024);
+  vm.inputdata = malloc(sizeof(uint64_t*)*1024);
+  
+  printf("Stack %x\n", (uint)vm.stack);
+  printf("Call t %x\n", (uint)vm.calltable);
+
+/*  vm.reg1;
+  uint64_t reg2;
+  uint64_t reg3;
+  uint64_t ireg;
+*/
+
+  vm.stack_ptr = 0;
+  vm.call_ptr = 0;
+  vm.pc = 0;
+  vm.memsize = 1024*100*8;
+
+}
+
+uint8_t *readFile(char *name, uint64_t *sz) {
+  FILE *f = fopen(name, "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET);  //same as rewind(f);
+  
+  fprintf(stderr, "Loading file %s: size %d\n", name, (int)fsize);
+
+  uint8_t *res = malloc(fsize);
+  fread(res, fsize, 1, f);
+  fclose(f);
+  
+  *sz = fsize;
+  
+  return res;
+}
+
+int main(int argc, char **argv) {
+  init();
+  // Load code from file
+  uint64_t sz = 0;
+  vm.code = readFile("decoded.bin", &sz);
+
+  // Load files to input
+  for (int i = 1; i < argc; i++) {
+     vm.inputname[i-1] = argv[i];
+     vm.inputdata[i-1] = readFile(argv[i], &sz);
+     vm.inputsize[i-1] = sz;
+  }
+     vm.inputname[argc-1] = "";
+     vm.inputdata[argc-1] = "";
+     vm.inputsize[argc-1] = 0;
+  
+  // start running it
+  uint64_t counter = 0;
+  while (1) {
+    // printf("Step %ld, PC %ld\n", counter, vm.pc);
+    performStep();
+    // printOp();
+    counter++;
+    // fprintf(stderr, "Step %ld, PC %ld, Stack ptr %ld\n", counter, vm.pc, vm.stack_ptr);
+    if (counter % 1000000 == 0) printf("Step %ld, PC %ld, Stack ptr %ld\n", counter, vm.pc, vm.stack_ptr);
+  }
+}
 
