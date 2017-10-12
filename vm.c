@@ -581,58 +581,57 @@ void performALU() {
    vm.reg1 = handleALU(getHint(3), vm.reg1, vm.reg2, vm.reg3, vm.ireg);
 }
 
-/*
-        
-    function performWrite1() internal {
+void performWrite1() {
         uint target = getHint(4);
         uint hint = getHint(5);
         uint v;
-        if (target == 1) v = getReg1();
-        if (target == 2) v = getReg2();
-        if (target == 3) v = getReg3();
+        if (target == 1) v = vm.reg1;
+        else if (target == 2) v = vm.reg2;
+        else if (target == 3) v = vm.reg3;
+        else assert(0);
         writeStuff(hint, v);
-    }
-    function performWrite2() internal {
+}
+
+void performWrite2() {
         uint target = getHint(6);
         uint hint = getHint(7);
         uint v;
-        if (target == 1) v = getReg1();
-        if (target == 2) v = getReg2();
-        if (target == 3) v = getReg3();
+        if (target == 1) v = vm.reg1;
+        if (target == 2) v = vm.reg2;
+        if (target == 3) v = vm.reg3;
+        else assert(0);
         writeStuff(hint, v);
-    }
+}
+        
+void performUpdatePC() {
+    vm.pc = handlePointer(getHint(11), vm.pc);
+}
+
+void performUpdateStackPtr() {
+    vm.stack_ptr = handlePointer(getHint(9), vm.stack_ptr);
+}
+
+void performUpdateCallPtr() {
+    vm.call_ptr = handlePointer(getHint(8), vm.call_ptr);
+}
+
+void performUpdateMemsize() {
+    if (getHint(12) == 1) vm.memsize = vm.memsize + vm.reg1;
+}
     
-    function performUpdatePC() internal {
-        setPC(handlePointer(getHint(11), getPC()));
-    }
-    function performUpdateStackPtr() internal {
-        setStackPtr(handlePointer(getHint(9), getStackPtr()));
-    }
-    function performUpdateCallPtr() internal {
-        setCallPtr(handlePointer(getHint(8), getCallPtr()));
-    }
-    function performUpdateMemsize() internal {
-        if (getHint(12) == 1) setMemsize(getMemsize()+getReg1());
-    }
-    
-    uint phase;
-    
-    function performPhase() internal {
-        if (phase == 0) performFetch();
-        if (phase == 1) performInit();
-        if (phase == 2) performRead1();
-        if (phase == 3) performRead2();
-        if (phase == 4) performRead3();
-        if (phase == 5) performALU();
-        if (phase == 6) performWrite1();
-        if (phase == 7) performWrite2();
-        if (phase == 8) performUpdatePC();
-        if (phase == 9) performUpdateStackPtr();
-        if (phase == 10) performUpdateCallPtr();
-        if (phase == 11) performUpdateMemsize();
-        phase = (phase+1) % 12;
-    }
-    
-*/
+void performStep() {
+        performFetch();
+        performInit();
+        performRead1();
+        performRead2();
+        performRead3();
+        performALU();
+        performWrite1();
+        performWrite2();
+        performUpdatePC();
+        performUpdateStackPtr();
+        performUpdateCallPtr();
+        performUpdateMemsize();
+}
 
 
