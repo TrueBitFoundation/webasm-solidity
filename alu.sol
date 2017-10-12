@@ -4,7 +4,7 @@ import "./vmmemory.sol";
 
 contract ALU is VMMemory {
     function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
-        uint res;
+        uint res = r1;
         if (hint == 0) return r1;
         else if (hint == 1 || hint == 6) revert(); // Trap
         // Loading from memory
@@ -39,73 +39,73 @@ contract ALU is VMMemory {
             else res = 0;
         }
         else if (hint == 0x47 || hint == 0x52) {
-            if (r1 == r2) res = 1;
+            if (r1 != r2) res = 1;
             else res = 0;
         }
         else if (hint == 0x48) {
-            if (int32(r1) < int32(r2)) res = 0;
-            else res = 1;
+            if (int32(r1) < int32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x49) {
-            if (uint32(r1) < uint32(r2)) res = 0;
-            else res = 1;
+            if (uint32(r1) < uint32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4a) {
-            if (int32(r1) > int32(r2)) res = 0;
-            else res = 1;
+            if (int32(r1) > int32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4b) {
-            if (uint32(r1) > uint32(r2)) res = 0;
-            else res = 1;
+            if (uint32(r1) > uint32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4c) {
-            if (int32(r1) <= int32(r2)) res = 0;
-            else res = 1;
+            if (int32(r1) <= int32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4d) {
-            if (uint32(r1) <= uint32(r2)) res = 0;
-            else res = 1;
+            if (uint32(r1) <= uint32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4e) {
-            if (int32(r1) >= int32(r2)) res = 0;
-            else res = 1;
+            if (int32(r1) >= int32(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x4f) {
-            if (uint32(r1) >= uint32(r2)) res = 0;
-            else res = 1;
+            if (uint32(r1) >= uint32(r2)) res = 1;
+            else res = 0;
         }
 
         else if (hint == 0x53) {
-            if (int64(r1) < int64(r2)) res = 0;
-            else res = 1;
+            if (int64(r1) < int64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x54) {
-            if (uint64(r1) < uint64(r2)) res = 0;
-            else res = 1;
+            if (uint64(r1) < uint64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x55) {
-            if (int64(r1) > int64(r2)) res = 0;
-            else res = 1;
+            if (int64(r1) > int64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x56) {
-            if (uint64(r1) > uint64(r2)) res = 0;
-            else res = 1;
+            if (uint64(r1) > uint64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x57) {
-            if (int64(r1) <= int64(r2)) res = 0;
-            else res = 1;
+            if (int64(r1) <= int64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x58) {
-            if (uint64(r1) <= uint64(r2)) res = 0;
-            else res = 1;
+            if (uint64(r1) <= uint64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x59) {
-            if (int64(r1) >= int64(r2)) res = 0;
-            else res = 1;
+            if (int64(r1) >= int64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x5a) {
-            if (uint64(r1) >= uint64(r2)) res = 0;
-            else res = 1;
+            if (uint64(r1) >= uint64(r2)) res = 1;
+            else res = 0;
         }
         else if (hint == 0x67) {
             res = clz32(uint32(r1));
