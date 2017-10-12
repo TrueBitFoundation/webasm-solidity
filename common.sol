@@ -75,10 +75,12 @@ contract REPLACEME, ALU {
         else if (hint == 9) return getStackPtr()-2;
         else if (hint == 0x0a) return getReg1();
         else if (hint == 0x0c) return getReg1();
+        else if (hint == 0x0e) return getIreg();
+        else if (hint == 0x0f) return getIreg();
         else if (hint & 0xc0 == 0x80) return (getReg1()+getIreg())/8;
         else if (hint & 0xc0 == 0xc0) return (getReg1()+getIreg())/8 + 1;
     }
-
+    
     function writeStuff(uint hint, uint v) internal {
         if (hint == 0) return;
         // Special cases for creation, other output
@@ -95,6 +97,8 @@ contract REPLACEME, ALU {
         else if (hint == 8) setGlobal(loc, v);
         else if (hint == 9) setStack(loc, v);
         else if (hint == 0x0a) setInputSize(loc, v);
+        else if (hint == 0x0e) setCallTable(loc, v);
+        else if (hint == 0x0f) setCallType(loc, v);
     }
     
     function handlePointer(uint hint, uint ptr) internal view returns (uint) {

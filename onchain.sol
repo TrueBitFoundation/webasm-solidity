@@ -288,6 +288,24 @@ contract Onchain {
         state = hashMachine();
     }
 
+    function setCallTable(uint loc, uint v) internal {
+        require(hashMachine() == state && hashVM() == m.vm);
+        require(getRoot(loc) == vm_r.calltable);
+        setLeaf(loc, v);
+        vm_r.calltable = getRoot(loc);
+        m.vm = hashVM();
+        state = hashMachine();
+    }
+
+    function setCallType(uint loc, uint v) internal {
+        require(hashMachine() == state && hashVM() == m.vm);
+        require(getRoot(loc) == vm_r.calltypes);
+        setLeaf(loc, v);
+        vm_r.calltypes = getRoot(loc);
+        m.vm = hashVM();
+        state = hashMachine();
+    }
+
     function getPC() internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         return vm.pc;

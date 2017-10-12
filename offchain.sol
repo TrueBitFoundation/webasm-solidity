@@ -80,6 +80,14 @@ contract Offchain {
         vm_r.globals[loc] = bytes32(v);
     }
 
+    function setCallTable(uint loc, uint v) internal {
+        vm_r.calltable[loc] = bytes32(v);
+    }
+
+    function setCallType(uint loc, uint v) internal {
+        vm_r.calltypes[loc] = bytes32(v);
+    }
+
     function getInputSize(uint loc) internal view returns (uint) {
         return uint(vm_r.input_size[loc]);
     }
