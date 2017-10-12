@@ -577,13 +577,12 @@ void performRead3() {
    vm.reg3 = readFrom(getHint(2));
 }
 
+void performALU() {
+   vm.reg1 = handleALU(getHint(3), vm.reg1, vm.reg2, vm.reg3, vm.ireg);
+}
+
 /*
-    
-    function performALU() internal {
-        setReg1(handleALU(getHint(3), getReg1(), getReg2(), getReg3(), getIreg()));
-        debug = getHint(3);
-    }
-    
+        
     function performWrite1() internal {
         uint target = getHint(4);
         uint hint = getHint(5);
