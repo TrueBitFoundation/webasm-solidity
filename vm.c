@@ -216,198 +216,121 @@ int debug = 0;
 
 uint64_t handleALU(uint8_t hint, uint64_t r1, uint64_t r2, uint64_t r3, uint64_t ireg) {
         uint64_t res = r1;
-        if (debug) fprintf(stderr, "ALU %x, R1 %ld, R2 %ld\n", hint, r1, r2);
         if (hint == 0) return r1;
-        else if (hint == 1 || hint == 6) {
+        switch (hint) {
+          case 1:
+          case 6:
            assert(0);
-        }
-        // Loading from memory
-        else if ((hint & 0xc0) == 0xc0) {
-            uint8_t *arr = toMemory(r2, r3);
-            res = loadX(arr, (r1+ireg)&0x7, hint);
-            if (debug) fprintf(stderr, "Loading from memory %ld %ld, got %ld\n", r2, r3, res);
-        }
-        else if (hint == 2) {
-            if (r1 < r2) res = r1;
-            else res = r2;
-        }
+          case 2:
+            if (r1 < r2) return r1;
+            else return r2;
         // Calculate conditional jump
-        else if (hint == 3) {
-            if (r2 != 0) res = r1;
-            else res = r3;
-            // fprintf(stderr, "JumpI to %d. R2 was %ld\n", res, r2);
-        }
+          case 3:
+            if (r2 != 0) return r1;
+            else return r3;
         // Calculate jump to jump table
-        else if (hint == 4) {
-            res = r2 + (r1 >= ireg ? ireg : r1);
-        }
+          case 4:
+            return r2 + (r1 >= ireg ? ireg : r1);
         // Check dynamic call
-        else if (hint == 7) {
+          case 7:
             if (ireg != r2) assert(0);
-            res = 0;
-        }
-        else if (hint == 0x45 || hint == 0x50) {
-            if (r1 == 0) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x46 || hint == 0x51) {
-            if (r1 == r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x47 || hint == 0x52) {
-            if (r1 != r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x48) {
-            if ((int32_t)r1 < (int32_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x49) {
-            if ((uint32_t)r1 < (uint32_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x4a) {
-            if ((int32_t)r1 > (int32_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x4b) {
-            if ((uint32_t)r1 > (uint32_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x4c) {
-            if ((int32_t)r1 <= (int32_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x4d) {
-            if ((uint32_t)r1 <= (uint32_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x4e) {
-            if ((int32_t)r1 >= (int32_t)r2) res = 1;
-            else res = 0;
-            // printf("Result %d\n", res);
-        }
-        else if (hint == 0x4f) {
-            if ((uint32_t)r1 >= (uint32_t)r2) res = 1;
-            else res = 0;
-        }
-
-        else if (hint == 0x53) {
-            if ((int64_t)r1 < (int64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x54) {
-            if ((uint64_t)r1 < (uint64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x55) {
-            if ((int64_t)r1 > (int64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x56) {
-            if ((uint64_t)r1 > (uint64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x57) {
-            if ((int64_t)r1 <= (int64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x58) {
-            if ((uint64_t)r1 <= (uint64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x59) {
-            if ((int64_t)r1 >= (int64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x5a) {
-            if ((uint64_t)r1 >= (uint64_t)r2) res = 1;
-            else res = 0;
-        }
-        else if (hint == 0x67) {
-            res = clz32((uint32_t)r1);
-        }
-        else if (hint == 0x68) {
-            res = ctz32((uint32_t)r1);
-        }
-        else if (hint == 0x69) {
-            res = popcnt32((uint32_t)r1);
-        }
-        else if (hint == 0x79) {
-            res = clz64((uint64_t)r1);
-        }
-        else if (hint == 0x7a) {
-            res = ctz64((uint64_t)r1);
-        }
-        else if (hint == 0x7b) {
-            res = popcnt64((uint64_t)r1);
-        }
-        else if (hint == 0x6a || hint == 0x7c) {
-            res = r1+r2;
-        }
-        else if (hint == 0x6b || hint == 0x7d) {
-            res = r1-r2;
-        }
-        else if (hint == 0x6c || hint == 0x7e) {
-            res = r1*r2;
-        }
-        else if (hint == 0x6d) {
-            res = (uint64_t)((int32_t)r1/(int32_t)r2);
-        }
-        else if (hint == 0x7f) {
-            res = (uint64_t)((int64_t)r1/(int64_t)r2);
-        }
-        else if (hint == 0x6e || hint == 0x80) {
-            res = r1/r2;
-        }
-        else if (hint == 0x6f) {
-            res = (uint64_t)((int32_t)r1%(int32_t)r2);
-        }
-        else if (hint == 0x81) {
-            res = (uint64_t)((int64_t)r1%(int64_t)r2);
-        }
-        else if (hint == 0x70 || hint == 0x82) {
-            res = r1%r2;
-        }
-        else if (hint == 0x71 || hint == 0x83) {
-            res = r1&r2;
-        }
-        else if (hint == 0x72 || hint == 0x84) {
-            res = r1|r2;
-        }
-        else if (hint == 0x73 || hint == 0x85) {
-            res = r1^r2;
-        }
-        else if (hint == 0x74 || hint == 0x86) {
-            res = r1 << r2; // shift 
-        }
-        else if (hint == 0x75 || hint == 0x87) {
-            res = r1 >> r2;
-        }
-        else if (hint == 0x76 || hint == 0x88) {
-            res = r1 >> r2;
-        }
+            return 0;
+          // Handle 32 bit and 64 bit differently
+          case 0x45:
+          case 0x50:
+            return (r1 == 0) ? 1 : 0;
+          case 0x46:
+          case 0x51:
+            return (r1 == r2) ? 1 : 0;
+          case 0x47:
+          case 0x52:
+            return (r1 != r2) ? 1 : 0;
+          case  0x48: return ((int32_t)r1 < (int32_t)r2) ? 1 : 0;
+          case 0x49:
+            return ((uint32_t)r1 < (uint32_t)r2) ? 1 : 0;
+          case 0x4a:
+            return ((int32_t)r1 > (int32_t)r2) ? 1 : 0;
+          case 0x4b:
+            return ((uint32_t)r1 > (uint32_t)r2) ? 1 : 0;
+          case 0x4c:
+            return ((int32_t)r1 <= (int32_t)r2) ? 1 : 0;
+          case 0x4d:
+            return ((uint32_t)r1 <= (uint32_t)r2) ? 1 : 0;
+          case 0x4e:
+            return ((int32_t)r1 >= (int32_t)r2) ? 1 : 0;
+          case 0x4f:
+            return ((uint32_t)r1 >= (uint32_t)r2) ? 1 : 0;
+          case 0x53:
+            return ((int64_t)r1 < (int64_t)r2) ? 1 : 0;
+          case 0x54:
+            return ((uint64_t)r1 < (uint64_t)r2) ? 1 : 0;
+          case 0x55:
+            return ((int64_t)r1 > (int64_t)r2) ? 1 : 0;
+          case 0x56:
+            return ((uint64_t)r1 > (uint64_t)r2) ? 1 : 0;
+          case 0x57:
+            return ((int64_t)r1 <= (int64_t)r2) ? 1 : 0;
+          case 0x58:
+            return ((uint64_t)r1 <= (uint64_t)r2) ? 1 : 0;
+          case 0x59:
+            return ((int64_t)r1 >= (int64_t)r2) ? 1 : 0;
+          case 0x5a:
+            return ((uint64_t)r1 >= (uint64_t)r2) ? 1 : 0;
+          case 0x67: return clz32((uint32_t)r1);
+          case 0x68: return ctz32((uint32_t)r1);
+          case 0x69: return popcnt32((uint32_t)r1);
+          case 0x79: return clz64((uint64_t)r1);
+          case 0x7a: return ctz64((uint64_t)r1);
+          case 0x7b: return popcnt64((uint64_t)r1);
+          case 0x6a: return (uint32_t)r1+(uint32_t)r2;
+          case 0x7c: return r1+r2;
+          case 0x6b: return (uint32_t)r1-(uint32_t)r2;
+          case 0x7d: return r1-r2;
+          case 0x6c: return (uint32_t)r1*(uint32_t)r2;
+          case 0x7e: return r1*r2;
+          case 0x6d: return (uint64_t)((int32_t)r1/(int32_t)r2);
+          case 0x7f: return (uint64_t)((int64_t)r1/(int64_t)r2);
+          case 0x6e: return (uint32_t)r1/(uint32_t)r2;
+          case 0x80: return r1/r2;
+          case 0x6f:
+            return (uint64_t)((int32_t)r1%(int32_t)r2);
+          case 0x81:
+            return (uint64_t)((int64_t)r1%(int64_t)r2);
+          case 0x70: return (uint32_t)r1%(uint32_t)r2;
+          case 0x82: return r1%r2;
+          case 0x71:
+          case 0x83:
+            return r1&r2;
+          case 0x72:
+          case 0x84:
+            return r1|r2;
+          case 0x73:
+          case 0x85:
+            return r1^r2;
+          case 0x74: return (r1 << r2)&0xffffffff;
+          case 0x86: return r1 << r2; // shift 
+        case 0x75: return (r1 >> r2)&0xffffffff;
+        case 0x87: return r1 >> r2;
+        case 0x76: return (r1 >> r2)&0xffffffff;
+        case 0x88: return r1 >> r2;
         // rol, ror -- fix
-        else if (hint == 0x77) {
-            res = (r1<<r2) | (r1>>(32-r2));
-        }
-        else if (hint == 0x78) {
-            res = (r1>>r2) | (r1<<(32-r2));
-        }
-        else if (hint == 0x89) {
-            res = (r1<<r2) | (r1<<(64-r2));
-        }
-        else if (hint == 0x8a) {
-            res = (r1>>r2) | (r1<<(64-r2));
-        }
-        
-        if (hint >= 0x62 && hint <= 0x78) {
-            res = res & 0xffffffff;
-        }
-        else if (hint >= 0x7c && hint <= 0x8a) {
-            res = res & 0xffffffffffffffff;
-        }
-        return res;
+        case 0x77:
+            return (r1<<r2) | (r1>>(32-r2));
+        case 0x78:
+            return (r1>>r2) | (r1<<(32-r2));
+        case 0x89:
+            return (r1<<r2) | (r1<<(64-r2));
+        case 0x8a:
+            return (r1>>r2) | (r1<<(64-r2));
+        default:
+          // Loading from memory
+          if ((hint & 0xc0) == 0xc0) {
+            uint8_t *arr = toMemory(r2, r3);
+            return loadX(arr, (r1+ireg)&0x7, hint);
+          }
+          return res;
+     }
+     return res;
 }
 
 struct vm_t {
@@ -439,54 +362,35 @@ struct vm_t {
 
 struct vm_t vm;
 
-uint64_t readPosition(uint8_t hint) {
-        assert(hint > 4);
-        if (hint == 5) return vm.reg1;
-        else if (hint == 6) return vm.stack_ptr-1;
-        else if (hint == 7) return vm.stack_ptr-2;
-        else if (hint == 8) return vm.stack_ptr-vm.reg1; // Stack in reg
-        else if (hint == 9) return vm.stack_ptr-vm.reg2;
-        else if (hint == 14) return vm.call_ptr-1;
-        else if (hint == 15) return (vm.reg1+vm.ireg) >> 3;
-        else if (hint == 16) return vm.reg1;
-        else if (hint == 17) return ((vm.reg1+vm.ireg) >> 3) + 1;
-        else if (hint == 18) return vm.reg1;
-        else if (hint == 19) return vm.reg1;
-        else if (hint == 0x16) return vm.stack_ptr-3;
-        assert(0);
-}
-
 uint64_t readFrom(uint8_t hint) {
   // fprintf(stderr, "read hint %x\n", hint);
-        if (hint == 0) return 0;
-        else if (hint == 1) return vm.ireg;
-        else if (hint == 2) return vm.pc+1;
-        else if (hint == 3) return vm.stack_ptr;
-        else if (hint == 4) return vm.memsize;
-        // Add special cases for input data, input name
-        else if (hint == 0x14) {
-          // fprintf(stderr, "Getting from name %s\n", vm.inputname[vm.reg2]);
-          return vm.inputname[vm.reg2][vm.reg1];
-        }
-        else if (hint == 0x15) return vm.inputdata[vm.reg2][vm.reg1];
-        uint64_t loc = readPosition(hint);
-        if (hint == 5) return vm.globals[loc];
-        else if (hint == 6) return vm.stack[loc];
-        else if (hint == 7) return vm.stack[loc];
-        else if (hint == 8) return vm.stack[loc];
-        else if (hint == 9) return vm.stack[loc];
-        else if (hint == 14) return vm.callstack[loc];
-        else if (hint == 15) return vm.memory[loc];
-        else if (hint == 16) return vm.calltable[loc];
-        else if (hint == 17) return vm.memory[loc];
-        else if (hint == 18) return vm.calltypes[loc];
-        else if (hint == 19) return vm.inputsize[loc];
-        else if (hint == 0x16) return vm.stack[loc];
-        assert(0);
+    if (!hint) return 0;
+    switch (hint) {
+      case 0: return 0;
+      case 1: return vm.ireg;
+      case 2: return vm.pc+1;
+      case 3: return vm.stack_ptr;
+      case 4: return vm.memsize;
+      case 0x14: return vm.inputname[vm.reg2][vm.reg1];
+      case 0x15: return vm.inputdata[vm.reg2][vm.reg1];
+      case 5: return vm.globals[vm.reg1];
+      case 6: return vm.stack[vm.stack_ptr-1];
+      case 7: return vm.stack[vm.stack_ptr-2];
+      case 8: return vm.stack[vm.stack_ptr-vm.reg1];
+      case 9: return vm.stack[vm.stack_ptr-vm.reg2];
+      case 14: return vm.callstack[vm.call_ptr-1];
+      case 15: return vm.memory[(vm.reg1+vm.ireg) >> 3];
+      case 16: return vm.calltable[vm.reg1];
+      case 17: return vm.memory[((vm.reg1+vm.ireg) >> 3) + 1];
+      case 18: return vm.calltypes[vm.reg1];
+      case 19: return vm.inputsize[vm.reg1];
+      case 0x16: return vm.stack[vm.stack_ptr-3];
+      default:  assert(0);
+   }
 }
 
 void makeMemChange1(uint64_t loc, uint64_t v, uint8_t hint) {
-        if (debug) fprintf(stderr, "Storing A: %ld to %ld\n", v, loc);
+        // if (debug) fprintf(stderr, "Storing A: %ld to %ld\n", v, loc);
         uint64_t old = vm.memory[loc];
         uint8_t *mem = toMemory(old, 0);
         storeX(mem, (vm.reg1+vm.ireg)&0x7, v, hint);
@@ -494,86 +398,82 @@ void makeMemChange1(uint64_t loc, uint64_t v, uint8_t hint) {
 }
 
 void makeMemChange2(uint64_t loc, uint64_t v, uint8_t hint) {
-        if (debug) fprintf(stderr, "Storing B: %ld to %ld\n", v, loc);
+        // if (debug) fprintf(stderr, "Storing B: %ld to %ld\n", v, loc);
         uint64_t old = vm.memory[loc];
         uint8_t *mem = toMemory(0, old);
         storeX(mem, (vm.reg1+vm.ireg)&0x7, v, hint);
         vm.memory[loc] = fromMemory2(mem);
 }
 
-uint64_t writePosition(uint8_t hint) {
-        assert(hint > 0);
-        if (hint == 2) return vm.stack_ptr-vm.reg1;
-        else if (hint == 3) return vm.stack_ptr;
-        else if (hint == 4) return vm.stack_ptr-1;
-        else if (hint == 5) return vm.reg1+vm.reg2;
-        else if (hint == 6) return vm.call_ptr;
-        else if (hint == 8) return vm.reg1;
-        else if (hint == 9) return vm.stack_ptr-2;
-        else if (hint == 0x0a) return vm.reg1;
-        else if (hint == 0x0c) return vm.reg1;
-        else if (hint == 0x0e) return vm.ireg;
-        else if (hint == 0x0f) return vm.ireg;
-        else if ((hint & 0xc0) == 0x80) return (vm.reg1+vm.ireg) >> 3;
-        else if ((hint & 0xc0) == 0xc0) return ((vm.reg1+vm.ireg) >> 3) + 1;
-        assert(0);
-    }
-    
 void writeStuff(uint8_t hint, uint64_t v) {
-        if (hint == 0) return;
+   switch (hint) {
+     case 0: return;
         // Special cases for creation, other output
-        if (hint == 0x0b) {
-          fprintf(stderr, "Output name\n");
+     case 0x0b:
+          // fprintf(stderr, "Output name\n");
           vm.inputname[vm.reg1][vm.reg2] = v;
           return;
-        }
-        if (hint == 0x0c) {
-          fprintf(stderr, "Output data size\n");
+     case 0x0c:
+          // fprintf(stderr, "Output data size\n");
           vm.inputdata[vm.reg1] = (uint8_t*)malloc(v*sizeof(uint8_t));
           vm.inputsize[vm.reg1] = v;
           return;
-        }
-        if (hint == 0x0d) {
-          fprintf(stderr, "Output data\n");
+     case 0x0d:
+          // fprintf(stderr, "Output data\n");
           vm.inputdata[vm.reg1][vm.reg2] = v;
           return;
-        }
-        uint64_t loc = writePosition(hint);
+     case 2:
+        vm.stack[vm.stack_ptr-vm.reg1] = v;
+        return;
+     case 3:
+        vm.stack[vm.stack_ptr] = v;
+        return;
+     case 4:
+        vm.stack[vm.stack_ptr-1] = v;
+        return;
+     case 6:
+        vm.callstack[vm.call_ptr] = v;
+        return;
+     case 8:
+        vm.globals[vm.reg1] = v;
+        return;
+     case 9:
+        vm.stack[vm.stack_ptr-2] = v;
+        return;
+     case 0x0a: 
+        vm.inputsize[vm.reg1] = v;
+        return;
+     case 0x0e: 
+        vm.calltable[vm.ireg] = v;
+        return;
+     case 0x0f:
+        vm.calltypes[vm.ireg] = v;
+        return;
+     default:
         // fprintf(stderr, "Loc: %ld, hint %x\n", loc, hint);
-        if ((hint & 0xc0) == 0x80) makeMemChange1(loc, v, hint);
-        else if ((hint & 0xc0) == 0xc0) makeMemChange2(loc, v, hint);
-        else if (hint == 2) vm.stack[loc] = v;
-        else if (hint == 3) {
-          vm.stack[loc] = v;
-        }
-        else if (hint == 4) vm.stack[loc] = v;
-        else if (hint == 6) vm.callstack[loc] = v;
-        else if (hint == 8) vm.globals[loc] = v;
-        else if (hint == 9) vm.stack[loc] = v;
-        else if (hint == 0x0a) vm.inputsize[loc] = v;
-        else if (hint == 0x0e) {
-          // fprintf(stderr, "Call t %x\n", (uint)vm.calltable);
-          vm.calltable[loc] = v;
-          // fprintf(stderr, "Call t %x\n", (uint)vm.calltable);
-        }
-        else if (hint == 0x0f) vm.calltypes[loc] = v;
-        // fprintf(stderr, "worked?\n");
+        if ((hint & 0xc0) == 0x80) makeMemChange1((vm.reg1+vm.ireg) >> 3, v, hint);
+        else if ((hint & 0xc0) == 0xc0) makeMemChange2(((vm.reg1+vm.ireg) >> 3) + 1, v, hint);
+        else assert(0);
+   }
 }
     
 uint64_t handlePointer(uint8_t hint, uint64_t ptr) {
-        if (hint == 0) return ptr - vm.reg1;
-        else if (hint == 1) return vm.reg1;
-        else if (hint == 2) return vm.reg2;
-        else if (hint == 3) return vm.reg3;
-        else if (hint == 4) return ptr+1;
-        else if (hint == 5) return ptr-1;
-        else if (hint == 6) return ptr;
-        else if (hint == 7) return ptr-2;
-        else if (hint == 8) return ptr-1-vm.ireg;
+   switch (hint) {
+     case 0: return ptr - vm.reg1;
+     case 1: return vm.reg1;
+     case 2: return vm.reg2;
+     case 3: return vm.reg3;
+     case 4: return ptr+1;
+     case 5: return ptr-1;
+     case 6: return ptr;
+     case 7: return ptr-2;
+     case 8: return ptr-1-vm.ireg;
+     default: assert(0);
+   }
 }
     
 uint64_t getImmed(uint8_t *op) {
-   // it is the first 8 bytes
+   // if (!*((uint64_t *)(op+11))) return 0;
    uint64_t res = 0;
    for (int i = 0; i < 8; i++) {
      res = (res<<8) + op[11+i];
@@ -581,104 +481,58 @@ uint64_t getImmed(uint8_t *op) {
    return res;
 }
 
-void performFetch() {
-  vm.op = &vm.code[vm.pc*32];
-}
-
-void printOp() {
-  for (int i = 0; i < 32; i++) {
-    printf("%02x", vm.op[i]);
-  }
-  printf(" <- this is the op, immed %lx\n", getImmed(vm.op));
-}
-
-void performInit() {
-   vm.reg1 = 0;
-   vm.reg2 = 0;
-   vm.reg3 = 0;
-   vm.ireg = getImmed(vm.op);
-}
-
 uint8_t getHint(uint8_t n) {
         return vm.op[31-n];
 }
-
-void performRead1() {
-   vm.reg1 = readFrom(getHint(0));
-   // fprintf(stderr, "reg1 %lx\n", vm.reg1);
-}
-void performRead2() {
-   vm.reg2 = readFrom(getHint(1));
-}
-void performRead3() {
-   vm.reg3 = readFrom(getHint(2));
-   if (debug) fprintf(stderr, "reg3 %lx, hint %x\n", vm.reg3, getHint(2));
-}
-
-void performALU() {
-   vm.reg1 = handleALU(getHint(3), vm.reg1, vm.reg2, vm.reg3, vm.ireg);
-}
-
-void performWrite1() {
-        uint8_t target = getHint(4);
-        uint8_t hint = getHint(5);
-        uint64_t v;
-        if (debug) fprintf(stderr, "target %d, hint %x\n", target, hint);
-        // printf("reg1: %ld\n", vm.reg1);
-        if (target == 1) v = vm.reg1;
-        else if (target == 2) v = vm.reg2;
-        else if (target == 3) v = vm.reg3;
-        else assert(0);
-        writeStuff(hint, v);
-}
-
-void performWrite2() {
-        uint8_t target = getHint(6);
-        uint8_t hint = getHint(7);
-        uint64_t v;
-        if (debug) fprintf(stderr, "target %d, hint %x\n", target, hint);
-        if (target == 1) v = vm.reg1;
-        else if (target == 2) v = vm.reg2;
-        else if (target == 3) v = vm.reg3;
-        else assert(0);
-        writeStuff(hint, v);
-}
-        
-void performUpdatePC() {
-    vm.pc = handlePointer(getHint(11), vm.pc);
-}
-
-void performUpdateStackPtr() {
-    // fprintf(stderr, "stack hint %x\n", getHint(9));
-    vm.stack_ptr = handlePointer(getHint(9), vm.stack_ptr);
-}
-
-void performUpdateCallPtr() {
-    vm.call_ptr = handlePointer(getHint(8), vm.call_ptr);
-}
-
-void performUpdateMemsize() {
-    if (getHint(12) == 1) vm.memsize = vm.memsize + vm.reg1;
-}
     
 void performStep() {
-        performFetch();
-        if (getHint(3) == 0x06) return;
-        performInit();
-        // printf("Reading\n");
-        performRead1();
-        performRead2();
-        performRead3();
-        performALU();
-        // printf("Writing 1\n");
-        performWrite1();
-        // printf("Writing 2\n");
-        performWrite2();
-        // printf("Updating\n");
-        performUpdatePC();
-        performUpdateStackPtr();
-        performUpdateCallPtr();
-        performUpdateMemsize();
+    vm.op = &vm.code[vm.pc*32];
+
+    if (getHint(3) == 0x06) return;
+
+/*    vm.reg1 = 0;
+    vm.reg2 = 0;
+    vm.reg3 = 0; */
+    vm.ireg = getImmed(vm.op);
+
+    uint8_t target;
+    uint8_t *hptr = vm.op+31;
+    uint64_t v;
+
+    vm.reg1 = readFrom(*hptr--);
+    vm.reg2 = readFrom(*hptr--);
+    vm.reg3 = readFrom(*hptr--);
+
+    // hint = getHint(3);
+    if (*hptr) vm.reg1 = handleALU(*hptr, vm.reg1, vm.reg2, vm.reg3, vm.ireg);
+    hptr -= 2;
+
+    if (*hptr) {
+        target = hptr[1];
+        if (target == 1) v = vm.reg1;
+        else if (target == 2) v = vm.reg2;
+        else if (target == 3) v = vm.reg3;
+        else assert(0);
+        writeStuff(*hptr, v);
+    }
+    hptr -= 2;
+    
+    // hint = getHint(7);
+    if (*hptr) {
+           target = hptr[1];
+           if (target == 1) v = vm.reg1;
+           else if (target == 2) v = vm.reg2;
+           else if (target == 3) v = vm.reg3;
+           else assert(0);
+           writeStuff(*hptr, v);
+    }
+    hptr--;
+
+    vm.call_ptr = handlePointer(*hptr--, vm.call_ptr);
+    vm.stack_ptr = handlePointer(*hptr--, vm.stack_ptr);
+    hptr--;
+    vm.pc = handlePointer(*hptr--, vm.pc);
+    if (*hptr) vm.memsize = vm.memsize + vm.reg1;
 }
 
 void init() {
@@ -693,12 +547,6 @@ void init() {
   vm.inputsize = malloc(sizeof(uint64_t)*1024);
   vm.inputname = malloc(sizeof(uint64_t*)*1024);
   vm.inputdata = malloc(sizeof(uint64_t*)*1024);
-  
-/*  vm.reg1;
-  uint64_t reg2;
-  uint64_t reg3;
-  uint64_t ireg;
-*/
 
   vm.stack_ptr = 0;
   vm.call_ptr = 0;
@@ -745,11 +593,11 @@ int main(int argc, char **argv) {
   while (1) {
     // printf("Step %ld, PC %ld\n", counter, vm.pc);
     performStep();
-    if (getHint(3) == 0x06) return;
+    if (getHint(3) == 0x06) return 0;
     // printOp();
     counter++;
     // fprintf(stderr, "Step %ld, PC %ld, Stack ptr %ld\n", counter, vm.pc, vm.stack_ptr);
-    if (counter % 1000000 == 0) fprintf(stderr, "Step %ld, PC %ld, Stack ptr %ld\n", counter, vm.pc, vm.stack_ptr);
+    if (counter % 10000000 == 0) fprintf(stderr, "Step %ld, PC %ld, Stack ptr %ld\n", counter, vm.pc, vm.stack_ptr);
     /* if (counter > 560010000) {
        debug = 1;
        fprintf(stderr, "Step %ld, PC %ld, Stack ptr %ld\n", counter, vm.pc, vm.stack_ptr);
