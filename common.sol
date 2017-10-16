@@ -63,7 +63,6 @@ contract REPLACEME, ALU {
         setMemory(loc, res);
         
     }
-    
     function writePosition(uint hint) internal view returns (uint) {
         assert(hint > 0);
         if (hint == 2) return getStackPtr()-getReg1();
