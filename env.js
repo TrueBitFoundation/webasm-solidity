@@ -17,12 +17,21 @@ function loadFile(fn) {
 // setup command line parameters, needs malloc
 function allocArgs(m, lst) {
     var heap8 = new Uint8Array(m.wasmMemory.buffer)
-    return lst.map(function (str) {
+    function setInt(ptr, i) {
+        heap8[ptr+0] = ptr&0xff
+        heap8[ptr+1] = (ptr>>8)&0xff
+        heap8[ptr+2] = (ptr>>16)&0xff
+        heap8[ptr+3] = (ptr>>24)&0xff
+    }
+    var argv = lst.map(function (str) {
         var ptr = env._malloc(str.length+1)
         for (var i = 0; i < str.length; i++) heap8[ptr+1] = str.charCodeAt(i)
         heap8[ptr+str.length] = 0
         return ptr
     })
+    var res = env._malloc(lst.length*4)
+    for (var i = 0; i < lst.length; i++) setInt(res+i*4, argv[i])
+    return res
 }
 
 // Make our runtime environment for the wasm module
@@ -78,12 +87,23 @@ function makeEnv(m) {
             env["invoke" + i.substr(7)] = makeDynamicCall(i)
         }
     }
+    
+    return env
+}
 
+function run(m, args) {
+    
+    var env = makeEnv(m)
+    
     // After building the environment, run the init functions
     if (m.__GLOBAL__I_000101) m.__GLOBAL__I_000101()
     if (m.__GLOBAL__sub_I_iostream_cpp) m.__GLOBAL__sub_I_iostream_cpp()
     if (m._initSystem) m._initSystem()
+    
+    var argv = allocArgs(m, args)
+
+    m._main(args.length, argv)
+
+    if (m._finalizeSystem) m._finalizeSystem()
 }
-
-
 
