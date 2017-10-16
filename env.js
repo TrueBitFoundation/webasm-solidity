@@ -14,6 +14,11 @@ function loadFile(fn) {
     input.data.push(buf)
 }
 
+function loadedFiles() {
+    input.name.push("")
+    input.data.push("")
+}
+
 // setup command line parameters, needs malloc
 function allocArgs(m, lst) {
     var heap8 = new Uint8Array(m.wasmMemory.buffer)
@@ -23,23 +28,26 @@ function allocArgs(m, lst) {
         heap8[ptr+2] = (ptr>>16)&0xff
         heap8[ptr+3] = (ptr>>24)&0xff
     }
+    var malloc = m.instance.exports._malloc
     var argv = lst.map(function (str) {
-        var ptr = env._malloc(str.length+1)
+        var ptr = malloc(str.length+1)
         for (var i = 0; i < str.length; i++) heap8[ptr+1] = str.charCodeAt(i)
         heap8[ptr+str.length] = 0
         return ptr
     })
-    var res = env._malloc(lst.length*4)
+    var res = malloc(lst.length*4)
     for (var i = 0; i < lst.length; i++) setInt(res+i*4, argv[i])
     return res
 }
 
+var module
+
 // Make our runtime environment for the wasm module
-function makeEnv(m, env) {
+function makeEnv(env) {
     function finalize() {
-        m._finalizeSystem()
+        module._finalizeSystem()
     }
-    env.getTotalMemory = function () { return m['TOTAL_MEMORY']; };
+    env.getTotalMemory = function () { return module['TOTAL_MEMORY']; };
     env.abort = function () { process.exit(-1) }
     env.exit = function () {
         finalize()
@@ -64,6 +72,7 @@ function makeEnv(m, env) {
     env._outputName = function (i,j,c) {
         var len = Math.max(input.name[i].length, j)
         var buf = Buffer.alloc(len, input.name[i])
+        console.log("doing output")
         input.name[i] = buf
         input.name[i][j] = c
     }
@@ -77,11 +86,11 @@ function makeEnv(m, env) {
     }
     
     function makeDynamicCall(i) {
-        return function () { m["dynCall"+i].apply(null, arguments) }
+        return function () { module["dynCall"+i].apply(null, arguments) }
     }
 
     // how to handle invokes? probably have to find all dynCalls
-    for (var i in m) {
+    for (var i in env) {
         if (i.substr(0,7) == "dynCall") {
             env["invoke" + i.substr(7)] = makeDynamicCall(i)
         }
@@ -89,23 +98,45 @@ function makeEnv(m, env) {
     
 }
 
-function run(binary, args) {
+var dta = JSON.parse(fs.readFileSync("info.json"))
+
+async function run(binary, args) {
+    var info = { env: {}, global: {NaN: 0/0, Infinity:1/0} }
+    // var sz = TOTAL_MEMORY / WASM_PAGE_SIZE
+    var sz = 256
+    info.env.table = new WebAssembly.Table({ 'initial': 10, 'maximum': 10, 'element': 'anyfunc' });
+    info.env.memory = new WebAssembly.Memory({ 'initial': sz, 'maximum': sz })
     
-    var info = { env = {} }
+    dta.map(e => { info[e[0]][e[1]] = function () {} })
     
-    var m = WebAssembly.instantiate(binary, info)
+    makeEnv(info.env)
     
-    makeEnv(m, info.env)
+    var m = await WebAssembly.instantiate(new Uint8Array(binary), info)
+    
+    m.wasmMemory = info.env.memory
+    
+    var e = m.instance.exports
     
     // After building the environment, run the init functions
-    if (m.__GLOBAL__I_000101) m.__GLOBAL__I_000101()
-    if (m.__GLOBAL__sub_I_iostream_cpp) m.__GLOBAL__sub_I_iostream_cpp()
-    if (m._initSystem) m._initSystem()
+    if (e.__GLOBAL__I_000101) e.__GLOBAL__I_000101()
+    if (e.__GLOBAL__sub_I_iostream_cpp) e.__GLOBAL__sub_I_iostream_cpp()
+    if (e._initSystem) e._initSystem()
     
     var argv = allocArgs(m, args)
 
-    m._main(args.length, argv)
+    e._main(args.length, argv)
 
-    if (m._finalizeSystem) m._finalizeSystem()
+    if (m._finalizeSystem) e._finalizeSystem()
+    
+    for (var i = 0; i < input.data.length; i++) {
+        if (input.data[i].length > 0) {
+            fs.writeFileSync(input.name[i], input.data[i])
+        }
+    }
+    
 }
+
+loadedFiles()
+
+run(fs.readFileSync("globals.wasm"), ["/home/truebit/program.wasm"])
 
