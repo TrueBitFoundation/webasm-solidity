@@ -35,8 +35,7 @@ function allocArgs(m, lst) {
 }
 
 // Make our runtime environment for the wasm module
-function makeEnv(m) {
-    var env = {}
+function makeEnv(m, env) {
     function finalize() {
         m._finalizeSystem()
     }
@@ -51,7 +50,7 @@ function makeEnv(m) {
     env.debugInt = function (i) { console.log(i) }
     
     env._inputName = function (i,j) {
-        return input.name[i][j]
+        return input.name[i][j] || 0
     }
     
     env._inputSize = function (i,j) {
@@ -88,12 +87,15 @@ function makeEnv(m) {
         }
     }
     
-    return env
 }
 
-function run(m, args) {
+function run(binary, args) {
     
-    var env = makeEnv(m)
+    var info = { env = {} }
+    
+    var m = WebAssembly.instantiate(binary, info)
+    
+    makeEnv(m, info.env)
     
     // After building the environment, run the init functions
     if (m.__GLOBAL__I_000101) m.__GLOBAL__I_000101()
