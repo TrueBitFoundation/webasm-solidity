@@ -11,7 +11,6 @@ solc --abi --optimize --overwrite --bin -o contracts getcode.sol
 solc --abi --optimize --overwrite --bin -o contracts instruction.sol
 solc --abi --optimize --overwrite --bin -o contracts tasks.sol
 solc --abi --optimize --overwrite --bin -o contracts interactive2.sol
-solc --abi --optimize --overwrite --bin -o contracts fs.sol
 solc --abi --optimize --overwrite --bin -o contracts interpreter.sol
 solc --abi --optimize --overwrite --bin -o contracts judge.sol
 

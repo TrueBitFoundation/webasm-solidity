@@ -52,10 +52,10 @@ contract Filesystem {
       return files[id].name;
    }
    
-   function getData(uint id) public view returns (uint[]) {
+   function getData(uint id) public view returns (bytes32[]) {
       File storage f = files[id];
-      uint[] memory res = new uint[](f.size);
-      for (uint i = 0; i < f.size; i++) res[i] = uint(f.data[0][i]);
+      bytes32[] memory res = new bytes32[](f.size);
+      for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
       return res;
    }
 
