@@ -7,6 +7,8 @@ var web3 = new Web3()
 var execFile = require('child_process').execFile
 var ipfsAPI = require('ipfs-api')
 
+var appFile = require("./appFile")
+
 var host = process.argv[2] || "localhost"
 
 // connect to ipfs daemon API server
@@ -38,9 +40,9 @@ var wasm_path = "ocaml-offchain/interpreter/wasm"
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
-        fs.writeFile(ifname, JSON.stringify(inp), function () {
+        fs.writeFile(ifname, inp, function () {
             // run init script
-            execFile(wasm_path, ["-m", "-init", "-input-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
+            execFile(wasm_path, ["-m", "-init", "-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
                 if (error) {
                     console.error('initialization error', stderr)
                     return

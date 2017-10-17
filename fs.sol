@@ -20,7 +20,7 @@ contract Filesystem {
    
    function createFile(string name) public returns (uint) {
       files.length++;
-      uint id = files.length;
+      uint id = files.length-1;
       File storage f = files[id];
       f.data.length = 2;
       f.data[0].length = 2;
@@ -30,6 +30,7 @@ contract Filesystem {
       f.data[1][0] = zero[1];
       f.size = 0;
       f.name = name;
+      return id;
    }
    
    function expand(uint id) internal {
@@ -39,18 +40,24 @@ contract Filesystem {
       }
       f.data[f.data.length-1][1] = zero[f.data.length-1];
       f.data.length++;
+      f.data[f.data.length-1].length = 1;
       f.data[f.data.length-1][0] = keccak256(f.data[f.data.length-2][0], f.data[f.data.length-2][1]);
    }
    
    function setSize(uint id, uint sz) public {
       File storage f = files[id];
-      while (2 ** f.data.length < sz) expand(id);
+      while (2 ** (f.data.length-1) < sz) expand(id);
       f.size = sz;
    }
    
    function getName(uint id) public view returns (string) {
       return files[id].name;
    }
+   
+   function getSize(uint id) public view returns (uint) {
+      return files[id].size;
+   }
+
    
    function getData(uint id) public view returns (bytes32[]) {
       File storage f = files[id];
