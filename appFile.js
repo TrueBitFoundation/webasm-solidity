@@ -23,11 +23,12 @@ function getFile(contract, id, cont) {
                 console.log(err)
                 return
             }
-            cont(inputToBuffer(arr))
+            cont({data:inputToBuffer(arr),name:name})
         })
     })
 }
 
+exports.inputToBuffer = inputToBuffer
 exports.getFile = getFile
 
 /*

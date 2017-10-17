@@ -15,7 +15,7 @@ interface Callback {
 contract Tasks is Filesystem {
     
     event Posted(address giver, bytes32 hash, string file, string input, int input_file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, int input_file);
     
     Interactive iactive;
     
@@ -58,12 +58,13 @@ contract Tasks is Filesystem {
     }
 
     function solve(uint id, bytes32 result, uint steps) public {
-        require(tasks[id].solver == 0);
-        tasks[id].solver = msg.sender;
-        tasks[id].result = result;
-        tasks[id].steps = steps;
-        tasks[id].state = 1;
-        Solved(id, result, steps, tasks[id].init, tasks[id].file, tasks[id].input);
+        Task storage t = tasks[id];
+        require(t.solver == 0);
+        t.solver = msg.sender;
+        t.result = result;
+        t.steps = steps;
+        t.state = 1;
+        Solved(id, result, steps, t.init, t.file, t.input, t.input_file);
     }
 
     function challenge(uint id) public {

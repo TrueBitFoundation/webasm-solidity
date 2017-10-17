@@ -65,16 +65,17 @@ io.on("connection", function(socket) {
     })
     socket.on("new_task", function (obj) {
         // store into IPFS, get ipfs address
-        ipfs.files.add([new Buffer(obj.task), new Buffer(JSON.stringify(obj.input))], function (err, res) {
+        var input_buffer = appFile.inputToBuffer(obj.input)
+        ipfs.files.add([new Buffer(obj.task), input_buffer], function (err, res) {
             if (err) {
                 console.log(err)
                 return
             }
             console.log(res)
             var filename = res[0].hash + ".wast"
-            var inputfilename = res[1].hash + ".json"
+            var inputfilename = res[1].hash + ".bin"
             // store into filesystem
-            initTask(filename, obj.task, inputfilename, obj.input, function (state) {
+            initTask(filename, obj.task, inputfilename, input_buffer, function (state) {
                 contract.add(state, res[0].hash, res[1].hash, send_opt, function (err, tr) {
                     if (err) console.log(err)
                     else {
@@ -102,7 +103,7 @@ function insertError(args, actor) {
 }
 
 function taskResult(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-result", "-input-file", ifilename, "-case", "0", filename], actor)
+    var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             console.error('stderr', stderr)
@@ -116,7 +117,7 @@ function taskResult(filename, ifilename, actor, cont) {
 
 function solveTask(obj, actor) {
     var filename = obj.filehash + ".wast"
-    var ifilename = obj.inputhash + ".json"
+    var ifilename = obj.inputhash + ".bin"
     // store into filesystem
     initTask(filename, obj.file, ifilename, obj.input, function (inithash) {
         if (inithash == obj.hash) {
@@ -143,7 +144,7 @@ var error_hash = "0x000000000000000000000000000000000000000000000000000000000000
 
 function verifyTask(obj, actor) {
     var filename = obj.filehash + ".wast"
-    var ifilename = obj.inputhash + ".json"
+    var ifilename = obj.inputhash + ".bin"
     // store into filesystem
     initTask(filename, obj.file, ifilename, obj.input, function (inithash) {
         if (inithash == obj.init) {
@@ -202,6 +203,11 @@ function getFile(fileid, cont) {
     })
 }
 
+function getInputFile(filehash, filenum, cont) {
+    if (filenum < 0) getFile(filehash, a => cont({data:a, name:filehash}))
+    else appFile.getFile(contract, filenum, cont)
+}
+
 var task_to_file = {}
 var task_to_steps = {}
 var task_to_inputfile = {}
@@ -215,13 +221,14 @@ contract.Posted("latest").watch(function (err, ev) {
     }
     var id = ev.args.id.toString()
     task_to_file[id] = ev.args.file + ".wast"
-    task_to_inputfile[id] = ev.args.input + ".json"
+    task_to_inputfile[id] = ev.args.input + ".bin"
     console.log(ev.args)
-    io.emit("posted", {giver: ev.args.giver, hash: ev.args.hash, filehash:ev.args.file, inputhash:ev.args.input, id:id})
+    io.emit("posted", {giver: ev.args.giver, hash: ev.args.hash, filehash:ev.args.file, inputhash:ev.args.input, inputfile: ev.args.input_file, id:id})
     // download file from IPFS
     getFile(ev.args.file, function (filestr) {
-        getFile(ev.args.input, function (input) {
-            solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id, input:JSON.parse(input), inputhash:ev.args.input}, solver)
+        getInputFile(ev.args.input, ev.args.input_file, function (input) {
+/*        getFile(ev.args.input, function (input) { */
+            solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id, input:input.data, inputhash:input.name}, solver)
         })
     })
 })
@@ -233,12 +240,12 @@ contract.Solved("latest").watch(function (err, ev) {
     }
     console.log("solved", ev.args)
     var id = ev.args.id.toString()
-    io.emit("solved", {hash: ev.args.hash, filehash:ev.args.file, init: ev.args.init, id:id, inputhash:ev.args.input, steps:ev.args.steps.toString()})
+    io.emit("solved", {hash: ev.args.hash, filehash:ev.args.file, init: ev.args.init, id:id, inputhash:ev.args.input, inputfile: ev.args.input_file, steps:ev.args.steps.toString()})
     task_to_file[id] = ev.args.file + ".wast"
-    task_to_inputfile[id] = ev.args.input + ".json"
+    task_to_inputfile[id] = ev.args.input + ".bin"
     getFile(ev.args.file, function (filestr) {
-        getFile(ev.args.input, function (input) {
-            verifyTask({hash: ev.args.hash, file: filestr, filehash:ev.args.file, init: ev.args.init, id:id, input:JSON.parse(input), inputhash:ev.args.input,
+        getInputFile(ev.args.input, ev.args.input_file, function (input) {
+            verifyTask({hash: ev.args.hash, file: filestr, filehash:ev.args.file, init: ev.args.init, id:id, input:input.data, inputhash:input.name,
                         steps:ev.args.steps.toString()}, verifier)
         })
     })
@@ -247,7 +254,7 @@ contract.Solved("latest").watch(function (err, ev) {
 var challenges = {}
 
 function getLocation(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-location", place, "-case", "0", fname], actor)
+    var args = insertError(["-m", "-file", ifname, "-location", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else {
@@ -258,7 +265,7 @@ function getLocation(fname, ifname, place, actor, cont) {
 }
 
 function getStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-step", place, "-case", "0", fname], actor)
+    var args = insertError(["-m", "-file", ifname, "-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
@@ -266,7 +273,7 @@ function getStep(fname, ifname, place, actor, cont) {
 }
 
 function getErrorStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-error-step", place, "-case", "0", fname], actor)
+    var args = insertError(["-m", "-file", ifname, "-error-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
@@ -274,7 +281,7 @@ function getErrorStep(fname, ifname, place, actor, cont) {
 }
 
 function getFinality(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-input-file", ifname, "-final", place, "-case", "0", fname], actor)
+    var args = insertError(["-m", "-file", ifname, "-final", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr', stderr)
         else cont(JSON.parse(stdout))
