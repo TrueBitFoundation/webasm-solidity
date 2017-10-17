@@ -212,6 +212,35 @@ uint64_t loadX(uint8_t *mem, uint64_t addr, uint64_t hint) {
         return load(mem, addr, (hint >> 4)&0x3, (hint >> 1)&0x7, (hint&0x1) == 1);
 }
 
+struct vm_t {
+  uint64_t reg1;
+  uint64_t reg2;
+  uint64_t reg3;
+  uint64_t ireg;
+  
+  uint8_t *op;
+  
+  uint64_t stack_ptr;
+  uint64_t call_ptr;
+  uint64_t pc;
+  uint64_t memsize;
+  
+  uint64_t *globals;
+  uint64_t *stack;
+  uint64_t *callstack;
+  uint64_t *memory;
+  uint64_t *calltable;
+  uint64_t *calltypes;
+  
+  uint64_t *inputsize;
+  uint8_t **inputname;
+  uint8_t **inputdata;
+
+  uint8_t *code;
+};
+
+
+
 int debug = 0;
 
 uint64_t handleALU(uint8_t hint, uint64_t r1, uint64_t r2, uint64_t r3, uint64_t ireg) {
@@ -332,33 +361,6 @@ uint64_t handleALU(uint8_t hint, uint64_t r1, uint64_t r2, uint64_t r3, uint64_t
      }
      return res;
 }
-
-struct vm_t {
-  uint64_t reg1;
-  uint64_t reg2;
-  uint64_t reg3;
-  uint64_t ireg;
-  
-  uint8_t *op;
-  
-  uint64_t stack_ptr;
-  uint64_t call_ptr;
-  uint64_t pc;
-  uint64_t memsize;
-  
-  uint64_t *globals;
-  uint64_t *stack;
-  uint64_t *callstack;
-  uint64_t *memory;
-  uint64_t *calltable;
-  uint64_t *calltypes;
-  
-  uint64_t *inputsize;
-  uint8_t **inputname;
-  uint8_t **inputdata;
-
-  uint8_t *code;
-};
 
 struct vm_t vm;
 
