@@ -9,13 +9,13 @@ interface Interactive {
 }
 
 interface Callback {
-    function solved(bytes32 result) public;
+    function solved(uint id, bytes32 result, bytes32 file) public;
 }
 
 contract Tasks is Filesystem {
     
-    event Posted(address giver, bytes32 hash, string file, string input, int input_file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, int input_file);
+    event Posted(address giver, bytes32 hash, string file, string input, uint input_file, uint id);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, uint input_file);
     
     Interactive iactive;
     
@@ -32,12 +32,14 @@ contract Tasks is Filesystem {
         bytes32 init;
         string file; // currently ipfs hash
         string input; // also ipfs hash
-        int input_file; // get file from the filesystem
+        uint input_file; // get file from the filesystem
         
         address solver;
         bytes32 result;
         uint steps;
         uint state;
+        
+        bytes32 output_file;
     }
     
     Task[] public tasks;
@@ -45,15 +47,15 @@ contract Tasks is Filesystem {
     mapping (bytes32 => uint) challenges;
     
     function add(bytes32 init, string file, string input) public returns (uint) {
-        tasks.push(Task(msg.sender, init, file, input, -1, 0, 0, 0, 0));
-        Posted(msg.sender, init, file, input, -1, tasks.length-1);
+        tasks.push(Task(msg.sender, init, file, input, 0, 0, 0, 0, 0, 0));
+        Posted(msg.sender, init, file, input, 0, tasks.length-1);
         return tasks.length-1;
     }
     
     // Perhaps it should lock the file?
     function addWithFile(bytes32 init, string file, uint input_file) public returns (uint) {
-        tasks.push(Task(msg.sender, init, file, "", int(input_file), 0, 0, 0, 0));
-        Posted(msg.sender, init, file, "", int(input_file), tasks.length-1);
+        tasks.push(Task(msg.sender, init, file, "", input_file, 0, 0, 0, 0, 0));
+        Posted(msg.sender, init, file, "", input_file, tasks.length-1);
         return tasks.length-1;
     }
 
@@ -89,7 +91,7 @@ contract Tasks is Filesystem {
         Task storage t = tasks[id];
         require(t.state == 1);
         t.state = 3;
-        Callback(t.giver).solved(t.result);
+        Callback(t.giver).solved(id, t.result, t.output_file);
     }
 
 }

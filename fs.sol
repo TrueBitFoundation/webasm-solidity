@@ -1,15 +1,20 @@
 pragma solidity ^0.4.16;
 
+interface Consumer {
+   function consume(uint id, bytes32[] dta) public;
+}
+
 /* Calculate a merkle tree in solidity */
 
 contract Filesystem {
    bytes32[] zero;
    struct File {
      uint size;
+     uint bytesize;
      bytes32[][] data;
      string name;
    }
-   File[] files;
+   mapping (uint => File) files;
    function Filesystem() public {
       zero.length = 32;
       zero[0] = bytes32(0);
@@ -18,9 +23,19 @@ contract Filesystem {
       }
    }
    
-   function createFile(string name) public returns (uint) {
-      files.length++;
-      uint id = files.length-1;
+   function createFileWithContents(string name, uint nonce, bytes32[] arr, uint sz) public returns (uint) {
+      uint id = createFile(name, nonce);
+      setSize(id, arr.length);
+      setLeafs(id, arr, 0, arr.length);
+      setByteSize(id, sz);
+   }
+   
+   function calcId(uint nonce) public view returns (uint) {
+         return uint(keccak256(msg.sender, nonce));
+   }
+
+   function createFile(string name, uint nonce) public returns (uint) {
+      uint id = uint(keccak256(msg.sender, nonce));
       File storage f = files[id];
       f.data.length = 2;
       f.data[0].length = 2;
@@ -58,14 +73,28 @@ contract Filesystem {
       return files[id].size;
    }
 
-   
+   function getByteSize(uint id) public view returns (uint) {
+      return files[id].bytesize;
+   }
+
+   function setByteSize(uint id, uint sz) public returns (uint) {
+      files[id].bytesize = sz;
+   }
+
    function getData(uint id) public view returns (bytes32[]) {
       File storage f = files[id];
       bytes32[] memory res = new bytes32[](f.size);
       for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
       return res;
    }
-
+   
+   function forwardData(uint id, address a) public {
+      File storage f = files[id];
+      bytes32[] memory res = new bytes32[](f.size);
+      for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
+      Consumer(a).consume(id, res);
+   }
+   
    function getRoot(uint id) public view returns (bytes32) {
       File storage f = files[id];
       return f.data[f.data.length-1][0];
@@ -73,6 +102,9 @@ contract Filesystem {
    function getLeaf(uint id, uint loc) public view returns (bytes32) {
       File storage f = files[id];
       return f.data[0][loc];
+   }
+   function setLeafs(uint id, bytes32[] arr, uint loc, uint len) public {
+      for (uint i = 0; i < len; i++) setLeaf(id, loc+i, arr[i]);
    }
    function setLeaf(uint id, uint loc, bytes32 v) public {
       File storage f = files[id];
