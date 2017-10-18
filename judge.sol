@@ -45,4 +45,11 @@ contract Judge is CommonOnchain {
         require(m.op == 0x0000000000000000000000000000000000000000040006060001000106000000);
         return 1;
     }
+    
+    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, uint loc) public returns (bool) {
+        setVM2(roots, pointers);
+        proof = _proof;
+        return state == hashVM() && vm_r.input_data == getRoot(loc);
+    }
+    
 }

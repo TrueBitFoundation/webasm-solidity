@@ -7,6 +7,7 @@ interface JudgeInterface {
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
     function judgeFinality(bytes32[13] res, bytes32[] _proof,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
+    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
 }
 
 contract Interactive2 {
@@ -262,6 +263,10 @@ contract Interactive2 {
         judge.judge(r.result, r.phase, proof, vm, op, regs, roots, pointers);
         WinnerSelected(id);
         r.winner = r.challenger;
+    }
+
+    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool) {
+        return judge.checkFileProof(state, roots, pointers, proof, loc);
     }
 
 }
