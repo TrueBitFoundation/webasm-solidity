@@ -47,14 +47,14 @@ contract Tasks is Filesystem {
     mapping (bytes32 => uint) challenges;
     
     function add(bytes32 init, string file, string input) public returns (uint) {
-        tasks.push(Task(msg.sender, init, file, input, 0, 0, 0, 0, 0));
+        tasks.push(Task(msg.sender, init, file, input, 0, 0, 0, 0, 0, 0));
         Posted(msg.sender, init, file, input, 0, tasks.length-1);
         return tasks.length-1;
     }
     
     // Perhaps it should lock the file?
     function addWithFile(bytes32 init, string file, uint input_file) public returns (uint) {
-        tasks.push(Task(msg.sender, init, file, "", input_file, 0, 0, 0, 0));
+        tasks.push(Task(msg.sender, init, file, "", input_file, 0, 0, 0, 0, 0));
         Posted(msg.sender, init, file, "", input_file, tasks.length-1);
         return tasks.length-1;
     }

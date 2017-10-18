@@ -1,5 +1,9 @@
 pragma solidity ^0.4.16;
 
+interface Consumer {
+   function consume(uint id, bytes32[] dta) public;
+}
+
 /* Calculate a merkle tree in solidity */
 
 contract Filesystem {
@@ -83,7 +87,14 @@ contract Filesystem {
       for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
       return res;
    }
-
+   
+   function forwardData(uint id, address a) public {
+      File storage f = files[id];
+      bytes32[] memory res = new bytes32[](f.size);
+      for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
+      Consumer(a).consume(id, res);
+   }
+   
    function getRoot(uint id) public view returns (bytes32) {
       File storage f = files[id];
       return f.data[f.data.length-1][0];
