@@ -9,7 +9,7 @@ interface Interactive {
 }
 
 interface Callback {
-    function solved(bytes32 result) public;
+    function solved(uint id, bytes32 result, bytes32 file) public;
 }
 
 contract Tasks is Filesystem {
@@ -38,6 +38,8 @@ contract Tasks is Filesystem {
         bytes32 result;
         uint steps;
         uint state;
+        
+        bytes32 output_file;
     }
     
     Task[] public tasks;
@@ -89,7 +91,7 @@ contract Tasks is Filesystem {
         Task storage t = tasks[id];
         require(t.state == 1);
         t.state = 3;
-        Callback(t.giver).solved(t.result);
+        Callback(t.giver).solved(id, t.result, t.output_file);
     }
 
 }
