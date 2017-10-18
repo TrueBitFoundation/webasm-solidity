@@ -36,6 +36,8 @@ var contract = contractABI.at(addresses.tasks)
 var iactiveABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")))
 var iactive = iactiveABI.at(addresses.interactive)
 
+appFile.configure(web3)
+
 var wasm_path = "ocaml-offchain/interpreter/wasm"
 
 function initTask(fname, task, ifname, inp, cont) {
@@ -134,6 +136,16 @@ function solveTask(obj, actor) {
                 else {
                     console.log("Success", tr)
                     io.emit("solve_success", tr)
+                    fs.access("blockchain.out", fs.constants.R_OK, function (err) {
+                        if (!err) {
+                            fs.readFile("blockchain.out", function (err, buf) {
+                                if (err) console.log(err)
+                                else appFile.createFile(contract, "task.out", buf, function (id) {
+                                    console.log("Uploaded file ", id.toString(16))
+                                })
+                            })
+                        }
+                    })
                 }
             })
         })
@@ -204,7 +216,7 @@ function getFile(fileid, cont) {
 }
 
 function getInputFile(filehash, filenum, cont) {
-    if (filenum < 0) getFile(filehash, a => cont({data:a, name:filehash}))
+    if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
 
