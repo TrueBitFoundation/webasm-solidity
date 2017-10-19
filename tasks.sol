@@ -87,10 +87,11 @@ contract Tasks is Filesystem {
         return challenges[uniq];
     }
     
-    function finalize(uint id) public {
+    function finalize(uint id, uint output) public {
         Task storage t = tasks[id];
         require(t.state == 1);
         t.state = 3;
+        t.output_file = bytes32(output);
         Callback(t.giver).solved(id, t.result, t.output_file);
     }
 

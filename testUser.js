@@ -20,7 +20,7 @@ var contract = web3.eth.contract(abi)
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 contract.new(addresses.tasks,
-             "QmaegMUJDipLtLpkzoYjhvpTmAn9yHxnySSvN8Eqcrnv5f",
+             "QmNmUEKZfMYxqiacPYxxSWXhpFD4JSKvuyk5ng967C8WrM",
              "0x82a518ccc40c9b6118493c3c46add30e49261ac0daf1adac2f8e6f85a9206741",
              {from: base, data: '0x' + code, gas: '5000000'},
              function (e, contract) {
@@ -29,6 +29,7 @@ contract.new(addresses.tasks,
         console.log("made contract")
         // contract.debugStuff.call(send_opt, (err,args) => console.log(args[0].toString(16), args[1].toString(16)))
         contract.doStuff(send_opt, console.log)
+        contract.Success("latest").watch(console.log)
     }
 })
 

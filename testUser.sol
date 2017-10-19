@@ -17,6 +17,8 @@ contract TestUser {
    
    bytes32 val;
    
+   event Success();
+   
    function TestUser(address tb, string code_hash, bytes32 init_hash) public {
       truebit = TrueBit(tb);
       code = code_hash;
@@ -44,6 +46,7 @@ contract TestUser {
    
    function consume(uint file_id, bytes32[] arr) public {
       val = arr[2];
+      Success();
    }
    
    // this is the callback name

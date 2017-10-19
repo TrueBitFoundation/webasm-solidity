@@ -38,7 +38,8 @@ var iactive = iactiveABI.at(addresses.interactive)
 
 appFile.configure(web3)
 
-var wasm_path = "ocaml-offchain/interpreter/wasm"
+// var wasm_path = "ocaml-offchain/interpreter/wasm"
+var wasm_path = "../webasm/interpreter/wasm"
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
@@ -142,6 +143,9 @@ function solveTask(obj, actor) {
                                 if (err) console.log(err)
                                 else appFile.createFile(contract, "task.out", buf, function (id) {
                                     console.log("Uploaded file ", id.toString(16))
+                                    contract.finalize(obj.id, id, send_opt, function (err, res) {
+                                        console.log("finalized task", err, res)
+                                    })
                                 })
                             })
                         }
