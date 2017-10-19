@@ -20,8 +20,8 @@ var contract = web3.eth.contract(abi)
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 contract.new(addresses.tasks,
-             "QmNmUEKZfMYxqiacPYxxSWXhpFD4JSKvuyk5ng967C8WrM",
-             "0x6a2ff41d3d4ddade5937b0c69d5add2028d5555ee1bd69c3106b3464914574ff",
+             "QmeDCHMmkagYPhHJc5GwhWQqugDFQj8zQuBRKNoxFoDYLF",
+             "0x60c6604347f37fe76b02c9be08f96f87bb586016b75e076525e96311abeafb24",
              {from: base, data: '0x' + code, gas: '5000000'},
              function (e, contract) {
     if (e) console.error(e)

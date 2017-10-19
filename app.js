@@ -117,7 +117,7 @@ function ensureInputFile(filename, ifilename, actor, cont) {
             return
         }
         console.log('input file proof', stdout)
-        cont(JSON.parse(stdout))
+        if (stdout) cont(JSON.parse(stdout))
     })
 }
 

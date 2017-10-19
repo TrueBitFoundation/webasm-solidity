@@ -15,7 +15,7 @@ function byte(x) {
 }
 
 function bufferToInput(buf) {
-    var len = Math.floor(buf.length/32) + 1
+    var len = buf.length
     var res = []
     for (var i = 0; i < len; i++) {
         res.push("0x"+byte(buf[i]))
@@ -47,8 +47,7 @@ function getFile(contract, id, cont) {
 
 function setFile(contract, id, buf, cont) {
     var arr = bufferToInput(buf)
-        if (err) console.log(err)
-        else contract.setSize(id, arr.length, send_opt, function (err) {
+    contract.setSize(id, arr.length, send_opt, function (err) {
             if (err) console.log(err)
             else contract.setLeafs(id, arr, 0, arr.length, send_opt, function (err) {
                 if (err) console.log(err)
@@ -63,6 +62,7 @@ function createFile(contract, name, buf, cont) {
     var arr = bufferToInput(buf)
     var nonce = web3.eth.getTransactionCount(web3.eth.coinbase)
     contract.createFileWithContents(name, nonce, arr, buf.length, send_opt, function (err) {
+        console.log("created file with size ", arr.length)
         if (err) console.log(err)
         else contract.calcId(nonce, send_opt, function (err, id) {
             if (err) console.log(err)
