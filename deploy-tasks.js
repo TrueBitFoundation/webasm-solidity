@@ -15,8 +15,8 @@ var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 var code2 = fs.readFileSync("contracts/Interactive2.bin")
 var abi2 = JSON.parse(fs.readFileSync("contracts/Interactive2.abi"))
 
-var code3 = fs.readFileSync("contracts/Instruction.bin")
-var abi3 = JSON.parse(fs.readFileSync("contracts/Instruction.abi"))
+var code3 = fs.readFileSync("contracts/Judge.bin")
+var abi3 = JSON.parse(fs.readFileSync("contracts/Judge.abi"))
 
 var send_opt = {from:base, gas: 4000000}
 
@@ -34,7 +34,7 @@ contract3.new({from: base, data: '0x' + code3, gas: '5000000'}, function (e, jud
                 contract.new(contr.address, {from: base, data: '0x' + code, gas: '4000000'}, function (e, contract){
                     if (e) console.error(e)
                     if (typeof contract.address !== 'undefined') {
-                        console.log('{ "interactive": "' + contr.address + '", "tasks" : "' + contract.address + '" }')
+                        console.log('{ "judge": "' + judge.address + '", "interactive": "' + contr.address + '", "tasks" : "' + contract.address + '" }')
                         process.exit(0)
                     }
                 })

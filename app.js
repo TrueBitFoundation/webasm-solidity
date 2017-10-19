@@ -7,7 +7,7 @@ var web3 = new Web3()
 var execFile = require('child_process').execFile
 var ipfsAPI = require('ipfs-api')
 
-var appFile = require("./appFile")
+var appFile = require("./appFileBytes")
 
 var host = process.argv[2] || "localhost"
 
@@ -36,9 +36,13 @@ var contract = contractABI.at(addresses.tasks)
 var iactiveABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")))
 var iactive = iactiveABI.at(addresses.interactive)
 
+var judgeABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")))
+var judge = judgeABI.at(addresses.judge)
+
 appFile.configure(web3)
 
 var wasm_path = "ocaml-offchain/interpreter/wasm"
+// var wasm_path = "../webasm/interpreter/wasm"
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
@@ -50,7 +54,7 @@ function initTask(fname, task, ifname, inp, cont) {
                     return
                 }
                 console.log('initializing task', stdout)
-                cont(JSON.parse(stdout))
+                cont(JSON.parse(stdout).vm.code)
             })
         })
     })
@@ -104,8 +108,34 @@ function insertError(args, actor) {
     return args
 }
 
+function ensureInputFile(filename, ifilename, actor, cont) {
+    var args = insertError(["-m", "-file", ifilename, "-input-proof", ifilename, "-case", "0", filename], actor)
+    console.log("ensure args", args)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
+        if (error) {
+            console.error('stderr', stderr)
+            return
+        }
+        console.log('input file proof', stdout)
+        if (stdout) cont(JSON.parse(stdout))
+    })
+}
+
+function ensureOutputFile(filename, ifilename, actor, cont) {
+    var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
+        if (error) {
+            console.error('stderr', stderr)
+            return
+        }
+        console.log('output file proof', stdout)
+        cont(JSON.parse(stdout))
+    })
+}
+
 function taskResult(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
+    console.log("task args", args)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             console.error('stderr', stderr)
@@ -127,8 +157,9 @@ function solveTask(obj, actor) {
         }
         else {
             console.log("Initial hash was wrong")
-            return
+            // return
         }
+
         taskResult(filename, ifilename, actor, function (res) {
             task_to_steps[obj.id] = res.steps
             contract.solve(obj.id, res.result, res.steps, send_opt, function (err, tr) {
@@ -142,6 +173,14 @@ function solveTask(obj, actor) {
                                 if (err) console.log(err)
                                 else appFile.createFile(contract, "task.out", buf, function (id) {
                                     console.log("Uploaded file ", id.toString(16))
+                                    contract.getRoot.call(id, function (err,res) {
+                                        console.log("output file root", res)
+                                    })
+                                    ensureOutputFile(filename, ifilename, actor, function (proof) {
+                                        contract.finalize(obj.id, id, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err, res) {
+                                            console.log("finalized task", err, res)
+                                        })
+                                    })
                                 })
                             })
                         }
@@ -216,8 +255,29 @@ function getFile(fileid, cont) {
 }
 
 function getInputFile(filehash, filenum, cont) {
+    console.log("Getting input file ", filehash, filenum.toString(16))
     if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
+}
+
+function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
+    console.log("Getting input file ", filehash, filenum.toString(16))
+    if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
+    else appFile.getFile(contract, filenum, function (obj) {
+        initTask(wast_file+".wast", wast_contents, obj.name+".bin", obj.data, function () {
+            ensureInputFile(wast_file+".wast", obj.name+".bin", verifier, function (proof) {
+                /*
+                console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
+                judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
+                    console.log("calculated hash", err, res)
+                })*/
+                contract.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err,tx) {
+                    console.log("ensure input", err, tx)
+                })
+            })
+            cont(obj)
+        })
+    })
 }
 
 var task_to_file = {}
@@ -238,8 +298,7 @@ contract.Posted("latest").watch(function (err, ev) {
     io.emit("posted", {giver: ev.args.giver, hash: ev.args.hash, filehash:ev.args.file, inputhash:ev.args.input, inputfile: ev.args.input_file, id:id})
     // download file from IPFS
     getFile(ev.args.file, function (filestr) {
-        getInputFile(ev.args.input, ev.args.input_file, function (input) {
-/*        getFile(ev.args.input, function (input) { */
+        getAndEnsureInputFile(ev.args.input, ev.args.input_file, ev.args.file, filestr, id, function (input) {
             solveTask({giver: ev.args.giver, hash: ev.args.hash, file:filestr, filehash:ev.args.file, id:id, input:input.data, inputhash:input.name}, solver)
         })
     })
@@ -409,6 +468,15 @@ var phase_table = {
     9: "stack_ptr",
     10: "call_ptr",
     11: "memsize",
+}
+
+function getRoots(vm) {
+    return [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
+                            vm.input_size, vm.input_name, vm.input_data]
+}
+
+function getPointers(vm) {
+    return [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
 }
 
 function submitProof(id, idx1, phase) {
