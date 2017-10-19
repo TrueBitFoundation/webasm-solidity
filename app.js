@@ -41,8 +41,8 @@ var judge = judgeABI.at(addresses.judge)
 
 appFile.configure(web3)
 
-// var wasm_path = "ocaml-offchain/interpreter/wasm"
-var wasm_path = "../webasm/interpreter/wasm"
+var wasm_path = "ocaml-offchain/interpreter/wasm"
+// var wasm_path = "../webasm/interpreter/wasm"
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
