@@ -21,7 +21,7 @@ var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 contract.new(addresses.tasks,
              "QmNmUEKZfMYxqiacPYxxSWXhpFD4JSKvuyk5ng967C8WrM",
-             "0x82a518ccc40c9b6118493c3c46add30e49261ac0daf1adac2f8e6f85a9206741",
+             "0x6a2ff41d3d4ddade5937b0c69d5add2028d5555ee1bd69c3106b3464914574ff",
              {from: base, data: '0x' + code, gas: '5000000'},
              function (e, contract) {
     if (e) console.error(e)
