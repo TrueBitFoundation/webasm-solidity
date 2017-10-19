@@ -32,6 +32,16 @@ contract TestUser {
       uint id = truebit.addWithFile(init, code, file); // it should then call back
    }
    
+   function debugStuff() public returns (uint, uint) {
+      bytes32[] memory arr = new bytes32[](5);
+      arr[0] = bytes32(msg.sender);
+      arr[1] = block.blockhash(block.number-1);
+      uint file = truebit.createFileWithContents("test.data", nonce, arr, 100);
+      nonce++;
+      uint id = truebit.addWithFile(init, code, file); // it should then call back
+      return (file, id);
+   }
+   
    function consume(uint file_id, bytes32[] arr) public {
       val = arr[2];
    }

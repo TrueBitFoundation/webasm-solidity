@@ -28,6 +28,7 @@ contract Filesystem {
       setSize(id, arr.length);
       setLeafs(id, arr, 0, arr.length);
       setByteSize(id, sz);
+      return id;
    }
    
    function calcId(uint nonce) public view returns (uint) {

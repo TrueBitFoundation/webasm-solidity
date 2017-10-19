@@ -16,6 +16,7 @@
     (call $outputName (i32.const 0) (i32.const 7) (i32.const 97))
     (call $outputName (i32.const 0) (i32.const 8) (i32.const 105))
     (call $outputName (i32.const 0) (i32.const 9) (i32.const 110))
+    (call $outputName (i32.const 0) (i32.const 10) (i32.const 0))
     (call $outputSize (i32.const 0) (i32.const 100))
   )
 )

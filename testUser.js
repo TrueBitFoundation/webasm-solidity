@@ -19,9 +19,16 @@ var contract = web3.eth.contract(abi)
 
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
-contract.new({from: base, data: '0x' + code, gas: '5000000'}, addresses.tasks, function (e, judge) {
+contract.new(addresses.tasks,
+             "QmaegMUJDipLtLpkzoYjhvpTmAn9yHxnySSvN8Eqcrnv5f",
+             "0x82a518ccc40c9b6118493c3c46add30e49261ac0daf1adac2f8e6f85a9206741",
+             {from: base, data: '0x' + code, gas: '5000000'},
+             function (e, contract) {
     if (e) console.error(e)
-    if (typeof judge.address !== 'undefined') {
+    else if (typeof contract.address !== 'undefined') {
+        console.log("made contract")
+        // contract.debugStuff.call(send_opt, (err,args) => console.log(args[0].toString(16), args[1].toString(16)))
+        contract.doStuff(send_opt, console.log)
     }
 })
 

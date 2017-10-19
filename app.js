@@ -127,7 +127,7 @@ function solveTask(obj, actor) {
         }
         else {
             console.log("Initial hash was wrong")
-            return
+            // return
         }
         taskResult(filename, ifilename, actor, function (res) {
             task_to_steps[obj.id] = res.steps
@@ -216,6 +216,7 @@ function getFile(fileid, cont) {
 }
 
 function getInputFile(filehash, filenum, cont) {
+    console.log("Getting input file ", filehash, filenum.toString(16))
     if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
