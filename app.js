@@ -121,6 +121,18 @@ function ensureInputFile(filename, ifilename, actor, cont) {
     })
 }
 
+function ensureOutputFile(filename, ifilename, actor, cont) {
+    var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
+    execFile(wasm_path, args, function (error, stdout, stderr) {
+        if (error) {
+            console.error('stderr', stderr)
+            return
+        }
+        console.log('output file proof', stdout)
+        cont(JSON.parse(stdout))
+    })
+}
+
 function taskResult(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
     console.log("task args", args)
@@ -161,8 +173,13 @@ function solveTask(obj, actor) {
                                 if (err) console.log(err)
                                 else appFile.createFile(contract, "task.out", buf, function (id) {
                                     console.log("Uploaded file ", id.toString(16))
-                                    contract.finalize(obj.id, id, send_opt, function (err, res) {
-                                        console.log("finalized task", err, res)
+                                    contract.getRoot.call(id, function (err,res) {
+                                        console.log("output file root", res)
+                                    })
+                                    ensureOutputFile(filename, ifilename, actor, function (proof) {
+                                        contract.finalize(obj.id, id, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err, res) {
+                                            console.log("finalized task", err, res)
+                                        })
                                     })
                                 })
                             })
@@ -249,10 +266,11 @@ function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, 
     else appFile.getFile(contract, filenum, function (obj) {
         initTask(wast_file+".wast", wast_contents, obj.name+".bin", obj.data, function () {
             ensureInputFile(wast_file+".wast", obj.name+".bin", verifier, function (proof) {
+                /*
                 console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
                 judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
                     console.log("calculated hash", err, res)
-                })
+                })*/
                 contract.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err,tx) {
                     console.log("ensure input", err, tx)
                 })

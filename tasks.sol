@@ -104,11 +104,14 @@ contract Tasks is Filesystem {
         return challenges[uniq];
     }
     
-    function finalize(uint id, uint output) public {
+    function finalize(uint id, uint output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         require(t.state == 1);
         t.state = 3;
         t.output_file = bytes32(output);
+        require(iactive.checkFileProof(t.result, roots, pointers, proof, file_num));
+        require(getRoot(output) == proof[1] || getRoot(output) == proof[0]);
+        
         Callback(t.giver).solved(id, t.result, t.output_file);
     }
 
