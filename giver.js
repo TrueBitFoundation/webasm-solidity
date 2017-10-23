@@ -1,8 +1,10 @@
 
+var fs = require("fs")
 var common = require("./common")
 var appFile = common.appFile
 var ipfs = common.ipfs
 var send_opt = common.send_opt
+var contract = common.contract
 
 // Now the file names do not have to be special
 

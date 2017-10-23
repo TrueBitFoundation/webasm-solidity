@@ -11,3 +11,4 @@ common-onchain.sol
 *.out
 vm
 *.bin
+tmp.*

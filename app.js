@@ -4,16 +4,13 @@ var http = require('http').createServer()
 var io = require("socket.io")(http)
 var common = require("./common")
 var execFile = require('child_process').execFile
+var contract = common.contract
 
 function execInPath(fname, path_name) {
     execFile("node", [fname, path_name], (error, stdout, stderr) => {
-                if (error) {
-                    console.error('initialization error', stderr)
-                    return
-                }
-                console.log('initializing task', stdout)
-                cont(JSON.parse(stdout).vm.code)
-            })
+        if (stderr) console.error('error', stderr)
+        console.log('other output', stdout)
+    })
 }
 
 var solver = { error: false, error_location: 0 }
@@ -30,7 +27,7 @@ io.on("connection", function(socket) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
         if (!fs.existsSync(path)) fs.mkdirSync(path)
         fs.writeFileSync(path + "/task.wast", obj.task)
-        fs.writeFileSync(path + "/input.bin", JSON.strinfigy(obj.input))
+        fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
         execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
@@ -60,11 +57,12 @@ contract.Posted("latest").watch(function (err, ev) {
         filehash:ev.args.file,
         inputhash:ev.args.input,
         inputfile: ev.args.input_file,
+        actor: solver,
     }
     console.log(obj)
     io.emit("posted", obj)
 
-    fs.writeFileSync(path + "/solver.json", JSON.strinfigy(obj))
+    fs.writeFileSync(path + "/solver.json", JSON.stringify(obj))
     execInPath("solver.js", path)
 })
 
@@ -85,12 +83,13 @@ contract.Solved("latest").watch(function (err, ev) {
         filehash:ev.args.file,
         inputhash:ev.args.input,
         inputfile: ev.args.input_file,
-        steps:ev.args.steps.toString()
+        steps:ev.args.steps.toString(),
+        actor: verifier,
     }
     var id = ev.args.id.toString()
     io.emit("solved", obj)
-    fs.writeFileSync(path + "/solver.json", JSON.strinfigy(obj))
-    execInPath("solver.js", path)
+    fs.writeFileSync(path + "/verifier.json", JSON.stringify(obj))
+    execInPath("verifier.js", path)
 /*
     task_to_file[id] = ev.args.file + ".wast"
     task_to_inputfile[id] = ev.args.input + ".bin"

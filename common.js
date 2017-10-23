@@ -47,12 +47,13 @@ var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"
 // var wasm_path = "../webasm/interpreter/wasm"
 
 // change current directory here?
-process.chdir(process.argv[2])
+if (process.argv[2]) process.chdir(process.argv[2])
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
         fs.writeFile(ifname, inp, function () {
             // run init script
+                console.log('checking executable', wasm_path)
             execFile(wasm_path, ["-m", "-init", "-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
                 if (error) {
                     console.error('initialization error', stderr)
@@ -105,6 +106,8 @@ function ensureOutputFile(filename, ifilename, actor, cont) {
     })
 }
 
+exports.ensureOutputFile = ensureOutputFile
+
 function taskResult(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
     console.log("task args", args)
@@ -118,10 +121,14 @@ function taskResult(filename, ifilename, actor, cont) {
     })
 }
 
+exports.taskResult = taskResult
+
 function getFile(fileid, cont) {
+    console.log("gettting file ", fileid)
     ipfs.get(fileid, function (err, stream) {
         if (err) {
             console.log(err)
+            process.exit(1)
             return
         }
         var chunks = []
@@ -140,7 +147,7 @@ exports.getFile = getFile
 
 function getInputFile(filehash, filenum, cont) {
     console.log("Getting input file ", filehash, filenum.toString(16))
-    if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
+    if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
 
@@ -148,10 +155,10 @@ exports.getInputFile = getInputFile
 
 function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
     console.log("Getting input file ", filehash, filenum.toString(16))
-    if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
+    if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, function (obj) {
-        initTask(wast_file+".wast", wast_contents, obj.name+".bin", obj.data, function () {
-            ensureInputFile(wast_file+".wast", obj.name+".bin", verifier, function (proof) {
+        initTask("task.wast", wast_contents, "input.bin", obj.data, function () {
+            ensureInputFile("task.wast", "input.bin", verifier, function (proof) {
                 /*
                 console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
                 judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
@@ -168,12 +175,6 @@ function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, 
 
 exports.getAndEnsureInputFile = getAndEnsureInputFile
 
-var task_to_file = {}
-var task_to_steps = {}
-var task_to_inputfile = {}
-
-var challenges = {}
-
 function getLocation(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-location", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
@@ -185,6 +186,8 @@ function getLocation(fname, ifname, place, actor, cont) {
     })
 }
 
+exports.getLocation = getLocation
+
 function getStep(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
@@ -192,6 +195,8 @@ function getStep(fname, ifname, place, actor, cont) {
         else cont(JSON.parse(stdout))
     })
 }
+
+exports.getStep = getStep
 
 function getErrorStep(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-error-step", place, "-case", "0", fname], actor)
@@ -201,6 +206,8 @@ function getErrorStep(fname, ifname, place, actor, cont) {
     })
 }
 
+exports.getErrorStep = getErrorStep
+
 function getFinality(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-final", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
@@ -209,7 +216,7 @@ function getFinality(fname, ifname, place, actor, cont) {
     })
 }
 
-var phase_table = {
+exports.phase_table = {
     0: "fetch",
     1: "init",
     2: "reg1",
@@ -236,5 +243,6 @@ function getPointers(vm) {
 exports.appFile = appFile
 exports.ipfs = ipfs
 exports.send_opt = send_opt
-
+exports.contract = contract
+exports.iactive = iactive
 
