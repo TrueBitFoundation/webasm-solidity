@@ -5,6 +5,7 @@ var io = require("socket.io")(http)
 var common = require("./common")
 var execFile = require('child_process').execFile
 var contract = common.contract
+var iactive = common.iactive
 
 function execInPath(fname, path_name) {
     execFile("node", [fname, path_name], (error, stdout, stderr) => {
@@ -90,18 +91,96 @@ contract.Solved("latest").watch(function (err, ev) {
     io.emit("solved", obj)
     fs.writeFileSync(path + "/verifier.json", JSON.stringify(obj))
     execInPath("verifier.js", path)
-/*
-    task_to_file[id] = ev.args.file + ".wast"
-    task_to_inputfile[id] = ev.args.input + ".bin"
-    getFile(ev.args.file, function (filestr) {
-        getInputFile(ev.args.input, ev.args.input_file, function (input) {
-            verifyTask({hash: ev.args.hash, file: filestr, filehash:ev.args.file, init: ev.args.init, id:id, input:input.data, inputhash:input.name,
-                        steps:ev.args.steps.toString()}, verifier)
-        })
-    }) */
+})
+
+/// check verifier events
+
+iactive.Reported("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Reported ", ev)
+    io.emit("reply", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber(), hash:ev.arr[0]})
+})
+
+iactive.NeedErrorPhases("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Query ", ev)
+    io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber()})
+})
+
+iactive.PostedPhases("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Phases ", ev)
+    io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
 })
 
 
+iactive.SelectedErrorPhase("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Prover selected error phase ", ev)
+    io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+})
+
+/// solver events
+
+iactive.StartChallenge("latest").watch(function (err,ev) {
+    if (err) {
+        console.log(err)
+        return
+    }
+    console.log("Got challenge", ev)
+    io.emit("challenge", {
+            prover: ev.args.p,
+            challenger: ev.args.c,
+            uniq: ev.args.uniq,
+            init: ev.args.s,
+            result: ev.args.e,
+            size: ev.args.par.toNumber(),
+        })
+})
+
+iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
+    if (err) {
+        console.log(err)
+        return
+    }
+    console.log("Got finality challenge", ev)
+    io.emit("challenge", {
+            prover: ev.args.p,
+            challenger: ev.args.c,
+            uniq: ev.args.uniq,
+            init: ev.args.s,
+            result: ev.args.e,
+        })
+})
+
+function myId(id) {
+    return !!challenges[ev.id]
+}
+
+iactive.Queried("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Query ", ev)
+    io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber()})
+})
+
+iactive.PostedErrorPhases("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Error phases ", ev)
+    io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
+})
+
+iactive.SelectedPhase("latest").watch(function (err,ev) {
+    if (err) { console.log(err) ; return }
+    ev = ev.args
+    console.log("Challenger selected phase ", ev)
+    io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+})
 
 http.listen(22448, function(){
     console.log("listening on *:22448")

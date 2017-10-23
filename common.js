@@ -240,9 +240,13 @@ function getPointers(vm) {
     return [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
 }
 
+exports.getRoots = getRoots
+exports.getPointers = getPointers
+
 exports.appFile = appFile
 exports.ipfs = ipfs
 exports.send_opt = send_opt
 exports.contract = contract
 exports.iactive = iactive
+exports.base = base
 

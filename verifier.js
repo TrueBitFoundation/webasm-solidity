@@ -56,7 +56,7 @@ function verifyTask(obj, actor) {
     })
 }
 
-function replyPhases(idx1, arr) {
+function replyPhases(id, idx1, arr) {
     // Now we are checking the intermediate states
     common.getStep("task.wast", "input.bin", idx1, verifier, function (obj) {
         for (var i = 1; i < arr.length; i++) {
@@ -71,7 +71,7 @@ function replyPhases(idx1, arr) {
     })
 }
 
-function submitErrorProof(idx1, phase) {
+function submitErrorProof(id, idx1, phase) {
     // Now we are checking the intermediate states
     common.getStep("task.wast", "input.bin", idx1, verifier, function (obj) {
         var proof = obj[phase_table[phase]]
@@ -90,8 +90,10 @@ function submitErrorProof(idx1, phase) {
     })
 }
 
-function replyReported(idx1, idx2, otherhash) {
+function replyReported(id, idx1, idx2, otherhash) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
+    console.log("place", place, "steps", steps)
+    // process.exit(0)
     // Solver has posted too many steps
     if (steps < place) {
         iactive.query(id, idx1, idx2, 0, send_opt, function (err,tx) {
@@ -152,7 +154,7 @@ iactive.SelectedErrorPhase("latest").watch(function (err,ev) {
     if (challenge_id != ev.id.toString(16)) return
     console.log("Prover selected error phase ", ev)
     // io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
-    submitErrorProof(ev.idx1.toNumber(), ev.phase.toString())
+    submitErrorProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
 })
 
 iactive.StartChallenge("latest").watch(function (err,ev) {
@@ -161,7 +163,19 @@ iactive.StartChallenge("latest").watch(function (err,ev) {
         return
     }
     console.log("Got challenge", ev)
-    if (ev.args.c == base) challenge_id = ev.args.uniq
+    if (ev.args.c != base) return
+    console.log("Got challenge to our address", ev)
+    contract.queryChallenge.call(ev.args.uniq, function (err, id) {
+        if (err) {
+            console.log(err)
+            return
+        }
+        console.log("Got task id ", id)
+        var id = parseInt(id.toString(16),16)
+        if (task_id != id) return
+        challenge_id = ev.args.uniq
+        console.log("Got challenge that we are handling", ev)
+    })
 })
 
 iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
@@ -170,7 +184,17 @@ iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
         return
     }
     console.log("Got finality challenge", ev)
-    if (ev.args.c == base) challenge_id = ev.args.uniq
+    if (ev.args.c != base) return
+    contract.queryChallenge.call(ev.args.uniq, function (err, id) {
+        if (err) {
+            console.log(err)
+            return
+        }
+        console.log("Got task id ", id)
+        var id = parseInt(id.toString(16),16)
+        if (task_id != id) return
+        challenge_id = ev.args.uniq
+    })
 })
 
 

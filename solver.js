@@ -8,7 +8,7 @@ var contract = common.contract
 var iactive = common.iactive
 var base = common.base
 
-var id, solver, steps
+var task_id, solver, steps
 
 function solveTask(obj, actor) {
     // store into filesystem
@@ -52,7 +52,7 @@ function solveTask(obj, actor) {
     })
 }
 
-function replyChallenge(idx1, idx2) {
+function replyChallenge(id, idx1, idx2) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
     if (idx1 + 1 == idx2) {
         // Now we are sending the intermediate states
@@ -76,7 +76,7 @@ function replyChallenge(idx1, idx2) {
     })
 }
 
-function replyFinalityChallenge(idx1, idx2) {
+function replyFinalityChallenge(id, idx1, idx2) {
     // Now we are sending the intermediate states
     common.getFinality(fname, ifname, idx1, solver, function (obj) {
         iactive.callFinalityJudge(id, idx1, obj.location,
@@ -87,7 +87,7 @@ function replyFinalityChallenge(idx1, idx2) {
     })
 }
 
-function replyErrorPhases(idx1, arr) {
+function replyErrorPhases(id, idx1, arr) {
     // Now we are checking the intermediate states
     common.getErrorStep("task.wast", "input.bin", idx1, solver, function (obj) {
         for (var i = 1; i < obj.states.length; i++) {
@@ -107,7 +107,7 @@ function replyErrorPhases(idx1, arr) {
 }
 
 
-function submitProof(idx1, phase) {
+function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
     common.getStep("task.wast", "input.bin", idx1, solver, function (obj) {
         var proof = obj[common.phase_table[phase]]
@@ -149,7 +149,9 @@ iactive.StartChallenge("latest").watch(function (err,ev) {
             return
         }
         console.log("Got task id ", id)
-        var id = id.toString()
+        var id = parseInt(id.toString(16),16)
+        console.log("Got task id ", JSON.stringify([id, task_id]))
+        if (task_id != id) return
         challenges[ev.args.uniq] = {
             prover: ev.args.p,
             task: id,
@@ -182,7 +184,9 @@ iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
             return
         }
         console.log("Got task id ", id)
-        var id = id.toString()
+        var id = parseInt(id.toString(16),16)
+        if (task_id != id) return
+        console.log("Challenge to us")
         challenges[ev.args.uniq] = {
             prover: ev.args.p,
             task: id,
@@ -194,7 +198,7 @@ iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
     })
 })
 
-function myId(id) {
+function myId(ev) {
     return !!challenges[ev.id]
 }
 
@@ -204,7 +208,7 @@ iactive.Queried("latest").watch(function (err,ev) {
     if (!myId(ev)) return
     console.log("Query ", ev)
     // io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber()})
-    replyChallenge(ev.idx1.toNumber(), ev.idx2.toNumber())
+    replyChallenge(ev.id, ev.idx1.toNumber(), ev.idx2.toNumber())
 })
 
 iactive.PostedErrorPhases("latest").watch(function (err,ev) {
@@ -213,7 +217,7 @@ iactive.PostedErrorPhases("latest").watch(function (err,ev) {
     if (!myId(ev)) return
     console.log("Error phases ", ev)
     // io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
-    replyErrorPhases(ev.idx1.toNumber(), ev.arr)
+    replyErrorPhases(ev.id, ev.idx1.toNumber(), ev.arr)
 })
 
 iactive.SelectedPhase("latest").watch(function (err,ev) {
@@ -222,17 +226,17 @@ iactive.SelectedPhase("latest").watch(function (err,ev) {
     if (!myId(ev)) return
     console.log("Challenger selected phase ", ev)
     // io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
-    submitProof(ev.idx1.toNumber(), ev.phase.toString())
+    submitProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
 })
 
 function runSolver(config) {
     // download file from IPFS
     console.log("solving", config)
-    id = parseInt(config.id, 16)
+    task_id = parseInt(config.id, 16)
     solver = config.actor
     common.getFile(config.filehash, function (filestr) {
-        common.getAndEnsureInputFile(config.inputhash, config.inputfile, config.filehash, filestr, id, function (input) {
-            solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:id, input:input.data, inputhash:input.name}, solver)
+        common.getAndEnsureInputFile(config.inputhash, config.inputfile, config.filehash, filestr, task_id, function (input) {
+            solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:task_id, input:input.data, inputhash:input.name}, solver)
         })
     })
 }
