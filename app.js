@@ -41,24 +41,6 @@ var judge = judgeABI.at(addresses.judge)
 
 appFile.configure(web3)
 
-var wasm_path = "ocaml-offchain/interpreter/wasm"
-// var wasm_path = "../webasm/interpreter/wasm"
-
-function initTask(fname, task, ifname, inp, cont) {
-    fs.writeFile(fname, task, function () {
-        fs.writeFile(ifname, inp, function () {
-            // run init script
-            execFile(wasm_path, ["-m", "-init", "-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
-                if (error) {
-                    console.error('initialization error', stderr)
-                    return
-                }
-                console.log('initializing task', stdout)
-                cont(JSON.parse(stdout).vm.code)
-            })
-        })
-    })
-}
 
 var solver = { error: false, error_location: 0 }
 var verifier = { error: false, error_location: 0 }
@@ -71,26 +53,7 @@ io.on("connection", function(socket) {
     })
     socket.on("new_task", function (obj) {
         // store into IPFS, get ipfs address
-        var input_buffer = appFile.inputToBuffer(obj.input)
-        ipfs.files.add([new Buffer(obj.task), input_buffer], function (err, res) {
-            if (err) {
-                console.log(err)
-                return
-            }
-            console.log(res)
-            var filename = res[0].hash + ".wast"
-            var inputfilename = res[1].hash + ".bin"
-            // store into filesystem
-            initTask(filename, obj.task, inputfilename, input_buffer, function (state) {
-                contract.add(state, res[0].hash, res[1].hash, send_opt, function (err, tr) {
-                    if (err) console.log(err)
-                    else {
-                        console.log("Success", tr)
-                        io.emit("task_success", tr)
-                    }
-                })
-            })
-        })
+
     })
     socket.on("setup_error", function (obj) {
         verifier.error = obj.verifier_error
@@ -100,51 +63,6 @@ io.on("connection", function(socket) {
     })
 })
 
-function insertError(args, actor) {
-    if (actor.error) {
-        args.push("-insert-error")
-        args.push("" + actor.error_location)
-    }
-    return args
-}
-
-function ensureInputFile(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-file", ifilename, "-input-proof", ifilename, "-case", "0", filename], actor)
-    console.log("ensure args", args)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            console.error('stderr', stderr)
-            return
-        }
-        console.log('input file proof', stdout)
-        if (stdout) cont(JSON.parse(stdout))
-    })
-}
-
-function ensureOutputFile(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            console.error('stderr', stderr)
-            return
-        }
-        console.log('output file proof', stdout)
-        cont(JSON.parse(stdout))
-    })
-}
-
-function taskResult(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
-    console.log("task args", args)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            console.error('stderr', stderr)
-            return
-        }
-        console.log('solved task', stdout)
-        cont(JSON.parse(stdout))
-    })
-}
 
 
 function solveTask(obj, actor) {
@@ -236,53 +154,6 @@ function verifyTask(obj, actor) {
     })
 }
 
-function getFile(fileid, cont) {
-    ipfs.get(fileid, function (err, stream) {
-        if (err) {
-            console.log(err)
-            return
-        }
-        var chunks = []
-        stream.on('data', (file) => {
-            file.content.on("data", function (chunk) {
-                chunks.push(chunk);
-            })
-            file.content.on("end", function () {
-                cont(Buffer.concat(chunks).toString())
-            })
-        })
-    })
-}
-
-function getInputFile(filehash, filenum, cont) {
-    console.log("Getting input file ", filehash, filenum.toString(16))
-    if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
-    else appFile.getFile(contract, filenum, cont)
-}
-
-function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
-    console.log("Getting input file ", filehash, filenum.toString(16))
-    if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
-    else appFile.getFile(contract, filenum, function (obj) {
-        initTask(wast_file+".wast", wast_contents, obj.name+".bin", obj.data, function () {
-            ensureInputFile(wast_file+".wast", obj.name+".bin", verifier, function (proof) {
-                /*
-                console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
-                judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
-                    console.log("calculated hash", err, res)
-                })*/
-                contract.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err,tx) {
-                    console.log("ensure input", err, tx)
-                })
-            })
-            cont(obj)
-        })
-    })
-}
-
-var task_to_file = {}
-var task_to_steps = {}
-var task_to_inputfile = {}
 
 // We should listen to contract events
 
@@ -322,42 +193,7 @@ contract.Solved("latest").watch(function (err, ev) {
     })
 })
 
-var challenges = {}
 
-function getLocation(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-location", place, "-case", "0", fname], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
-        else {
-            console.log("Got location " + place + ": " + stdout)
-            cont(JSON.parse(stdout))
-        }
-    })
-}
-
-function getStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-step", place, "-case", "0", fname], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
-        else cont(JSON.parse(stdout))
-    })
-}
-
-function getErrorStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-error-step", place, "-case", "0", fname], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
-        else cont(JSON.parse(stdout))
-    })
-}
-
-function getFinality(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-final", place, "-case", "0", fname], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
-        else cont(JSON.parse(stdout))
-    })
-}
 
 function replyChallenge(id, idx1, idx2) {
     if (!challenges[id]) {
@@ -455,29 +291,7 @@ function replyErrorPhases(id, idx1, arr) {
     })
 }
 
-var phase_table = {
-    0: "fetch",
-    1: "init",
-    2: "reg1",
-    3: "reg2",
-    4: "reg3",
-    5: "alu",
-    6: "write1",
-    7: "write2",
-    8: "pc",
-    9: "stack_ptr",
-    10: "call_ptr",
-    11: "memsize",
-}
 
-function getRoots(vm) {
-    return [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
-                            vm.input_size, vm.input_name, vm.input_data]
-}
-
-function getPointers(vm) {
-    return [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
-}
 
 function submitProof(id, idx1, phase) {
     if (!challenges[id]) {
