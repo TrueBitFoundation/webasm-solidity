@@ -9,7 +9,9 @@ var ipfsAPI = require('ipfs-api')
 
 var appFile = require("./appFileBytes")
 
-var host = process.argv[2] || "localhost"
+var addresses = JSON.parse(fs.readFileSync("config.json"))
+
+var host = addresses.host || "localhost"
 
 // connect to ipfs daemon API server
 var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
@@ -26,8 +28,6 @@ var base = web3.eth.coinbase
 
 var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 
-var addresses = JSON.parse(fs.readFileSync("config.json"))
-
 var send_opt = {from:base, gas: 4000000}
 
 var contractABI = web3.eth.contract(abi)
@@ -43,8 +43,11 @@ appFile.configure(web3)
 
 var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"
 
-var wasm_path = "ocaml-offchain/interpreter/wasm"
+// var wasm_path = "ocaml-offchain/interpreter/wasm"
 // var wasm_path = "../webasm/interpreter/wasm"
+
+// change current directory here?
+process.chdir(process.argv[2])
 
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
@@ -62,8 +65,7 @@ function initTask(fname, task, ifname, inp, cont) {
     })
 }
 
-// change current directory here?
-// process.chdir()
+exports.initTask = initTask
 
 // perhaps load this from config
 var actor = { error: false, error_location: 0 }
@@ -88,6 +90,8 @@ function ensureInputFile(filename, ifilename, actor, cont) {
         if (stdout) cont(JSON.parse(stdout))
     })
 }
+
+exports.ensureInputFile = ensureInputFile
 
 function ensureOutputFile(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
@@ -132,11 +136,15 @@ function getFile(fileid, cont) {
     })
 }
 
+exports.getFile = getFile
+
 function getInputFile(filehash, filenum, cont) {
     console.log("Getting input file ", filehash, filenum.toString(16))
     if (filenum.toNumber() == 0) getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
+
+exports.getInputFile = getInputFile
 
 function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
     console.log("Getting input file ", filehash, filenum.toString(16))
@@ -157,6 +165,8 @@ function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, 
         })
     })
 }
+
+exports.getAndEnsureInputFile = getAndEnsureInputFile
 
 var task_to_file = {}
 var task_to_steps = {}
@@ -222,5 +232,9 @@ function getRoots(vm) {
 function getPointers(vm) {
     return [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
 }
+
+exports.appFile = appFile
+exports.ipfs = ipfs
+exports.send_opt = send_opt
 
 

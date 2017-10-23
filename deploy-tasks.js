@@ -34,7 +34,12 @@ contract3.new({from: base, data: '0x' + code3, gas: '5000000'}, function (e, jud
                 contract.new(contr.address, {from: base, data: '0x' + code, gas: '4000000'}, function (e, contract){
                     if (e) console.error(e)
                     if (typeof contract.address !== 'undefined') {
-                        console.log('{ "judge": "' + judge.address + '", "interactive": "' + contr.address + '", "tasks" : "' + contract.address + '" }')
+                        var config = {
+                            judge: judge.address,
+                            interactive: contr.address,
+                            host: host,
+                            tasks: contract.address }
+                        console.log(JSON.stringify(config))
                         process.exit(0)
                     }
                 })
