@@ -127,15 +127,28 @@ function ensureOutputFile(filename, ifilename, actor, cont) {
 exports.ensureOutputFile = ensureOutputFile
 
 function taskResult(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            logger.error('stderr %s', stderr)
-            return
-        }
-        logger.info('solved task %s', stdout)
-        cont(JSON.parse(stdout))
-    })
+    if (actor.stop_early < 0) {
+        var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
+        execFile(wasm_path, args, function (error, stdout, stderr) {
+            if (error) {
+                logger.error('stderr %s', stderr)
+                return
+            }
+            logger.info('solved task %s', stdout)
+            cont(JSON.parse(stdout))
+        })
+    }
+    else {
+        var args = insertError(["-m", "-step", actor.stop_early.toString(), "-file", ifilename, "-case", "0", filename], actor)
+        execFile(wasm_path, args, function (error, stdout, stderr) {
+            if (error) {
+                logger.error('stderr %s', stderr)
+                return
+            }
+            logger.info('exited early %s', stdout)
+            cont({steps: actor.stop_early, result:JSON.parse(stdout)})
+        })
+    }
 }
 
 exports.taskResult = taskResult

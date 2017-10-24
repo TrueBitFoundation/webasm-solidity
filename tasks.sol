@@ -21,7 +21,7 @@ interface Callback {
 contract Tasks is Filesystem {
     
     event Posted(address giver, bytes32 hash, string file, string input, uint input_file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, uint input_file);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, uint input_file, address solver);
     event Finalized(uint id);
     
     Interactive iactive;
@@ -77,7 +77,7 @@ contract Tasks is Filesystem {
         t.steps = steps;
         t.state = 1;
         t.blocked = block.number + 10;
-        Solved(id, result, steps, t.init, t.file, t.input, t.input_file);
+        Solved(id, result, steps, t.init, t.file, t.input, t.input_file, t.solver);
     }
 
     function ensureInputFile(uint id, bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {

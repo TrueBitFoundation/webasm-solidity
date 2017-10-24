@@ -33,7 +33,6 @@ io.on("connection", function(socket) {
         logger.info("Got user interface")
     })
     socket.on("new_task", function (obj) {
-        // store into IPFS, get ipfs address
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
         if (!fs.existsSync(path)) fs.mkdirSync(path)
         fs.writeFileSync(path + "/task.wast", obj.task)
@@ -41,13 +40,12 @@ io.on("connection", function(socket) {
         execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
-        verifier.error = obj.verifier_error
-        solver.error = obj.solver_error
-        verifier.error_location = obj.verifier_location
-        solver.error_location = obj.solver_location
+        logger.info("new configuration", obj)
+        verifier = obj.verifier
+        solver = obj.solver
     })
     socket.on("config", function (obj) {
-        logger.info("process changed %s", obj.message)
+        // logger.info("process changed %s", obj.message)
         io.to("ui").emit("config", obj)
     })
 })
@@ -85,12 +83,14 @@ contract.Solved("latest").watch(function (err, ev) {
         return
     }
     logger.info("solved", ev.args)
+    if (ev.args.solver == common.base && !verifier.check_own) return logger.info("Not going to verify", verifier)
     var id = ev.args.id.toString(16)
     var path = "tmp.verifier_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
     var obj = {
         message: "Starting verifier",
         id: id,
+        solver: ev.args.solver,
         giver: ev.args.giver,
         hash: ev.args.hash,
         init: ev.args.init,
@@ -196,6 +196,13 @@ iactive.WinnerSelected("latest").watch(function (err,ev) {
     ev = ev.args
     logger.info("Selected winner for challenge", ev)
     io.emit("event", {message: "Selected winner for challenge", uniq:ev.id})
+})
+
+contract.Finalized("latest").watch(function (err,ev) {
+    if (err) return logger.error(err);
+    ev = ev.args
+    logger.info("Finalized a task", ev)
+    io.emit("event", {message: "Finalized task", uniq:ev.id})
 })
 
 function tick() {

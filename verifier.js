@@ -246,7 +246,7 @@ iactive.WinnerSelected("latest").watch(function (err,ev) {
 })
 
 function forceTimeout() {
-    if (!challenge_id) return
+    if (!config) return
     iactive.gameOver(challenge_id, send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)

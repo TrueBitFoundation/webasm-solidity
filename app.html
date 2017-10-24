@@ -9,6 +9,33 @@
         background-color: hsl(123, 10%, 93%);
     }
     
+    div#clearEvents {
+        color: gray;
+    }
+    
+    div#clearEvents:hover {
+        color: black;
+    }
+    
+    div#clearEvents:active {
+        color: black;
+        text-shadow: 0px 0px 3px #000000;
+    }
+    
+    span.removeElem {
+        float: right;
+        color: gray;
+    }
+    
+    span.removeElem:hover {
+        color: black;
+    }
+    
+    span.removeElem:active {
+        color: black;
+        text-shadow: 0px 0px 3px #000000;
+    }
+    
     input {
         font-family: 'Oswald', sans-serif;
         width: 50px;
@@ -60,17 +87,20 @@
 </div>
 
 <button onclick="newTask();">New task</button>
+<button onclick="smartContract();">Test Smart Contract</button>
 
 <h1>Solvers</h1>
 
 <input type="checkbox" class="error" id="solver_error">Make an error at position <input type="number" id="solver_location"  class="error" value="100">
 <p>
-<input type="checkbox" class="error" id="solver_error_top">Stop execution at position <input type="number" id="solver_stop"  class="error" value="100">
+<input type="checkbox" class="error" id="solver_error_stop">Stop execution at position <input type="number" id="solver_stop"  class="error" value="100">
 
     <div id="solvers"></div>
     
 <h1>Verifiers</h1>
 
+<input type="checkbox" checked class="error" id="verifier_challenge_own">Verify own solutions
+<p>
 <input type="checkbox" class="error" id="verifier_error">Make an error at position <input type="number" id="verifier_location"   class="error" value="100">
 <p>
 <input type="checkbox" class="error" id="verifier_error_stop">Stop execution at position <input type="number" id="verifier_stop"  class="error" value="100">
@@ -79,6 +109,8 @@
     
     <h1>Events</h1>
 
+    <div id="clearEvents" onclick="clearEvents();">Clear Events</div>
+    
 <div id="events"></div>
 
 </div>
@@ -145,53 +177,36 @@
     socket.on("config", function (obj) {
         console.log(obj)
         var elem = findElem(obj)
-        elem.innerHTML = printObject(obj, obj.kind.toUpperCase() + " " + obj.pid)
+        elem.innerHTML = printObject(obj, obj.kind.toUpperCase() + " " + obj.pid + '<span class="removeElem" onclick="removeElem(event);">Remove</span>')
     })
     
     socket.emit("request-ui", {})
-    
-    /*
-    socket.on("posted", function (obj) {
-        console.log(obj)
-        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
-    })
-    socket.on("solved", function (obj) {
-        console.log(obj)
-        document.querySelector("#solved").innerHTML += "<br>" + printObject(obj)
-    })
-    socket.on("task_success", function (id) {
-        document.querySelector("#success").innerHTML += "<br>" + id
-    })
-    socket.on("solve_success", function (id) {
-        document.querySelector("#solve_success").innerHTML += "<br>" + id
-    })
-    socket.on("challenge", function (obj) {
-        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
-    })
-    socket.on("reply", function (obj) {
-        document.querySelector("#solved").innerHTML += "<br>" + printObject(obj)
-    })
-    socket.on("query", function (obj) {
-        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
-    })
-    socket.on("phases", function (obj) {
-        document.querySelector("#solved").innerHTML += "<br>" + printObject(obj)
-    })
-    socket.on("phase_selected", function (obj) {
-        document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
-    })
-    */
     
     function handleErrorUI() {
         var e1 = document.querySelector("#solver_error")
         var e2 = document.querySelector("#solver_location")
         var e3 = document.querySelector("#verifier_error")
         var e4 = document.querySelector("#verifier_location")
+        var e5 = document.querySelector("#verifier_challenge_own")
+        var e6 = document.querySelector("#solver_error_stop")
+        var e7 = document.querySelector("#solver_stop")
+        var e8 = document.querySelector("#verifier_error_stop")
+        var e9 = document.querySelector("#verifier_stop")
         socket.emit("setup_error", {
-            solver_error: e1.checked, solver_location: e2.value,
-            verifier_error: e3.checked, verifier_location: e4.value
+            solver: { error: e1.checked, error_location: e2.value, stop_early: e6.checked ? e7.value : -1 },
+            verifier: { error: e3.checked, error_location: e4.value, check_own: e5.value, stop_early: e8.checked ? e9.value : -1 },
+            
         })
         console.log("changed configuration")
+    }
+    
+    function removeElem(ev) {
+        var el = ev.target.parentNode.parentNode
+        el.parentNode.removeChild(el)
+    }
+    
+    function clearEvents() {
+        document.querySelector("#events").innerHTML = "";
     }
     
     function initErrorUI() {

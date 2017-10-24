@@ -240,7 +240,7 @@ contract.Finalized("latest").watch(function (err,ev) {
 
 
 function forceTimeout() {
-    if (!task_id) return
+    if (!config) return
     contract.finalizeTask(task_id, send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
