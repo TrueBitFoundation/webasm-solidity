@@ -1,5 +1,38 @@
 <!doctype html>
 
+<style>
+    
+    @import url('https://fonts.googleapis.com/css?family=Oswald|Share+Tech+Mono');
+    
+    body {
+        font-family: 'Oswald', sans-serif;
+        background-color: hsl(123, 10%, 93%);
+    }
+    
+    input {
+        font-family: 'Oswald', sans-serif;
+        width: 50px;
+    }
+
+    button {
+        font-family: 'Oswald', sans-serif;
+        font-size: 200%;
+        background-color: hsl(123, 30%, 80%);
+    }
+    
+    textarea {
+        font-family: 'Share Tech Mono', monospace;
+        width: 100%;
+    }
+    
+    div#content {
+        margin: 0% 10% 0% 10%;
+    }
+    
+</style>
+
+<div id="content">
+
 <title>Test node</title>
 
 <h1>Post tasks</h1>
@@ -28,21 +61,27 @@
 
 <button onclick="newTask();">New task</button>
 
-<div id="success"></div>
-
-<h1>Solver</h1>
+<h1>Solvers</h1>
 
 <input type="checkbox" class="error" id="solver_error">Make an error at position <input type="number" id="solver_location"  class="error" value="100">
+<p>
+<input type="checkbox" class="error" id="solver_error_top">Stop execution at position <input type="number" id="solver_stop"  class="error" value="100">
 
-<div id="posted"></div>
-
-<div id="solve_success"></div>
-
-<h1>Verifier</h1>
+    <div id="solvers"></div>
+    
+<h1>Verifiers</h1>
 
 <input type="checkbox" class="error" id="verifier_error">Make an error at position <input type="number" id="verifier_location"   class="error" value="100">
+<p>
+<input type="checkbox" class="error" id="verifier_error_stop">Stop execution at position <input type="number" id="verifier_stop"  class="error" value="100">
 
-<div id="solved"></div>
+    <div id="verifiers"></div>
+    
+    <h1>Events</h1>
+
+<div id="events"></div>
+
+</div>
 
 <script src="socketio.js"></script>
 
@@ -69,10 +108,16 @@
         return res
     }
     
-    function printObject(obj) {
-        var res = "<p>Message <ul>"
+    function printList(lst) {
+        if (!(lst instanceof Array)) return JSON.stringify(lst)
+        return "<ol>" + lst.map(a => "<li>" + JSON.stringify(a)).join("") + "</ol>"
+    }
+    
+    function printObject(obj, msg) {
+        msg = msg || "Message"
+        var res = "<p>" + msg + " <ul>"
         for (var i in obj) {
-            res += "<li>" + i + ": " + JSON.stringify(obj[i])
+            res += "<li>" + i + ": " + printList(obj[i])
         }
         return res + "</ul>"
     }
@@ -81,6 +126,31 @@
     
     var socket = io(host + ":22448")
     socket.on("client", () => console.log("Got message!"))
+    socket.on("event", function (obj) {
+        console.log(obj)
+        document.querySelector("#events").innerHTML += "<br>" + printObject(obj)
+    })
+    
+    function findElem(obj) {
+        var id = obj.kind+obj.pid
+        var elem = document.getElementById(id)
+        if (elem) return elem
+        var cont = obj.kind == "solver" ? document.querySelector("#solvers") : document.querySelector("#verifiers")
+        elem = document.createElement("div")
+        cont.appendChild(elem)
+        elem.id = id
+        return elem
+    }
+    
+    socket.on("config", function (obj) {
+        console.log(obj)
+        var elem = findElem(obj)
+        elem.innerHTML = printObject(obj, obj.kind.toUpperCase() + " " + obj.pid)
+    })
+    
+    socket.emit("request-ui", {})
+    
+    /*
     socket.on("posted", function (obj) {
         console.log(obj)
         document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
@@ -110,6 +180,7 @@
     socket.on("phase_selected", function (obj) {
         document.querySelector("#posted").innerHTML += "<br>" + printObject(obj)
     })
+    */
     
     function handleErrorUI() {
         var e1 = document.querySelector("#solver_error")
@@ -126,6 +197,7 @@
     function initErrorUI() {
         var lst = document.querySelectorAll(".error");
         for (var i = 0; i < lst.length; i++) lst[i].onchange = handleErrorUI
+        handleErrorUI()
     }
     
     initErrorUI()

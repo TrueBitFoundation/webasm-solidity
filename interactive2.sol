@@ -129,7 +129,7 @@ contract Interactive2 {
     }
     
     function blockedTime(uint id) public view returns (uint) {
-        return blocked[id];
+        return blocked[id] + 5;
     }
 
     function getIter(bytes32 id) internal view returns (uint it, uint i1, uint i2) {
@@ -138,7 +138,7 @@ contract Interactive2 {
         i1 = r.idx1;
         i2 = r.idx2;
     }
-    
+
     event Reported(bytes32 id, uint idx1, uint idx2, bytes32[] arr);
 
     function report(bytes32 id, uint i1, uint i2, bytes32[] arr) public returns (bool) {

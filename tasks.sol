@@ -22,6 +22,7 @@ contract Tasks is Filesystem {
     
     event Posted(address giver, bytes32 hash, string file, string input, uint input_file, uint id);
     event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, uint input_file);
+    event Finalized(uint id);
     
     Interactive iactive;
     
@@ -127,7 +128,7 @@ contract Tasks is Filesystem {
         require(t.state == 1 && t.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         
-        Callback(t.giver).solved(id, t.result, 0);
+        Finalized(id);
     }
     
     // For testing, mine this to create new block
