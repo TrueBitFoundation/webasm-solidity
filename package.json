@@ -4,6 +4,8 @@
   "dependencies": {
     "ipfs-api": "^14.3.5",
     "socket.io": "2.0.3",
-    "web3": "0.20"
+    "socket.io-client": "^2.0.4",
+    "web3": "0.20",
+    "winston": "^3.0.0-rc1"
   }
 }
