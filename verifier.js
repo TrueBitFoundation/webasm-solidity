@@ -7,6 +7,9 @@ var send_opt = common.send_opt
 var contract = common.contract
 var iactive = common.iactive
 var base = common.base
+var logger = common.logger
+
+var socket = require('socket.io-client')('http://localhost:22448')
 
 var task_id, verifier, steps, challenge_id
 
@@ -16,40 +19,40 @@ function verifyTask(obj, actor) {
     // store into filesystem
     common.initTask("task.wast", obj.file, "input.bin", obj.input, function (inithash) {
         if (inithash == obj.init) {
-            console.log("Initial hash matches")
+            logger.info("Initial hash matches")
         }
         else {
-            console.log("Initial hash was wrong")
+            logger.error("Initial hash was wrong")
             return
         }
         common.taskResult("task.wast", "input.bin", actor, function (res) {
             steps = res.steps
             if (res.steps < obj.steps) {
-                console.log("Too many steps")
+                logger.error("Too many steps")
                 contract.challenge(obj.id, send_opt, function (err, tx) {
-                    if (!err) console.log(tx, "challenge initiated")
+                    if (!err) logger.info(tx, "challenge initiated")
                 })
             }
             // Check if the posted state is a correct intermediate state
             else if (res.steps > obj.steps) {
-                console.log("Too few steps")
+                logger.error("Too few steps")
                 common.getLocation("task.wast", "input.bin", obj.steps, actor, function (hash) {
                     if (hash != obj.hash) contract.challenge(obj.id, send_opt, function (err, tx) {
-                        if (!err) console.log(tx, "challenge initiated")
+                        if (!err) logger.info(tx, "challenge initiated")
                     })
                     else contract.challengeFinality(obj.id, send_opt, function (err, tx) {
-                        if (!err) console.log(tx, "challenge initiated for final state")
+                        if (!err) logger.info(tx, "challenge initiated for final state")
                     })
                 })
             }
             else if (res.result != obj.hash) {
-                console.log("Result mismatch")
+                logger.info("Result mismatch")
                 contract.challenge(obj.id, send_opt, function (err, tx) {
-                    if (!err) console.log(tx, "challenge initiated")
+                    if (!err) logger.info(tx, "challenge initiated")
                 })
             }
             else {
-                console.log("Seems correct")
+                logger.info("Seems correct")
                 process.exit(0)
             }
         })
@@ -62,8 +65,8 @@ function replyPhases(id, idx1, arr) {
         for (var i = 1; i < arr.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.selectPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
-                    if (err) console.log(err)
-                    else console.log("Selected wrong phase", tx)
+                    if (err) logger.error(err)
+                    else logger.info("Selected wrong phase", tx)
                 })
                 return
             }
@@ -84,28 +87,28 @@ function submitErrorProof(id, idx1, phase) {
                                pc:0, stack_ptr:0, call_ptr:0, memsize:0}
         iactive.callErrorJudge(id, idx1, phase, merkle, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            common.getRoots(), common.getPointers(), send_opt, function (err, res) {
-            if (err) console.log(err)
-            else console.log("Judging (error) success " + res)
+            if (err) logger.error(err)
+            else logger.info("Judging (error) success " + res)
         })
     })
 }
 
 function replyReported(id, idx1, idx2, otherhash) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
-    console.log("place", place, "steps", steps)
+    logger.info("place", place, "steps", steps)
     // process.exit(0)
     // Solver has posted too many steps
     if (steps < place) {
         iactive.query(id, idx1, idx2, 0, send_opt, function (err,tx) {
-            if (err) console.log(err)
-            else console.log("Sent query", tx, " it was ", res)
+            if (err) logger.error(err)
+            else logger.info("Sent query", tx, " it was ", res)
         })
     }
     else common.getLocation("task.wast", "input.bin", place, verifier, function (hash) {
         var res = hash == otherhash ? 1 : 0
         iactive.query(id, idx1, idx2, res, send_opt, function (err,tx) {
-            if (err) console.log(err)
-            else console.log("Sent query", tx, " it was ", res)
+            if (err) logger.error(err)
+            else logger.info("Sent query", tx, " it was ", res)
         })
     })
 }
@@ -114,94 +117,78 @@ function postErrorPhases(id, idx1) {
     // Now we are sending the intermediate states
     getStep("task.wast", "input.bin", idx1, verifier, function (obj) {
         iactive.postErrorPhases(id, idx1, obj.states, send_opt, function (err,tx) {
-            if (err) console.log(err)
-            else console.log("Posted error phases", tx)
+            if (err) logger.error(err)
+            else logger.info("Posted error phases", tx)
         })
     })
 }
 
 iactive.Reported("latest").watch(function (err,ev) {
-    if (err) { console.log(err) ; return }
+    if (err) { logger.error(err) ; return }
     ev = ev.args
     if (challenge_id != ev.id.toString(16)) return
-    console.log("Reported ", ev)
-    // io.emit("reply", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber(), hash:ev.arr[0]})
+    logger.info("Reported ", ev)
     replyReported(ev.id, ev.idx1.toNumber(), ev.idx2.toNumber(), ev.arr[0])
 })
 
 iactive.NeedErrorPhases("latest").watch(function (err,ev) {
-    if (err) { console.log(err) ; return }
+    if (err) { logger.error(err) ; return }
     ev = ev.args
     if (challenge_id != ev.id.toString(16)) return
-    console.log("Query ", ev)
-    // io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber()})
+    logger.info("Query ", ev)
     postErrorPhases(ev.id, ev.idx1.toNumber())
 })
 
 iactive.PostedPhases("latest").watch(function (err,ev) {
-    if (err) { console.log(err) ; return }
+    if (err) { logger.error(err) ; return }
     ev = ev.args
     if (challenge_id != ev.id.toString(16)) return
-    console.log("Phases ", ev)
-    // io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
+    logger.info("Phases ", ev)
     replyPhases(ev.id, ev.idx1.toNumber(), ev.arr)
 })
 
 
 iactive.SelectedErrorPhase("latest").watch(function (err,ev) {
-    if (err) { console.log(err) ; return }
+    if (err) { logger.error(err) ; return }
     ev = ev.args
     if (challenge_id != ev.id.toString(16)) return
-    console.log("Prover selected error phase ", ev)
-    // io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+    logger.info("Prover selected error phase ", ev)
     submitErrorProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
 })
 
 iactive.StartChallenge("latest").watch(function (err,ev) {
-    if (err) {
-        console.log(err)
-        return
-    }
-    console.log("Got challenge", ev)
+    if (err) { logger.error(err) ; return }
+    logger.info("Got challenge", ev)
     if (ev.args.c != base) return
-    console.log("Got challenge to our address", ev)
+    logger.info("Got challenge to our address", ev)
     contract.queryChallenge.call(ev.args.uniq, function (err, id) {
-        if (err) {
-            console.log(err)
-            return
-        }
-        console.log("Got task id ", id)
+        if (err) { logger.error(err) ; return }
+        logger.info("Got task id ", id)
         var id = parseInt(id.toString(16),16)
         if (task_id != id) return
         challenge_id = ev.args.uniq
-        console.log("Got challenge that we are handling", ev)
+        logger.info("Got challenge that we are handling", ev)
     })
 })
 
 iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
-    if (err) {
-        console.log(err)
-        return
-    }
-    console.log("Got finality challenge", ev)
+    if (err) { logger.error(err) ; return }
+    logger.info("Got finality challenge", ev)
     if (ev.args.c != base) return
     contract.queryChallenge.call(ev.args.uniq, function (err, id) {
-        if (err) {
-            console.log(err)
-            return
-        }
-        console.log("Got task id ", id)
+        if (err) { logger.error(err) ; return }
+        logger.info("Got task id %s", id)
         var id = parseInt(id.toString(16),16)
         if (task_id != id) return
         challenge_id = ev.args.uniq
     })
 })
 
-
 function runVerifier(config) {
-    console.log("verifying", config)
+    logger.info("verifying", config)
     task_id = parseInt(config.id, 16)
     verifier = config.actor
+    socket.emit("info", config)
     common.getFile(config.filehash, function (filestr) {
         common.getInputFile(config.inputhash, config.inputfile, function (input) {
             verifyTask({hash: config.hash, file: filestr, filehash:config.filehash, init: config.init, id:task_id, input:input.data, inputhash:input.name,

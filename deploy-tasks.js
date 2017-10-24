@@ -38,6 +38,7 @@ contract3.new({from: base, data: '0x' + code3, gas: '5000000'}, function (e, jud
                             judge: judge.address,
                             interactive: contr.address,
                             host: host,
+                            base: base,
                             tasks: contract.address }
                         console.log(JSON.stringify(config))
                         process.exit(0)

@@ -1,7 +1,6 @@
 
 var fs = require("fs")
-var http = require('http').createServer()
-var io = require("socket.io")(http)
+var winston = require("winston")
 var Web3 = require('web3')
 var web3 = new Web3()
 var execFile = require('child_process').execFile
@@ -13,6 +12,25 @@ var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 var host = addresses.host || "localhost"
 
+var dir = process.argv[2] ? process.cwd() + "/" + process.argv[2] : process.cwd()
+
+// console.log(dir)
+
+var format = winston.format
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: format.combine(
+    format.splat(),
+    format.simple()
+  ),
+  // format: winston.format.simple(),
+  transports: [
+    new winston.transports.File({ filename: dir+'/error.log', level: 'error' }),
+    new winston.transports.File({ filename: dir+'/combined.log' })
+  ]
+})
+
 // connect to ipfs daemon API server
 var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
 
@@ -21,10 +39,10 @@ web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
 var solver_error = true
 var verifier_error = false
 
-console.log(web3.eth.coinbase)
-
 // var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
-var base = web3.eth.coinbase
+var base = addresses.base
+
+logger.info("Using address %s", base)
 
 var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 
@@ -43,6 +61,8 @@ appFile.configure(web3)
 
 var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"
 
+logger.info('using offchain interpreter at %s', wasm_path)
+
 // var wasm_path = "ocaml-offchain/interpreter/wasm"
 // var wasm_path = "../webasm/interpreter/wasm"
 
@@ -53,13 +73,12 @@ function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
         fs.writeFile(ifname, inp, function () {
             // run init script
-                console.log('checking executable', wasm_path)
             execFile(wasm_path, ["-m", "-init", "-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
                 if (error) {
-                    console.error('initialization error', stderr)
+                    logger.error('initialization error %s')
                     return
                 }
-                console.log('initializing task', stdout)
+                logger.info('initializing task %s', stdout)
                 cont(JSON.parse(stdout).vm.code)
             })
         })
@@ -81,13 +100,12 @@ function insertError(args, actor) {
 
 function ensureInputFile(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-file", ifilename, "-input-proof", ifilename, "-case", "0", filename], actor)
-    console.log("ensure args", args)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
-            console.error('stderr', stderr)
+            logger.error('stderr %s', stderr)
             return
         }
-        console.log('input file proof', stdout)
+        logger.info('input file proof %s', stdout)
         if (stdout) cont(JSON.parse(stdout))
     })
 }
@@ -98,10 +116,10 @@ function ensureOutputFile(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
-            console.error('stderr', stderr)
+            logger.error('stderr %s', stderr)
             return
         }
-        console.log('output file proof', stdout)
+        logger.info('output file proof %s', stdout)
         cont(JSON.parse(stdout))
     })
 }
@@ -110,13 +128,12 @@ exports.ensureOutputFile = ensureOutputFile
 
 function taskResult(filename, ifilename, actor, cont) {
     var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
-    console.log("task args", args)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
-            console.error('stderr', stderr)
+            logger.error('stderr %s', stderr)
             return
         }
-        console.log('solved task', stdout)
+        logger.info('solved task %s', stdout)
         cont(JSON.parse(stdout))
     })
 }
@@ -124,11 +141,10 @@ function taskResult(filename, ifilename, actor, cont) {
 exports.taskResult = taskResult
 
 function getFile(fileid, cont) {
-    console.log("gettting file ", fileid)
+    logger.info("getting file %s", fileid)
     ipfs.get(fileid, function (err, stream) {
         if (err) {
-            console.log(err)
-            process.exit(1)
+            logger.error("IPFS error", err)
             return
         }
         var chunks = []
@@ -146,7 +162,7 @@ function getFile(fileid, cont) {
 exports.getFile = getFile
 
 function getInputFile(filehash, filenum, cont) {
-    console.log("Getting input file ", filehash, filenum.toString(16))
+    logger.info("Getting input file %s %s", filehash, filenum.toString(16))
     if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
@@ -154,7 +170,7 @@ function getInputFile(filehash, filenum, cont) {
 exports.getInputFile = getInputFile
 
 function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
-    console.log("Getting input file ", filehash, filenum.toString(16))
+    logger.info("Getting input file %s %s", filehash, filenum.toString(16))
     if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, function (obj) {
         initTask("task.wast", wast_contents, "input.bin", obj.data, function () {
@@ -165,7 +181,7 @@ function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, 
                     console.log("calculated hash", err, res)
                 })*/
                 contract.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err,tx) {
-                    console.log("ensure input", err, tx)
+                    logger.info("Called ensure input", err, tx)
                 })
             })
             cont(obj)
@@ -178,9 +194,9 @@ exports.getAndEnsureInputFile = getAndEnsureInputFile
 function getLocation(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-location", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
+        if (error) console.error('stderr %s', stderr)
         else {
-            console.log("Got location " + place + ": " + stdout)
+            logger.info("Got location " + place + ": " + stdout)
             cont(JSON.parse(stdout))
         }
     })
@@ -191,7 +207,7 @@ exports.getLocation = getLocation
 function getStep(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
+        if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
 }
@@ -201,7 +217,7 @@ exports.getStep = getStep
 function getErrorStep(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-error-step", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
+        if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
 }
@@ -211,7 +227,7 @@ exports.getErrorStep = getErrorStep
 function getFinality(fname, ifname, place, actor, cont) {
     var args = insertError(["-m", "-file", ifname, "-final", place, "-case", "0", fname], actor)
     execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) console.error('stderr', stderr)
+        if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
 }
@@ -236,11 +252,12 @@ function getRoots(vm) {
                             vm.input_size, vm.input_name, vm.input_data]
 }
 
+exports.getRoots = getRoots
+
 function getPointers(vm) {
     return [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
 }
 
-exports.getRoots = getRoots
 exports.getPointers = getPointers
 
 exports.appFile = appFile
@@ -249,4 +266,6 @@ exports.send_opt = send_opt
 exports.contract = contract
 exports.iactive = iactive
 exports.base = base
+
+exports.logger = logger
 

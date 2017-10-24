@@ -12,3 +12,4 @@ common-onchain.sol
 vm
 *.bin
 tmp.*
+*.log
