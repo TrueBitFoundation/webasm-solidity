@@ -80,7 +80,7 @@ function replyChallenge(id, idx1, idx2) {
         iactive.report(id, idx1, idx2, [hash], send_opt, function (err,tx) {
             if (err) logger.error(err)
             else {
-                status("Replied to challenge " + tx)
+                status("Replied place " + place + " for challenge " + tx)
             }
         })
     })
@@ -88,13 +88,11 @@ function replyChallenge(id, idx1, idx2) {
 
 function replyFinalityChallenge(id, idx1, idx2) {
     // Now we are sending the intermediate states
-    common.getFinality(fname, ifname, idx1, solver, function (obj) {
+    common.getFinality("task.wast", "input.bin", idx1, solver, function (obj) {
         iactive.callFinalityJudge(id, idx1, obj.location,
                            common.getRoots(obj.vm), common.getPointers(obj.vm), send_opt, function (err, res) {
             if (err) logger.error(err)
-            else {
-                status("Judging finality " + res)
-            }
+            else status("Judging finality " + res)
         })
     })
 }
@@ -186,7 +184,7 @@ iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
             init: ev.args.s,
             result: ev.args.e,
         }
-        replyFinalityChallenge(ev.args.uniq, ev.args.steps.toNumber())
+        replyFinalityChallenge(ev.args.uniq, ev.args.step.toNumber())
     })
 })
 
@@ -233,7 +231,7 @@ iactive.WinnerSelected("latest").watch(function (err,ev) {
 contract.Finalized("latest").watch(function (err,ev) {
     if (err) return logger.error(err);
     ev = ev.args
-    if (task_id != ev.id.toString(16)) return
+    if (task_id != ev.id.toNumber()) return
     status("Task accepted, exiting.")
     process.exit(0)
 })

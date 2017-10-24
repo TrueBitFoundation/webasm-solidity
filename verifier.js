@@ -139,9 +139,7 @@ function replyReported(id, idx1, idx2, otherhash) {
         iactive.query(id, idx1, idx2, 0, send_opt, function (err,tx) {
             if (err) logger.error(err)
             else {
-                logger.info("Sent query", tx, " it was ", res)
-                config.message = "Sent query " + tx + " for position " + res
-                socket.emit("config", config)
+                status("Sent query " + tx + " for towards " + idx1 + " from " + place)
             }
         })
     }
@@ -150,9 +148,7 @@ function replyReported(id, idx1, idx2, otherhash) {
         iactive.query(id, idx1, idx2, res, send_opt, function (err,tx) {
             if (err) logger.error(err)
             else {
-                logger.info("Sent query", tx, " it was ", res)
-                config.message = "Sent query " + tx + " for position " + res
-                socket.emit("config", config)
+                status("Sent query " + tx + " for towards " + (res?idx2:idx1) + " from " + place)
             }
         })
     })

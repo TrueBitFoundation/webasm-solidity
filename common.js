@@ -139,7 +139,7 @@ function taskResult(filename, ifilename, actor, cont) {
         })
     }
     else {
-        var args = insertError(["-m", "-step", actor.stop_early.toString(), "-file", ifilename, "-case", "0", filename], actor)
+        var args = insertError(["-m", "-location", actor.stop_early.toString(), "-file", ifilename, "-case", "0", filename], actor)
         execFile(wasm_path, args, function (error, stdout, stderr) {
             if (error) {
                 logger.error('stderr %s', stderr)
@@ -244,6 +244,8 @@ function getFinality(fname, ifname, place, actor, cont) {
         else cont(JSON.parse(stdout))
     })
 }
+
+exports.getFinality = getFinality
 
 exports.phase_table = {
     0: "fetch",
