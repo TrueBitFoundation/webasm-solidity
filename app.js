@@ -25,10 +25,7 @@ function execInPath(fname, path_name) {
 var solver = { error: false, error_location: 0 }
 var verifier = { error: false, error_location: 0 }
 
-var CodeType = {
-    WAST: 0,
-    WASM: 1,
-}
+var CodeType = common.CodeType
 
 io.on("connection", function(socket) {
     logger.info("Got new socket.io client")

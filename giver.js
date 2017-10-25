@@ -12,6 +12,8 @@ function giveTask(obj) {
     var task = fs.readFileSync(obj.taskfile)
     var input = fs.readFileSync(obj.inputfile)
     var input_buffer = appFile.inputToBuffer(input)
+    obj.input_file = obj.taskfile
+    obj.code_file = obj.inputfile
     ipfs.files.add([task, input_buffer], function (err, res) {
             if (err) {
                 console.log(err)
@@ -19,7 +21,7 @@ function giveTask(obj) {
             }
             console.log(res)
             // store into filesystem
-            common.initTask(obj.taskfile, task, obj.inputfile, input_buffer, function (state) {
+            common.initTask(obj, task, input_buffer, function (state) {
                 contract.add(state, res[0].hash, 0, res[1].hash, send_opt, function (err, tr) {
                     if (err) console.log(err)
                     else {

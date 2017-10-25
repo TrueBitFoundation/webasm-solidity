@@ -71,11 +71,37 @@ if (process.argv[2]) process.chdir(process.argv[2])
 
 // perhaps have more stuff in config
 
-function initTask(fname, task, ifname, inp, cont) {
-    fs.writeFile(fname, task, function () {
-        fs.writeFile(ifname, inp, function () {
+var CodeType = {
+    WAST: 0,
+    WASM: 1,
+}
+
+exports.CodeType = CodeType
+
+function getExtension(t) {
+    if (t == CodeType.WASM) return "wasm"
+    else return "wast"
+}
+
+exports.getExtension = getExtension
+
+function buildArgs(args, config) {
+    if (config.actor.error) {
+        args.push("-insert-error")
+        args.push("" + config.actor.error_location)
+    }
+    args.push("-file")
+    args.push("" + config.input_file)
+    if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(args.push)
+    else ["-wasm", config.code_file].forEach(args.push)
+    return args
+}
+
+function initTask(config, task, inp, cont) {
+    fs.writeFile(config.code_file, task, function () {
+        fs.writeFile(config.input_file, inp, function () {
             // run init script
-            execFile(wasm_path, ["-m", "-init", "-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
+            execFile(wasm_path, buildArgs(["-m", "-init"], config), (error, stdout, stderr) => {
                 if (error) {
                     logger.error('initialization error %s')
                     return
@@ -89,16 +115,8 @@ function initTask(fname, task, ifname, inp, cont) {
 
 exports.initTask = initTask
 
-function insertError(args, actor) {
-    if (actor.actor.error) {
-        args.push("-insert-error")
-        args.push("" + actor.error_location)
-    }
-    return args
-}
-
-function ensureInputFile(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-file", ifilename, "-input-proof", ifilename, "-case", "0", filename], actor)
+function ensureInputFile(config, cont) {
+    var args = buildArgs(["-m", "-input-proof", config.input_file], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             logger.error('stderr %s', stderr)
@@ -111,8 +129,8 @@ function ensureInputFile(filename, ifilename, actor, cont) {
 
 exports.ensureInputFile = ensureInputFile
 
-function ensureOutputFile(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
+function ensureOutputFile(config, cont) {
+    var args = buildArgs(["-m", "-output-proof", "blockchain"], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             logger.error('stderr %s', stderr)
@@ -125,9 +143,9 @@ function ensureOutputFile(filename, ifilename, actor, cont) {
 
 exports.ensureOutputFile = ensureOutputFile
 
-function taskResult(filename, ifilename, actor, cont) {
+function taskResult(config, cont) {
     if (actor.stop_early < 0) {
-        var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
+        var args = buildArgs(["-m", "-result"], config)
         execFile(wasm_path, args, function (error, stdout, stderr) {
             if (error) {
                 logger.error('stderr %s', stderr)
@@ -138,7 +156,7 @@ function taskResult(filename, ifilename, actor, cont) {
         })
     }
     else {
-        var args = insertError(["-m", "-location", actor.stop_early.toString(), "-file", ifilename, "-case", "0", filename], actor)
+        var args = buildArgs(["-m", "-location", config.actor.stop_early.toString()], config)
         execFile(wasm_path, args, function (error, stdout, stderr) {
             if (error) {
                 logger.error('stderr %s', stderr)
@@ -181,12 +199,12 @@ function getInputFile(filehash, filenum, cont) {
 
 exports.getInputFile = getInputFile
 
-function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
+function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, cont) {
     logger.info("Getting input file %s %s", filehash, filenum.toString(16))
     if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, function (obj) {
-        initTask("task.wast", wast_contents, "input.bin", obj.data, function () {
-            ensureInputFile("task.wast", "input.bin", verifier, function (proof) {
+        initTask(config, wast_contents, obj.data, function () {
+            ensureInputFile(config, function (proof) {
                 /*
                 console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
                 judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
@@ -203,8 +221,8 @@ function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, 
 
 exports.getAndEnsureInputFile = getAndEnsureInputFile
 
-function getLocation(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-location", place, "-case", "0", fname], actor)
+function getLocation(place, config, cont) {
+    var args = buildArgs(["-m", "-location", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr %s', stderr)
         else {
@@ -216,8 +234,8 @@ function getLocation(fname, ifname, place, actor, cont) {
 
 exports.getLocation = getLocation
 
-function getStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-step", place, "-case", "0", fname], actor)
+function getStep(place, config, cont) {
+    var args = buildArgs(["-m", "-step", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
@@ -226,8 +244,8 @@ function getStep(fname, ifname, place, actor, cont) {
 
 exports.getStep = getStep
 
-function getErrorStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-error-step", place, "-case", "0", fname], actor)
+function getErrorStep(place, config, cont) {
+    var args = insertError(["-m", "-error-step", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
@@ -236,8 +254,8 @@ function getErrorStep(fname, ifname, place, actor, cont) {
 
 exports.getErrorStep = getErrorStep
 
-function getFinality(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-final", place, "-case", "0", fname], actor)
+function getFinality(place, config, cont) {
+    var args = insertError(["-m", "-final", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
