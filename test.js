@@ -5,16 +5,6 @@ var fs = require("fs")
 
 web3.setProvider(new web3.providers.HttpProvider('http://localhost:8545'))
 
-var base = web3.eth.coinbase
-// var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
-// var base = "0x9acbcf2d9bd157999ae5541c446f8d6962da1d4d"
-
-
-web3.eth.getBalance(base, (err,balance) => {
-    if (err) console.log(err)
-    else console.log(balance.toString())
-})
-
 if (process.argv.length < 3) {
     console.log("Give test file as argument!")
     process.exit(0)
@@ -26,7 +16,7 @@ var test = JSON.parse(fs.readFileSync(process.argv[2]))
 
 // console.log(test.states)
 
-var send_opt = {from:base, gas: 4000000}
+// var send_opt = {from:base, gas: 4000000}
 
 var phase_table = {
     0: "fetch",
@@ -46,37 +36,37 @@ var phase_table = {
 function handleResult(phase, err, res) {
         if (err) {
             console.log("Phase", phase, err)
-            process.exit(-1)
+            // process.exit(-1)
         }
         else console.log(res)
 }
 
-function testPhase(contr, phase) {
+function testPhase(contr, phase, send_opt) {
     var proof = test[phase_table[phase]]
     var merkle = (proof.merkle && proof.merkle.list) || proof.location || []
     var loc = (proof.merkle && proof.merkle.location) || 0
     var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
     if (phase == 5 || phase == 1) m = proof
-    var vm = proof.vm || { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
-                          globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
-                          pc:0, stack_ptr:0, call_ptr:0, memsize:0}
-    contr.judge.call(test.states, phase, merkle, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+    var vm 
+    if (typeof proof.vm != "object") vm = { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
+                                           globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
+                                           pc:0, stack_ptr:0, call_ptr:0, memsize:0}
+    else vm = proof.vm
+    console.log(typeof proof.vm)
+    contr.methods.judge(test.states, phase, merkle, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                      [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
                       vm.input_size, vm.input_name, vm.input_data],
-                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize], send_opt, (err,res) => handleResult(phase,err,res))
+                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).call(send_opt, (err,res) => handleResult(phase,err,res))
 }
 
-function doTest() {
-    web3.eth.contract(abi).new({from: base, data: '0x' + code, gas: '4500000'}, function (e, contr) {
-        if (e) {
-            console.log(e)
-            process.exit(-1)
-        }
-        if (contr && typeof contr.address !== 'undefined') {
-            console.log('Contract mined! address: ' + contr.address)
-            for (var i = 0; i < 12; i++) testPhase(contr, i)
-        }
-    })
+async function doTest() {
+    var accts = await web3.eth.getAccounts()
+    var base = accts[0]
+    var contr = new web3.eth.Contract(abi)
+    var send_opt = {from: base, gas: '4500000'}
+    var contr = await contr.deploy({data: '0x' + code}).send(send_opt)
+    console.log('Contract mined! address: ' + contr.options.address)
+    for (var i = 0; i < 12; i++) testPhase(contr, i, send_opt)
 }
 
 doTest()

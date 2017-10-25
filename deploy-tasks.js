@@ -5,47 +5,40 @@ var web3 = new Web3()
 
 var host = process.argv[2] || "localhost"
 
-web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
+web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
-var base = web3.eth.coinbase
-
-var code = fs.readFileSync("contracts/Tasks.bin")
+var code = "0x" + fs.readFileSync("contracts/Tasks.bin")
 var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
 
-var code2 = fs.readFileSync("contracts/Interactive2.bin")
+var code2 = "0x" + fs.readFileSync("contracts/Interactive2.bin")
 var abi2 = JSON.parse(fs.readFileSync("contracts/Interactive2.abi"))
 
-var code3 = fs.readFileSync("contracts/Judge.bin")
+var code3 = "0x" + fs.readFileSync("contracts/Judge.bin")
 var abi3 = JSON.parse(fs.readFileSync("contracts/Judge.abi"))
 
-var send_opt = {from:base, gas: 4000000}
+var code4 = "0x" + fs.readFileSync("contracts/GetCode.bin")
+var abi4 = JSON.parse(fs.readFileSync("contracts/GetCode.abi"))
 
-// var sol_testContract = new web3.eth.Contract(abi)
-var contract = web3.eth.contract(abi)
-var contract2 = web3.eth.contract(abi2)
-var contract3 = web3.eth.contract(abi3)
-
-contract3.new({from: base, data: '0x' + code3, gas: '5000000'}, function (e, judge) {
-    if (e) console.error(e)
-    if (typeof judge.address !== 'undefined') {
-        contract2.new(judge.address, {from: base, data: '0x' + code2, gas: '4000000'}, function (e, contr) {
-            if (e) console.error(e)
-            if (typeof contr.address !== 'undefined') {
-                contract.new(contr.address, {from: base, data: '0x' + code, gas: '4000000'}, function (e, contract){
-                    if (e) console.error(e)
-                    if (typeof contract.address !== 'undefined') {
-                        var config = {
-                            judge: judge.address,
-                            interactive: contr.address,
-                            host: host,
-                            base: base,
-                            tasks: contract.address }
-                        console.log(JSON.stringify(config))
-                        process.exit(0)
-                    }
-                })
-            }
-        })
+async function doDeploy() {
+    var accts = await web3.eth.getAccounts()
+    var send_opt = {gas:5000000, from:accts[0]}
+    var judge = await new web3.eth.Contract(abi3).deploy({data: code3}).send(send_opt)
+    var iactive = await new web3.eth.Contract(abi2).deploy({data: code2, arguments:[judge.options.address]}).send(send_opt)
+    var tasks = await new web3.eth.Contract(abi).deploy({data: code, arguments:[iactive.options.address]}).send(send_opt)
+    var get_code = await new web3.eth.Contract(abi4).deploy({data: code4}).send(send_opt)
+    var config = {
+        judge: judge.options.address,
+        interactive: iactive.options.address,
+        host: host,
+/*        base: web3.eth.Iban.toAddress(web3.eth.Iban.fromEthereumAddress(send_opt.from)), */
+        base: send_opt.from,
+        tasks: tasks.options.address,
+        get_code: get_code.options.address,
     }
-})
+    console.log(JSON.stringify(config))
+    process.exit(0)
+}
+
+doDeploy()
+
 

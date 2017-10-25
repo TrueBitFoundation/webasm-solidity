@@ -34,30 +34,24 @@ const logger = winston.createLogger({
 // connect to ipfs daemon API server
 var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
 
-web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
+web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
 var solver_error = true
 var verifier_error = false
 
-// var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
 var base = addresses.base
 
 logger.info("Using address %s", base)
 
-var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
-
 var send_opt = {from:base, gas: 4000000}
 
-var contractABI = web3.eth.contract(abi)
-var contract = contractABI.at(addresses.tasks)
+var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Tasks.abi")), addresses.tasks)
 
-var iactiveABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")))
-var iactive = iactiveABI.at(addresses.interactive)
+var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")), addresses.interactive)
 
-var judgeABI = web3.eth.contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")))
-var judge = judgeABI.at(addresses.judge)
+var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")), addresses.judge)
 
-appFile.configure(web3)
+appFile.configure(web3, base)
 
 var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"
 
@@ -74,13 +68,21 @@ if (process.argv[2]) process.chdir(process.argv[2])
 var CodeType = {
     WAST: 0,
     WASM: 1,
+    WASM_ADDRESS : 2,
+    INPUT : 3,
 }
 
 exports.CodeType = CodeType
 
+var extensions = {
+    0: "wast",
+    1: "wasm",
+    2: "wasm",
+    3: "bin"
+}
+
 function getExtension(t) {
-    if (t == CodeType.WASM) return "wasm"
-    else return "wast"
+    return extensions[t]
 }
 
 exports.getExtension = getExtension
@@ -170,9 +172,11 @@ function taskResult(config, cont) {
 
 exports.taskResult = taskResult
 
-function getFile(fileid, cont) {
+function getFile(fileid, ftype, cont) {
     logger.info("getting file %s", fileid)
-    ipfs.get(fileid, function (err, stream) {
+    if (ftype == CodeType.WASM_ADDRESS) {
+    }
+    else ipfs.get(fileid, function (err, stream) {
         if (err) {
             logger.error("IPFS error", err)
             return
@@ -193,7 +197,7 @@ exports.getFile = getFile
 
 function getInputFile(filehash, filenum, cont) {
     logger.info("Getting input file %s %s", filehash, filenum.toString(16))
-    if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
+    if (filenum == "0") getFile(filehash, CodeType.INPUT, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
 
@@ -201,7 +205,7 @@ exports.getInputFile = getInputFile
 
 function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, cont) {
     logger.info("Getting input file %s %s", filehash, filenum.toString(16))
-    if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
+    if (filenum == "0") getFile(filehash, CodeType.INPUT, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, function (obj) {
         initTask(config, wast_contents, obj.data, function () {
             ensureInputFile(config, function (proof) {
@@ -210,7 +214,7 @@ function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, con
                 judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
                     console.log("calculated hash", err, res)
                 })*/
-                contract.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err,tx) {
+                contract.methods.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location).send(send_opt, function (err,tx) {
                     logger.info("Called ensure input", err, tx)
                 })
             })
