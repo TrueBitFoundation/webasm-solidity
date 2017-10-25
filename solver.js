@@ -13,35 +13,43 @@ var socket = require('socket.io-client')('http://localhost:22448')
 
 var task_id, solver, steps
 
-function solveTask(obj, actor) {
+var config
+
+function status(msg) {
+    config.message = msg
+    socket.emit("config", config)
+    logger.info(msg)
+}
+
+function solveTask(obj, config) {
     // store into filesystem
-    common.initTask("task.wast", obj.file, "input.bin", obj.input, function (inithash) {
+    common.initTask(config, obj.file, obj.input, function (inithash) {
         if (inithash == obj.hash) {
-            logger.info("Initial hash matches")
+            status("Initial hash was correct, now solving.")
         }
         else {
-            logger.error("Initial hash was wrong")
-            // return
+            status("Initial hash was wrong, exiting.")
+            process.exit(0)
         }
 
-        common.taskResult("task.wast", "input.bin", actor, function (res) {
+        common.taskResult(config, function (res) {
             steps = res.steps
             contract.solve(obj.id, res.result, res.steps, send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
-                    logger.info("Success", tr)
-                    // io.emit("solve_success", tr)
+                    status("Solved task " + tr)
                     fs.access("blockchain.out", fs.constants.R_OK, function (err) {
                         if (!err) {
                             fs.readFile("blockchain.out", function (err, buf) {
                                 if (err) logger.error(err)
                                 else appFile.createFile(contract, "task.out", buf, function (id) {
-                                    logger.info("Uploaded file ", id.toString(16))
+                                    status("Uploaded file " + id.toString(16))
                                     contract.getRoot.call(id, function (err,res) {
-                                        logger.info("output file root", res)
+                                        logger.info("Output file root", res)
                                     })
-                                    common.ensureOutputFile(filename, ifilename, actor, function (proof) {
-                                        contract.finalize(obj.id, id, common.getRoots(proof.vm), common.getPointers(proof.vm), proof.loc.list, proof.loc.location, send_opt, function (err, res) {
+                                    common.ensureOutputFile(config, function (proof) {
+                                        contract.finalize(obj.id, id, common.getRoots(proof.vm), common.getPointers(proof.vm),
+                                                          proof.loc.list, proof.loc.location, send_opt, function (err, res) {
                                             logger.info("finalized task", err, res)
                                         })
                                     })
@@ -59,52 +67,54 @@ function replyChallenge(id, idx1, idx2) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
     if (idx1 + 1 == idx2) {
         // Now we are sending the intermediate states
-        common.getStep("task.wast", "input.bin", idx1, solver, function (obj) {
+        common.getStep(idx1, solver, function (obj) {
             iactive.postPhases(id, idx1, obj.states, send_opt, function (err,tx) {
                 if (err) logger.error(err)
-                else logger.info("Posted phases", tx)
+                else {
+                    status("Posted phases " + tx)
+                }
             })
         })
         return
     }
-    common.getLocation("task.wast", "input.bin", place, solver, function (hash) {
+    common.getLocation(place, solver, function (hash) {
         iactive.report(id, idx1, idx2, [hash], send_opt, function (err,tx) {
             if (err) logger.error(err)
-            else logger.info("Replied to challenge", tx)
-        })
-        iactive.report.call(id, idx1, idx2, [hash], send_opt, function (err, res) {
-            if (err) logger.error(err)
-            else logger.info("Testing reporting:", res)
+            else {
+                status("Replied place " + place + " for challenge " + tx)
+            }
         })
     })
 }
 
 function replyFinalityChallenge(id, idx1, idx2) {
     // Now we are sending the intermediate states
-    common.getFinality(fname, ifname, idx1, solver, function (obj) {
+    common.getFinality(idx1, solver, function (obj) {
         iactive.callFinalityJudge(id, idx1, obj.location,
                            common.getRoots(obj.vm), common.getPointers(obj.vm), send_opt, function (err, res) {
             if (err) logger.error(err)
-            else logger.info("Judging (finality) success " + res)
+            else status("Judging finality " + res)
         })
     })
 }
 
 function replyErrorPhases(id, idx1, arr) {
     // Now we are checking the intermediate states
-    common.getErrorStep("task.wast", "input.bin", idx1, solver, function (obj) {
+    common.getErrorStep(idx1, solver, function (obj) {
         for (var i = 1; i < obj.states.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.selectErrorPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
                     if (err) logger.error(err)
-                    else logger.info("Selected wrong phase", tx)
+                    else status("Selected wrong phase " + tx)
                 })
                 return
             }
         }
         iactive.selectErrorPhase(id, idx1, arr[i-1], i-1, send_opt, function (err,tx) {
             if (err) logger.error(err)
-            else logger.info("Selected wrong phase", tx)
+            else {
+                status("Selected wrong error phase " + tx)
+            }
         })
     })
 }
@@ -112,7 +122,7 @@ function replyErrorPhases(id, idx1, arr) {
 
 function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
-    common.getStep("task.wast", "input.bin", idx1, solver, function (obj) {
+    common.getStep(idx1, solver, function (obj) {
         var proof = obj[common.phase_table[phase]]
         var merkle = proof.proof || []
         var loc = proof.location || 0
@@ -124,7 +134,7 @@ function submitProof(id, idx1, phase) {
         iactive.callJudge(id, idx1, phase, merkle, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            common.getRoots(vm), common.getPointers(vm), send_opt, function (err, res) {
             if (err) logger.error(err)
-            else logger.info("Judging success " + res)
+            else status("Judging " + res)
         })
     })
 }
@@ -132,7 +142,7 @@ function submitProof(id, idx1, phase) {
 var challenges = {}
 
 iactive.StartChallenge("latest").watch(function (err,ev) {
-    if (err) { logger.error(err) ; return }
+    if (err) return logger.error(err);
     if (ev.args.p != base) return
     logger.error("Got challenge", ev)
     contract.queryChallenge.call(ev.args.uniq, function (err, id) {
@@ -156,7 +166,7 @@ iactive.StartChallenge("latest").watch(function (err,ev) {
 })
 
 iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
-    if (err) { logger.error(err) ; return }
+    if (err) return logger.error(err);
     if (ev.args.p != base) return
     logger.info("Got finality challenge", ev)
     contract.queryChallenge.call(ev.args.uniq, function (err, id) {
@@ -175,7 +185,7 @@ iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
             init: ev.args.s,
             result: ev.args.e,
         }
-        replyFinalityChallenge(ev.args.uniq, ev.args.steps.toNumber())
+        replyFinalityChallenge(ev.args.uniq, ev.args.step.toNumber())
     })
 })
 
@@ -184,7 +194,7 @@ function myId(ev) {
 }
 
 iactive.Queried("latest").watch(function (err,ev) {
-    if (err) { logger.error(err) ; return }
+    if (err) return logger.error(err);
     ev = ev.args
     if (!myId(ev)) return
     logger.info("Query ", ev)
@@ -192,7 +202,7 @@ iactive.Queried("latest").watch(function (err,ev) {
 })
 
 iactive.PostedErrorPhases("latest").watch(function (err,ev) {
-    if (err) { logger.error(err) ; return }
+    if (err) return logger.error(err);
     ev = ev.args
     if (!myId(ev)) return
     logger.info("Error phases ", ev)
@@ -200,22 +210,58 @@ iactive.PostedErrorPhases("latest").watch(function (err,ev) {
 })
 
 iactive.SelectedPhase("latest").watch(function (err,ev) {
-    if (err) { logger.error(err) ; return }
+    if (err) return logger.error(err);
     ev = ev.args
     if (!myId(ev)) return
     logger.info("Challenger selected phase ", ev)
     submitProof(ev.id, ev.idx1.toNumber(), ev.phase.toString())
 })
 
-function runSolver(config) {
+iactive.WinnerSelected("latest").watch(function (err,ev) {
+    if (err) return logger.error(err);
+    ev = ev.args
+    if (!myId(ev)) return
+    iactive.isRejected(task_id, send_opt, function (err, res) {
+        if (err) return logger.error(err)
+        if (!res) return status("A challenge was rejected")
+        status("My solution was rejected, exiting.")
+        process.exit(0)
+    })
+})
+
+contract.Finalized("latest").watch(function (err,ev) {
+    if (err) return logger.error(err);
+    ev = ev.args
+    if (task_id != ev.id.toNumber()) return
+    status("Task accepted, exiting.")
+    process.exit(0)
+})
+
+
+function forceTimeout() {
+    if (!config) return
+    contract.finalizeTask(task_id, send_opt, function (err,tx) {
+        if (err) return console.error(err)
+        status("Trying timeout " + tx)
+    })
+}
+
+setInterval(forceTimeout, 10000)
+
+function runSolver(congif) {
+    config = congif
     // download file from IPFS
     logger.info("solving", config)
     task_id = parseInt(config.id, 16)
-    solver = config.actor
-    socket.emit("info", config)
+    solver = config
+    config.pid = process.pid
+    config.kind = "solver"
+    config.input_file = "input.bin"
+    config.code_file = "task." + common.getExtension(config.code_type)
+    socket.emit("config", config)
     common.getFile(config.filehash, function (filestr) {
-        common.getAndEnsureInputFile(config.inputhash, config.inputfile, config.filehash, filestr, task_id, function (input) {
-            solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:task_id, input:input.data, inputhash:input.name}, solver)
+        common.getAndEnsureInputFile(config, config.inputhash, config.inputfile, filestr, task_id, function (input) {
+            solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:task_id, input:input.data, inputhash:input.name}, config)
         })
     })
 }

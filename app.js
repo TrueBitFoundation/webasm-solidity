@@ -17,40 +17,50 @@ if (process.env.NODE_ENV !== 'production') {
 
 function execInPath(fname, path_name) {
     execFile("node", [fname, path_name], (error, stdout, stderr) => {
-        if (stderr) logger.error('error', stderr)
-        logger.info('other output', stdout)
+        if (stderr) logger.error('error %s', stderr)
+        logger.info('other output %s', stdout)
     })
 }
 
 var solver = { error: false, error_location: 0 }
 var verifier = { error: false, error_location: 0 }
 
+var CodeType = common.CodeType
+
 io.on("connection", function(socket) {
     logger.info("Got new socket.io client")
     io.emit("client", {})
-    socket.on("msg", function (str) {
-        console.log(str)
+    socket.on("request-ui", function (str) {
+        socket.join("ui")
+        logger.info("Got user interface")
     })
     socket.on("new_task", function (obj) {
-        // store into IPFS, get ipfs address
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
         if (!fs.existsSync(path)) fs.mkdirSync(path)
         fs.writeFileSync(path + "/task.wast", obj.task)
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST}))
+        execInPath("giver.js", path)
+    })
+    socket.on("new_wasm_task", function (obj) {
+        var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+        if (!fs.existsSync(path)) fs.mkdirSync(path)
+        logger.info("Creating WASM task", obj)
+        fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
+        fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM}))
         execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
-        verifier.error = obj.verifier_error
-        solver.error = obj.solver_error
-        verifier.error_location = obj.verifier_location
-        solver.error_location = obj.solver_location
+        logger.info("new configuration", obj)
+        verifier = obj.verifier
+        solver = obj.solver
     })
-    socket.on("asd", function () {
-        console.log("debug")
+    socket.on("config", function (obj) {
+        // logger.info("process changed %s", obj.message)
+        io.to("ui").emit("config", obj)
     })
 })
-
-
 
 // We should listen to contract events
 
@@ -63,16 +73,18 @@ contract.Posted("latest").watch(function (err, ev) {
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
     var obj = {
+        message: "Starting solver",
         id: id,
         giver: ev.args.giver,
         hash: ev.args.hash,
         filehash:ev.args.file,
+        code_type: ev.args.ct.toNumber(),
         inputhash:ev.args.input,
         inputfile: ev.args.input_file,
         actor: solver,
     }
-    logger.info(obj)
-    io.emit("posted", obj)
+    logger.info("Creating task", obj)
+    io.emit("event", obj)
 
     fs.writeFileSync(path + "/solver.json", JSON.stringify(obj))
     execInPath("solver.js", path)
@@ -84,22 +96,26 @@ contract.Solved("latest").watch(function (err, ev) {
         return
     }
     logger.info("solved", ev.args)
+    if (ev.args.solver == common.base && !verifier.check_own) return logger.info("Not going to verify", verifier)
     var id = ev.args.id.toString(16)
     var path = "tmp.verifier_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
     var obj = {
+        message: "Starting verifier",
         id: id,
+        solver: ev.args.solver,
         giver: ev.args.giver,
         hash: ev.args.hash,
         init: ev.args.init,
         filehash:ev.args.file,
+        code_type: ev.args.ct.toNumber(),
         inputhash:ev.args.input,
         inputfile: ev.args.input_file,
         steps:ev.args.steps.toString(),
         actor: verifier,
     }
     var id = ev.args.id.toString()
-    io.emit("solved", obj)
+    io.emit("event", obj)
     fs.writeFileSync(path + "/verifier.json", JSON.stringify(obj))
     execInPath("verifier.js", path)
 })
@@ -110,29 +126,29 @@ iactive.Reported("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
     logger.info("Reported ", ev)
-    io.emit("reply", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber(), hash:ev.arr[0]})
+    io.emit("reply", {message:"Reported intermediate state", uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber(), hash:ev.arr[0]})
 })
 
 iactive.NeedErrorPhases("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
     logger.info("Query ", ev)
-    io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber()})
+    io.emit("event", {message: "Query for error phases", uniq:ev.id, idx1:ev.idx1.toNumber()})
 })
 
 iactive.PostedPhases("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
     logger.info("Phases ", ev)
-    io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
+    io.emit("event", {message:"Posted phases", uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
 })
 
 
 iactive.SelectedErrorPhase("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
-    logger.info("Prover selected error phase ", ev)
-    io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+    logger.info("Prover selected error phase", ev)
+    io.emit("event", {message: "Prover selected error phase", uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
 })
 
 /// solver events
@@ -140,7 +156,8 @@ iactive.SelectedErrorPhase("latest").watch(function (err,ev) {
 iactive.StartChallenge("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     logger.info("Got challenge", ev)
-    io.emit("challenge", {
+    io.emit("event", {
+        message:"Challenging solution",
             prover: ev.args.p,
             challenger: ev.args.c,
             uniq: ev.args.uniq,
@@ -153,7 +170,8 @@ iactive.StartChallenge("latest").watch(function (err,ev) {
 iactive.StartFinalityChallenge("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     logger.info("Got finality challenge", ev)
-    io.emit("challenge", {
+    io.emit("event", {
+        message:"Challenging finality",
             prover: ev.args.p,
             challenger: ev.args.c,
             uniq: ev.args.uniq,
@@ -170,22 +188,44 @@ iactive.Queried("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
     logger.info("Query ", ev)
-    io.emit("query", {uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber()})
+    io.emit("event", {message: "Query", uniq:ev.id, idx1:ev.idx1.toNumber(), idx2:ev.idx2.toNumber()})
 })
 
 iactive.PostedErrorPhases("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
     logger.info("Error phases ", ev)
-    io.emit("phases", {uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
+    io.emit("event", {message: "Error phases", uniq:ev.id, idx1:ev.idx1.toNumber(), phases:ev.arr})
 })
 
 iactive.SelectedPhase("latest").watch(function (err,ev) {
     if (err) { logger.error(err) ; return }
     ev = ev.args
     logger.info("Challenger selected phase ", ev)
-    io.emit("phase_selected", {uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
+    io.emit("event", {message: "Challenger selected phase", uniq:ev.id, idx1:ev.idx1.toNumber(), phase:ev.phase.toString()})
 })
+
+iactive.WinnerSelected("latest").watch(function (err,ev) {
+    if (err) { logger.error(err) ; return }
+    ev = ev.args
+    logger.info("Selected winner for challenge", ev)
+    io.emit("event", {message: "Selected winner for challenge", uniq:ev.id})
+})
+
+contract.Finalized("latest").watch(function (err,ev) {
+    if (err) return logger.error(err);
+    ev = ev.args
+    logger.info("Finalized a task", ev)
+    io.emit("event", {message: "Finalized task", uniq:ev.id})
+})
+
+function tick() {
+    contract.tick(common.send_opt, function (err, res) {
+        if (!err) logger.info("tick %s", res)
+    })
+}
+
+setInterval(tick, 10000)
 
 http.listen(22448, function(){
     logger.info("listening on *:22448")

@@ -69,13 +69,41 @@ logger.info('using offchain interpreter at %s', wasm_path)
 // change current directory here?
 if (process.argv[2]) process.chdir(process.argv[2])
 
-function initTask(fname, task, ifname, inp, cont) {
-    fs.writeFile(fname, task, function () {
-        fs.writeFile(ifname, inp, function () {
+// perhaps have more stuff in config
+
+var CodeType = {
+    WAST: 0,
+    WASM: 1,
+}
+
+exports.CodeType = CodeType
+
+function getExtension(t) {
+    if (t == CodeType.WASM) return "wasm"
+    else return "wast"
+}
+
+exports.getExtension = getExtension
+
+function buildArgs(args, config) {
+    if (config.actor.error) {
+        args.push("-insert-error")
+        args.push("" + config.actor.error_location)
+    }
+    args.push("-file")
+    args.push("" + config.input_file)
+    if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
+    else ["-wasm", config.code_file].forEach(a => args.push(a))
+    return args
+}
+
+function initTask(config, task, inp, cont) {
+    fs.writeFile(config.code_file, task, 'binary', function () {
+        fs.writeFile(config.input_file, inp, 'binary', function () {
             // run init script
-            execFile(wasm_path, ["-m", "-init", "-file", ifname, "-case", "0", fname], (error, stdout, stderr) => {
+            execFile(wasm_path, buildArgs(["-m", "-init"], config), (error, stdout, stderr) => {
                 if (error) {
-                    logger.error('initialization error %s')
+                    logger.error('initialization error %s', stderr)
                     return
                 }
                 logger.info('initializing task %s', stdout)
@@ -87,19 +115,8 @@ function initTask(fname, task, ifname, inp, cont) {
 
 exports.initTask = initTask
 
-// perhaps load this from config
-var actor = { error: false, error_location: 0 }
-
-function insertError(args, actor) {
-    if (actor.error) {
-        args.push("-insert-error")
-        args.push("" + actor.error_location)
-    }
-    return args
-}
-
-function ensureInputFile(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-file", ifilename, "-input-proof", ifilename, "-case", "0", filename], actor)
+function ensureInputFile(config, cont) {
+    var args = buildArgs(["-m", "-input-proof", config.input_file], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             logger.error('stderr %s', stderr)
@@ -112,8 +129,8 @@ function ensureInputFile(filename, ifilename, actor, cont) {
 
 exports.ensureInputFile = ensureInputFile
 
-function ensureOutputFile(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-file", ifilename, "-output-proof", "blockchain", "-case", "0", filename], actor)
+function ensureOutputFile(config, cont) {
+    var args = buildArgs(["-m", "-output-proof", "blockchain"], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) {
             logger.error('stderr %s', stderr)
@@ -126,16 +143,29 @@ function ensureOutputFile(filename, ifilename, actor, cont) {
 
 exports.ensureOutputFile = ensureOutputFile
 
-function taskResult(filename, ifilename, actor, cont) {
-    var args = insertError(["-m", "-result", "-file", ifilename, "-case", "0", filename], actor)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            logger.error('stderr %s', stderr)
-            return
-        }
-        logger.info('solved task %s', stdout)
-        cont(JSON.parse(stdout))
-    })
+function taskResult(config, cont) {
+    if (config.actor.stop_early < 0) {
+        var args = buildArgs(["-m", "-result"], config)
+        execFile(wasm_path, args, function (error, stdout, stderr) {
+            if (error) {
+                logger.error('stderr %s', stderr)
+                return
+            }
+            logger.info('solved task %s', stdout)
+            cont(JSON.parse(stdout))
+        })
+    }
+    else {
+        var args = buildArgs(["-m", "-location", config.actor.stop_early.toString()], config)
+        execFile(wasm_path, args, function (error, stdout, stderr) {
+            if (error) {
+                logger.error('stderr %s', stderr)
+                return
+            }
+            logger.info('exited early %s', stdout)
+            cont({steps: config.actor.stop_early, result:JSON.parse(stdout)})
+        })
+    }
 }
 
 exports.taskResult = taskResult
@@ -153,7 +183,7 @@ function getFile(fileid, cont) {
                 chunks.push(chunk);
             })
             file.content.on("end", function () {
-                cont(Buffer.concat(chunks).toString())
+                cont(Buffer.concat(chunks).toString("binary"))
             })
         })
     })
@@ -169,14 +199,14 @@ function getInputFile(filehash, filenum, cont) {
 
 exports.getInputFile = getInputFile
 
-function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, cont) {
+function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, cont) {
     logger.info("Getting input file %s %s", filehash, filenum.toString(16))
     if (filenum == "0") getFile(filehash, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, function (obj) {
-        initTask("task.wast", wast_contents, "input.bin", obj.data, function () {
-            ensureInputFile("task.wast", "input.bin", verifier, function (proof) {
+        initTask(config, wast_contents, obj.data, function () {
+            ensureInputFile(config, function (proof) {
+                logger.info("ensuring file", {id:id, proof: proof})
                 /*
-                console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
                 judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
                     console.log("calculated hash", err, res)
                 })*/
@@ -191,8 +221,8 @@ function getAndEnsureInputFile(filehash, filenum, wast_file, wast_contents, id, 
 
 exports.getAndEnsureInputFile = getAndEnsureInputFile
 
-function getLocation(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-location", place, "-case", "0", fname], actor)
+function getLocation(place, config, cont) {
+    var args = buildArgs(["-m", "-location", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) console.error('stderr %s', stderr)
         else {
@@ -204,8 +234,8 @@ function getLocation(fname, ifname, place, actor, cont) {
 
 exports.getLocation = getLocation
 
-function getStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-step", place, "-case", "0", fname], actor)
+function getStep(place, config, cont) {
+    var args = buildArgs(["-m", "-step", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
@@ -214,8 +244,8 @@ function getStep(fname, ifname, place, actor, cont) {
 
 exports.getStep = getStep
 
-function getErrorStep(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-error-step", place, "-case", "0", fname], actor)
+function getErrorStep(place, config, cont) {
+    var args = insertError(["-m", "-error-step", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
@@ -224,13 +254,15 @@ function getErrorStep(fname, ifname, place, actor, cont) {
 
 exports.getErrorStep = getErrorStep
 
-function getFinality(fname, ifname, place, actor, cont) {
-    var args = insertError(["-m", "-file", ifname, "-final", place, "-case", "0", fname], actor)
+function getFinality(place, config, cont) {
+    var args = insertError(["-m", "-final", place], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
 }
+
+exports.getFinality = getFinality
 
 exports.phase_table = {
     0: "fetch",
