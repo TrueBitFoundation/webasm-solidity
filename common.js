@@ -98,8 +98,8 @@ function buildArgs(args, config) {
 }
 
 function initTask(config, task, inp, cont) {
-    fs.writeFile(config.code_file, task, function () {
-        fs.writeFile(config.input_file, inp, function () {
+    fs.writeFile(config.code_file, task, 'binary', function () {
+        fs.writeFile(config.input_file, inp, 'binary', function () {
             // run init script
             execFile(wasm_path, buildArgs(["-m", "-init"], config), (error, stdout, stderr) => {
                 if (error) {
@@ -183,7 +183,7 @@ function getFile(fileid, cont) {
                 chunks.push(chunk);
             })
             file.content.on("end", function () {
-                cont(Buffer.concat(chunks).toString())
+                cont(Buffer.concat(chunks).toString("binary"))
             })
         })
     })

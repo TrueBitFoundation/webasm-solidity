@@ -23,7 +23,7 @@ function giveTask(obj) {
             console.log(res)
             // store into filesystem
             common.initTask(obj, task, input_buffer, function (state) {
-                contract.add(state, res[0].hash, 0, res[1].hash, send_opt, function (err, tr) {
+                contract.add(state, res[0].hash, obj.code_type, res[1].hash, send_opt, function (err, tr) {
                     if (err) console.log(err)
                     else {
                         console.log("Success", tr)

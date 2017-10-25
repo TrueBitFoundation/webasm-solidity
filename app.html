@@ -38,7 +38,14 @@
     
     input {
         font-family: 'Oswald', sans-serif;
+    }
+
+    input[type=number] {
         width: 50px;
+    }
+
+    input[type=file] {
+        
     }
 
     button {
@@ -88,6 +95,8 @@
 
 <button onclick="newTask();">New task</button>
 <button onclick="smartContract();">Test Smart Contract</button>
+<input id="wasm_file" name="wasm_file" type="file">
+<button onclick="newWasmTask();">New task from WASM file</button>
 
 <h1>Solvers</h1>
 
@@ -217,11 +226,21 @@
     
     initErrorUI()
     
-    
     function newTask() {
         socket.emit("new_task", {task:document.querySelector("#module").value, input:getInput()})
     }
     
+    function newWasmTask() {
+        var el = document.querySelector("#wasm_file")
+        var fr = new FileReader()
+        fr.onload = function () {
+            console.log(fr.result)
+            socket.emit("new_wasm_task", {task:fr.result, input:getInput()})
+        }
+        fr.readAsBinaryString(el.files[0])
+        
+    }
+
 </script>
 
 

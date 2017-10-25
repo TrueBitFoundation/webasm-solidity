@@ -45,7 +45,8 @@ io.on("connection", function(socket) {
     socket.on("new_wasm_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
         if (!fs.existsSync(path)) fs.mkdirSync(path)
-        fs.writeFileSync(path + "/task.wasm", obj.task)
+        logger.info("Creating WASM task", obj)
+        fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
         fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM}))
         execInPath("giver.js", path)
