@@ -12,8 +12,9 @@ function giveTask(obj) {
     var task = fs.readFileSync(obj.taskfile)
     var input = fs.readFileSync(obj.inputfile)
     var input_buffer = appFile.inputToBuffer(input)
-    obj.input_file = obj.taskfile
-    obj.code_file = obj.inputfile
+    obj.code_file = obj.taskfile
+    obj.input_file = obj.inputfile
+    obj.actor = {}
     ipfs.files.add([task, input_buffer], function (err, res) {
             if (err) {
                 console.log(err)

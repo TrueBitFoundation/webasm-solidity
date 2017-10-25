@@ -92,8 +92,8 @@ function buildArgs(args, config) {
     }
     args.push("-file")
     args.push("" + config.input_file)
-    if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(args.push)
-    else ["-wasm", config.code_file].forEach(args.push)
+    if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
+    else ["-wasm", config.code_file].forEach(a => args.push(a))
     return args
 }
 
@@ -103,7 +103,7 @@ function initTask(config, task, inp, cont) {
             // run init script
             execFile(wasm_path, buildArgs(["-m", "-init"], config), (error, stdout, stderr) => {
                 if (error) {
-                    logger.error('initialization error %s')
+                    logger.error('initialization error %s', stderr)
                     return
                 }
                 logger.info('initializing task %s', stdout)
@@ -144,7 +144,7 @@ function ensureOutputFile(config, cont) {
 exports.ensureOutputFile = ensureOutputFile
 
 function taskResult(config, cont) {
-    if (actor.stop_early < 0) {
+    if (config.actor.stop_early < 0) {
         var args = buildArgs(["-m", "-result"], config)
         execFile(wasm_path, args, function (error, stdout, stderr) {
             if (error) {
@@ -163,7 +163,7 @@ function taskResult(config, cont) {
                 return
             }
             logger.info('exited early %s', stdout)
-            cont({steps: actor.stop_early, result:JSON.parse(stdout)})
+            cont({steps: config.actor.stop_early, result:JSON.parse(stdout)})
         })
     }
 }
@@ -205,8 +205,8 @@ function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, con
     else appFile.getFile(contract, filenum, function (obj) {
         initTask(config, wast_contents, obj.data, function () {
             ensureInputFile(config, function (proof) {
+                logger.info("ensuring file", {id:id, proof: proof})
                 /*
-                console.log("ensuring", id, proof.hash, getRoots(proof.vm), getPointers(proof.vm))
                 judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
                     console.log("calculated hash", err, res)
                 })*/
