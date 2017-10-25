@@ -31,17 +31,17 @@ function bufferToInput(buf) {
 }
 
 function getFile(contract, id, cont) {
-    contract.getName(id, send_opt, function (err, name) {
+    contract.methods.getName(id).call(send_opt, function (err, name) {
         if (err) {
             console.log(err)
             return
         }
-        contract.getData(id, send_opt, function (err,arr) {
+        contract.methods.getData(id).call(send_opt, function (err,arr) {
             if (err) {
                 console.log(err)
                 return
             }
-            contract.getByteSize(id, send_opt, function (err,sz) {
+            contract.methods.getByteSize(id).call(send_opt, function (err,sz) {
                 if (err) {
                     console.log(err)
                     return
@@ -54,9 +54,9 @@ function getFile(contract, id, cont) {
 
 function setFile(contract, id, buf, cont) {
     var arr = bufferToInput(buf)
-    contract.setByteSize(id, buf.length, send_opt, function (err) {
+    contract.methods.setByteSize(id, buf.length).send(send_opt, function (err) {
         if (err) console.log(err)
-        else contract.setSize(id, arr.length, send_opt, function (err) {
+        else contract.methods.setSize(id, arr.length, send_opt, function (err) {
             if (err) console.log(err)
             else contract.setLeafs(id, arr, 0, arr.length, send_opt, function (err) {
                 if (err) console.log(err)
@@ -71,9 +71,9 @@ function setFile(contract, id, buf, cont) {
 function createFile(contract, name, buf, cont) {
     var arr = bufferToInput(buf)
     var nonce = web3.eth.getTransactionCount(web3.eth.coinbase)
-    contract.createFileWithContents(name, nonce, arr, buf.length, send_opt, function (err) {
+    contract.methods.createFileWithContents(name, nonce, arr, buf.length).send(send_opt, function (err) {
         if (err) console.log(err)
-        else contract.calcId(nonce, send_opt, function (err, id) {
+        else contract.methods.calcId(nonce).call(send_opt, function (err, id) {
             if (err) console.log(err)
             else cont(id)
         })
@@ -83,9 +83,8 @@ function createFile(contract, name, buf, cont) {
 var web3
 var send_opt
 
-function configure(w) {
+function configure(w, base) {
     web3 = w
-    var base = web3.eth.coinbase
     send_opt = {from:base, gas: 4000000}
 }
 

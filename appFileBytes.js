@@ -74,9 +74,8 @@ function createFile(contract, name, buf, cont) {
 var web3
 var send_opt
 
-function configure(w) {
+function configure(w, base) {
     web3 = w
-    var base = web3.eth.coinbase
     send_opt = {from:base, gas: 4000000}
 }
 

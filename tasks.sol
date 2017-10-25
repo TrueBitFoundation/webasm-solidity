@@ -19,16 +19,17 @@ interface Callback {
 }
 
 contract Tasks is Filesystem {
-    
+
     enum CodeType {
         WAST,
-        WASM
+        WASM,
+        WASM_ADDRESS
     }
 
     event Posted(address giver, bytes32 hash, string file, CodeType ct, string input, uint input_file, uint id);
     event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, CodeType ct, string input, uint input_file, address solver);
     event Finalized(uint id);
- 
+
     Interactive iactive;
     
     function Tasks(address contr) public {
