@@ -252,7 +252,7 @@ function runSolver(congif) {
     // download file from IPFS
     logger.info("solving", config)
     task_id = parseInt(config.id, 16)
-    solver = config.actor
+    solver = config
     config.pid = process.pid
     config.kind = "solver"
     socket.emit("config", config)

@@ -31,7 +31,7 @@ contract TestUser {
       arr[1] = block.blockhash(block.number-1) & 0xff;
       uint file = truebit.createFileWithContents("test.data", nonce, arr, 100);
       nonce++;
-      uint id = truebit.addWithFile(init, code, file); // it should then call back
+      truebit.addWithFile(init, code, file); // it should then call back
    }
    
    function debugStuff() public returns (uint, uint) {
@@ -44,13 +44,13 @@ contract TestUser {
       return (file, id);
    }
    
-   function consume(uint file_id, bytes32[] arr) public {
+   function consume(uint /* file_id */, bytes32[] arr) public {
       val = arr[2];
       Success();
    }
    
    // this is the callback name
-   function solved(uint id, bytes32 result, bytes32 file) public {
+   function solved(uint /* id */, bytes32 /* result */, bytes32 file) public {
       // could check the task id
       truebit.forwardData(uint(file), this);
    }

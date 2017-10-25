@@ -25,6 +25,11 @@ function execInPath(fname, path_name) {
 var solver = { error: false, error_location: 0 }
 var verifier = { error: false, error_location: 0 }
 
+var CodeType = {
+    WAST: 0,
+    WASM: 1,
+}
+
 io.on("connection", function(socket) {
     logger.info("Got new socket.io client")
     io.emit("client", {})
@@ -37,6 +42,15 @@ io.on("connection", function(socket) {
         if (!fs.existsSync(path)) fs.mkdirSync(path)
         fs.writeFileSync(path + "/task.wast", obj.task)
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST}))
+        execInPath("giver.js", path)
+    })
+    socket.on("new_wasm_task", function (obj) {
+        var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+        if (!fs.existsSync(path)) fs.mkdirSync(path)
+        fs.writeFileSync(path + "/task.wasm", obj.task)
+        fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM}))
         execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
@@ -66,6 +80,7 @@ contract.Posted("latest").watch(function (err, ev) {
         giver: ev.args.giver,
         hash: ev.args.hash,
         filehash:ev.args.file,
+        code_type: ev.args.ct.toNumber(),
         inputhash:ev.args.input,
         inputfile: ev.args.input_file,
         actor: solver,
@@ -95,6 +110,7 @@ contract.Solved("latest").watch(function (err, ev) {
         hash: ev.args.hash,
         init: ev.args.init,
         filehash:ev.args.file,
+        code_type: ev.args.ct.toNumber(),
         inputhash:ev.args.input,
         inputfile: ev.args.input_file,
         steps:ev.args.steps.toString(),

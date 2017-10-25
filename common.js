@@ -69,6 +69,8 @@ logger.info('using offchain interpreter at %s', wasm_path)
 // change current directory here?
 if (process.argv[2]) process.chdir(process.argv[2])
 
+// perhaps have more stuff in config
+
 function initTask(fname, task, ifname, inp, cont) {
     fs.writeFile(fname, task, function () {
         fs.writeFile(ifname, inp, function () {
@@ -87,11 +89,8 @@ function initTask(fname, task, ifname, inp, cont) {
 
 exports.initTask = initTask
 
-// perhaps load this from config
-var actor = { error: false, error_location: 0 }
-
 function insertError(args, actor) {
-    if (actor.error) {
+    if (actor.actor.error) {
         args.push("-insert-error")
         args.push("" + actor.error_location)
     }

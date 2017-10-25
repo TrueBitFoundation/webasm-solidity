@@ -255,7 +255,7 @@ function runVerifier(congif) {
     config = congif
     logger.info("verifying", config)
     task_id = parseInt(config.id, 16)
-    verifier = config.actor
+    verifier = config
     config.pid = process.pid
     config.kind = "verifier"
     socket.emit("config", config)

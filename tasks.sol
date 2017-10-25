@@ -20,10 +20,15 @@ interface Callback {
 
 contract Tasks is Filesystem {
     
-    event Posted(address giver, bytes32 hash, string file, string input, uint input_file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, string input, uint input_file, address solver);
+    enum CodeType {
+        WAST,
+        WASM
+    }
+
+    event Posted(address giver, bytes32 hash, string file, CodeType ct, string input, uint input_file, uint id);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, CodeType ct, string input, uint input_file, address solver);
     event Finalized(uint id);
-    
+ 
     Interactive iactive;
     
     function Tasks(address contr) public {
@@ -41,6 +46,8 @@ contract Tasks is Filesystem {
         string input; // also ipfs hash
         uint input_file; // get file from the filesystem
         
+        CodeType code_type;
+        
         address solver;
         bytes32 result;
         uint steps;
@@ -49,24 +56,40 @@ contract Tasks is Filesystem {
         bytes32 output_file;
         
         bool good; // has the file been loaded
-        uint blocked; // how long we have to wait to accept
+        uint blocked; // how long we have to wait to accept solution
     }
 
     Task[] public tasks;
     
     mapping (bytes32 => uint) challenges;
     
-    function add(bytes32 init, string file, string input) public returns (uint) {
-        tasks.push(Task(msg.sender, init, file, input, 0, 0, 0, 0, 0, 0, true, 0));
-        Posted(msg.sender, init, file, input, 0, tasks.length-1);
-        return tasks.length-1;
+    function add(bytes32 init, string file, CodeType ct, string input) public returns (uint) {
+        uint id = tasks.length;
+        tasks.length++;
+        Task storage t = tasks[id];
+        t.giver = msg.sender;
+        t.init = init;
+        t.file = file;
+        t.input = input;
+        t.good = true;
+        t.code_type = ct;
+        Posted(msg.sender, init, file, ct, input, 0, id);
+        return id;
     }
-    
+
     // Perhaps it should lock the file?
-    function addWithFile(bytes32 init, string file, uint input_file) public returns (uint) {
-        tasks.push(Task(msg.sender, init, file, "", input_file, 0, 0, 0, 0, 0, false, 0));
-        Posted(msg.sender, init, file, "", input_file, tasks.length-1);
-        return tasks.length-1;
+    function addWithFile(bytes32 init, string file, CodeType ct, uint input_file) public returns (uint) {
+        uint id = tasks.length;
+        tasks.length++;
+        Task storage t = tasks[id];
+        t.giver = msg.sender;
+        t.init = init;
+        t.file = file;
+        t.input_file = input_file;
+        t.good = false;
+        t.code_type = ct;
+        Posted(msg.sender, init, file, ct, "", input_file, id);
+        return id;
     }
 
     function solve(uint id, bytes32 result, uint steps) public {
@@ -77,7 +100,7 @@ contract Tasks is Filesystem {
         t.steps = steps;
         t.state = 1;
         t.blocked = block.number + 10;
-        Solved(id, result, steps, t.init, t.file, t.input, t.input_file, t.solver);
+        Solved(id, result, steps, t.init, t.file, t.code_type, t.input, t.input_file, t.solver);
     }
 
     function ensureInputFile(uint id, bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
@@ -131,8 +154,11 @@ contract Tasks is Filesystem {
         Finalized(id);
     }
     
+    uint tick_var;
+    
     // For testing, mine this to create new block
     function tick() public {
+        tick_var++;
     }
 
 }
