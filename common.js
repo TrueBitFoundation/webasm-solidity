@@ -51,6 +51,8 @@ var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Intera
 
 var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")), addresses.judge)
 
+var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/GetCode.abi")), addresses.get_code)
+
 appFile.configure(web3, base)
 
 var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"
@@ -68,11 +70,17 @@ if (process.argv[2]) process.chdir(process.argv[2])
 var CodeType = {
     WAST: 0,
     WASM: 1,
-    WASM_ADDRESS : 2,
+    INTERNAL: 2,
     INPUT : 3,
 }
 
+var Storage = {
+    IPFS: 0,
+    BLOCKCHAIN: 1,
+}
+
 exports.CodeType = CodeType
+exports.Storage = Storage
 
 var extensions = {
     0: "wast",
@@ -174,13 +182,16 @@ exports.taskResult = taskResult
 
 function getFile(fileid, ftype, cont) {
     logger.info("getting file %s", fileid)
-    if (ftype == CodeType.WASM_ADDRESS) {
+    if (ftype == Storage.BLOCKCHAIN) {
+        get_code.methods.get(fileid).call(function (err,res) {
+            // dropping "0x"
+            if (err) return logger.error("Cannot load file from blockchain",err)
+            var buf = Buffer.from(res.substr(2), "hex")
+            cont(buf.toString("binary"))
+        })
     }
     else ipfs.get(fileid, function (err, stream) {
-        if (err) {
-            logger.error("IPFS error", err)
-            return
-        }
+        if (err) return logger.error("IPFS error", err)
         var chunks = []
         stream.on('data', (file) => {
             file.content.on("data", function (chunk) {
@@ -197,7 +208,7 @@ exports.getFile = getFile
 
 function getInputFile(filehash, filenum, cont) {
     logger.info("Getting input file %s %s", filehash, filenum.toString(16))
-    if (filenum == "0") getFile(filehash, CodeType.INPUT, a => cont({data:a, name:filehash}))
+    if (filenum == "0") getFile(filehash, Storage.IPFS, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, cont)
 }
 
@@ -205,7 +216,7 @@ exports.getInputFile = getInputFile
 
 function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, cont) {
     logger.info("Getting input file %s %s", filehash, filenum.toString(16))
-    if (filenum == "0") getFile(filehash, CodeType.INPUT, a => cont({data:a, name:filehash}))
+    if (filenum == "0") getFile(filehash, Storage.IPFS, a => cont({data:a, name:filehash}))
     else appFile.getFile(contract, filenum, function (obj) {
         initTask(config, wast_contents, obj.data, function () {
             ensureInputFile(config, function (proof) {
@@ -295,6 +306,27 @@ function getPointers(vm) {
 }
 
 exports.getPointers = getPointers
+
+async function upload(data) {
+    logger.info("Going to upload")
+    var sz = data.length.toString(16)
+    if (sz.length == 1) sz = "000" + sz
+    else if (sz.length == 2) sz = "00" + sz
+    else if (sz.length == 3) sz = "0" + sz
+
+    var init_code = "61"+sz+"600061"+sz+"600e600039f3"
+
+    var contract = new web3.eth.Contract([])
+
+    var hex_data = Buffer.from(data).toString("hex")
+
+    contract = await contract.deploy({data: '0x' + init_code + hex_data}).send(send_opt)
+    logger.info("storage added to", contract.options.address)
+    
+    return contract.options.address
+}
+
+exports.upload = upload
 
 exports.appFile = appFile
 exports.ipfs = ipfs

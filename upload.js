@@ -11,26 +11,12 @@ if (process.argv.length < 3) {
 var host = process.argv[3] || "localhost"
 var file = process.argv[2]
 
-web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
-
-var base = web3.eth.coinbase
+web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
 var data = fs.readFileSync(file)
 
 var abi = JSON.parse(fs.readFileSync("contracts/GetCode.abi"))
 var code = fs.readFileSync("contracts/GetCode.bin")
-
-var send_opt = {from:base, gas: 4000000}
-
-var contract = web3.eth.contract([])
-
-var check_contract = web3.eth.contract(abi)
-
-// Assume the length is two bytes
-var sz = (data.length/2).toString(16)
-if (sz.length == 1) sz = "000" + sz
-else if (sz.length == 2) sz = "00" + sz
-else if (sz.length == 3) sz = "0" + sz
 
 /*
     Assembly of the code that we want to use as init-code in the new contract, 
@@ -48,22 +34,32 @@ else if (sz.length == 3) sz = "0" + sz
      
 */
 
+// Assume the length has two bytes
+var sz = (data.length/2).toString(16)
+if (sz.length == 1) sz = "000" + sz
+else if (sz.length == 2) sz = "00" + sz
+else if (sz.length == 3) sz = "0" + sz
+
 var init_code = "61"+sz+"600061"+sz+"600e600039f3"
 
-contract.new({from: base, data: '0x' + init_code + data, gas: '90000000'}, function (e, c) {
-    if (e) console.error(e)
-    if (typeof c.address !== 'undefined') {
-        console.log("storage added to", c.address)
-        check_contract.new({from: base, data: '0x' + code, gas: '4000000'}, function (e, check) {
-            if (e) console.error(e)
-            if (typeof check.address !== 'undefined') {
-                console.log("checking storage with", check.address)
-                check.get.call(c.address, function (err,res) {
-                    if (err) console.error(err)
-                    else console.log(res)
-                })
-            }
-        })
-    }
-})
+async function upload() {
+    var accts = await web3.eth.getAccounts()
+    var base = accts[0]
+    var contr = new web3.eth.Contract(abi)
+    var send_opt = {from: base, gas: '4500000'}
+    
+    var contract = new web3.eth.Contract([])
+
+    var check = new web3.eth.Contract(abi)
+
+    contract = await contract.deploy({data: '0x' + init_code + data}).send(send_opt)
+    console.error("storage added to", contract.options.address)
+    var check = await check.deploy({data: '0x' + code}).send(send_opt)
+    console.error("checking storage with", check.options.address)
+    var res = await check.methods.get(contract.options.address).call()
+    console.log(res)
+    process.exit(0)
+}
+
+upload()
 

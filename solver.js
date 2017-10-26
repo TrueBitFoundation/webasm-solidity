@@ -259,7 +259,7 @@ function runSolver(congif) {
     config.input_file = "input.bin"
     config.code_file = "task." + common.getExtension(config.code_type)
     socket.emit("config", config)
-    common.getFile(config.filehash, config.code_type, function (filestr) {
+    common.getFile(config.filehash, config.code_storage, function (filestr) {
         common.getAndEnsureInputFile(config, config.inputhash, config.inputfile, filestr, task_id, function (input) {
             solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:task_id, input:input.data, inputhash:input.name}, config)
         })
