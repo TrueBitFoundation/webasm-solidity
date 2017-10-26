@@ -367,17 +367,17 @@ contract Onchain {
         debug = v;
         state = hashMachine();
     }
-    
+
     function setReg2(uint v) internal  {
         m.reg2 = v;
         state = hashMachine();
     }
-    
+
     function setReg3(uint v) internal  {
         m.reg3 = v;
         state = hashMachine();
     }
-    
+
     function setPC(uint v) internal {
         vm.pc = v;
         m.vm = hashVM();
@@ -401,7 +401,5 @@ contract Onchain {
         m.vm = hashVM();
         state = hashMachine();
     }
-    
-
 
 }

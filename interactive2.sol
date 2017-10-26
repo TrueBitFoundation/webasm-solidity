@@ -18,6 +18,14 @@ contract Interactive2 {
     mapping (uint => uint) blocked;
     mapping (uint => bool) rejected;
 
+    struct VMParameters {
+        uint8 stack_size;
+        uint8 memory_size;
+        uint8 call_size;
+        uint8 globals_size;
+        uint8 table_size;
+    }
+
     struct Record {
         uint256 task_id;
     
@@ -46,12 +54,13 @@ contract Interactive2 {
         bytes32[13] result;
         
     }
-    
+
     function Interactive2(address addr) public {
         judge = JudgeInterface(addr);
     }
 
     mapping (bytes32 => Record) records;
+    mapping (bytes32 => VMParameters) params;
 
     function testMake() public returns (bytes32) {
         return make(0, msg.sender, msg.sender, bytes32(123), bytes32(123),
@@ -308,6 +317,16 @@ contract Interactive2 {
         return judge.calcStateHash(roots, pointers);
     }
 
+/*
+    function getInitialHash(bytes32 id) public returns (bytes32) {
+        Record storage r = records[id];
+        VMParameters storage params = params[id];
+        bytes32[] memory roots = new bytes32[](10);
+        uint[] memory pointers = new uint[](4);
+        
+        return judge.calcHash(roots, pointers);
+    }
+*/
 
 }
 

@@ -6,8 +6,10 @@ interface Interactive {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 steps,
         uint256 par, uint to) public returns (bytes32);
     function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
+    
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
+    
     // Check if a task has been rejected
     function isRejected(uint id) public returns (bool);
     // Check if a task is blocked, returns the block when it can be accepted
@@ -45,6 +47,22 @@ contract Tasks is Filesystem {
         return address(iactive);
     }
     
+    struct IO {
+       bytes32 name;
+       bytes32 size;
+       bytes32 data;
+       string[] ipfs_files;
+       uint[] blockchain_files;
+    }
+
+    struct VMParameters {
+        uint8 stack_size;
+        uint8 memory_size;
+        uint8 call_size;
+        uint8 globals_size;
+        uint8 table_size;
+    }
+
     struct Task2 {
         address solver;
         bytes32 result;
@@ -62,7 +80,7 @@ contract Tasks is Filesystem {
         string file; // currently ipfs hash
         string input; // also ipfs hash
         uint input_file; // get file from the filesystem
-        
+
         CodeType code_type;
         Storage code_storage;
         
@@ -71,13 +89,26 @@ contract Tasks is Filesystem {
 
     Task[] public tasks;
     Task2[] public tasks2;
+    VMParameters[] params;
+    IO[] io_roots;
     
     mapping (bytes32 => uint) challenges;
     
+    function defaultParameters(uint id) internal {
+        VMParameters storage param = params[id];
+        param.stack_size = 14;
+        param.memory_size = 14;
+        param.globals_size = 6;
+        param.table_size = 6;
+        param.call_size = 10;
+    }
+
     function add(bytes32 init, string file, CodeType ct, Storage cs, string input) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
         tasks2.length++;
+        params.length++;
+        io_roots.length++;
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
@@ -119,7 +150,7 @@ contract Tasks is Filesystem {
         t2.blocked = block.number + 10;
         Solved(id, t2.result, t2.steps, t.init, t.file, t.code_type, t.code_storage, t.input, t.input_file, t2.solver);
     }
-    
+
     /*
     function getCodeType(uint id) public view returns (CodeType) {
         return tasks[id].code_type;
@@ -130,6 +161,8 @@ contract Tasks is Filesystem {
     }
     */
 
+    // The state here should be marked the same as 
+    // This check shouldn't be needed unless there is a challenge, move it there
     function ensureInputFile(uint id, bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
@@ -147,8 +180,10 @@ contract Tasks is Filesystem {
     function challenge(uint id) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
+        // VMParameters storage p = params[id];
         require(t.state == 1);
         bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 1, 10);
+        // iactive.setParameters(uniq, p.stack_size, p.memory_size, p.call_size, p.globals_size, p.table_size);
         challenges[uniq] = id;
     }
 

@@ -119,5 +119,47 @@ contract Filesystem {
          f.data[i][loc] = keccak256(l1, l2);
       }
    }
+
+   // Methods to build IO blocks
+   struct Bundle {
+      uint name_file;
+      uint data_file;
+      uint size_file;
+      uint pointer;
+   }
+
+   mapping (bytes32 => Bundle) bundles;
+
+   function makeBundle(uint num, uint sz) public returns (bytes32) {
+       bytes32 id = keccak256(msg.sender, num);
+       Bundle storage b = bundles[id];
+       b.name_file = createFile("names", uint(id));
+       b.data_file = createFile("data", uint(id)+1);
+       b.size_file = createFile("size", uint(id)+2);
+       setSize(b.name_file, sz);
+       setSize(b.data_file, sz);
+       setSize(b.size_file, sz);
+       
+       return id;
+   }
+   
+   function makeMerkle(bytes arr, uint idx, uint level) internal returns (bytes32) {
+      if (level == 0) return idx < arr.length ? bytes32(arr[idx]) : bytes32(0);
+      else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**level), level-1));
+   }
+   
+   // assume 256 bytes?
+   function hashName(string name) internal returns (bytes32) {
+      return makeMerkle(bytes(name), 0, 8);
+   }
+
+   function addToBundle(bytes32 bid, bytes32 id) public {
+       Bundle storage b = bundles[bid];
+       setLeaf(b.data_file, b.pointer, getRoot(uint(id)));
+       setLeaf(b.size_file, b.pointer, bytes32(getSize(uint(id))));
+       setLeaf(b.name_file, b.pointer, hashName(getName(uint(id))));
+       b.pointer++;
+   }
+
 }
 
