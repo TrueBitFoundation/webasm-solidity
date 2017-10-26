@@ -23,11 +23,16 @@ contract Tasks is Filesystem {
     enum CodeType {
         WAST,
         WASM,
-        WASM_ADDRESS
+        INTERNAL
     }
 
-    event Posted(address giver, bytes32 hash, string file, CodeType ct, string input, uint input_file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, CodeType ct, string input, uint input_file, address solver);
+    enum Storage {
+        IPFS,
+        BLOCKCHAIN
+    }
+
+    event Posted(address giver, bytes32 hash, string file, CodeType ct, Storage cs, string input, uint input_file, uint id);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, CodeType ct, Storage cs, string input, uint input_file, address solver);
     event Finalized(uint id);
 
     Interactive iactive;
@@ -40,6 +45,17 @@ contract Tasks is Filesystem {
         return address(iactive);
     }
     
+    struct Task2 {
+        address solver;
+        bytes32 result;
+        uint steps;
+        
+        bytes32 output_file;
+        
+        bool good; // has the file been loaded
+        uint blocked; // how long we have to wait to accept solution
+    }
+    
     struct Task {
         address giver;
         bytes32 init;
@@ -48,65 +64,76 @@ contract Tasks is Filesystem {
         uint input_file; // get file from the filesystem
         
         CodeType code_type;
+        Storage code_storage;
         
-        address solver;
-        bytes32 result;
-        uint steps;
         uint state;
-        
-        bytes32 output_file;
-        
-        bool good; // has the file been loaded
-        uint blocked; // how long we have to wait to accept solution
     }
 
     Task[] public tasks;
+    Task2[] public tasks2;
     
     mapping (bytes32 => uint) challenges;
     
-    function add(bytes32 init, string file, CodeType ct, string input) public returns (uint) {
+    function add(bytes32 init, string file, CodeType ct, Storage cs, string input) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
+        tasks2.length++;
         Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
         t.file = file;
         t.input = input;
-        t.good = true;
+        t2.good = true;
         t.code_type = ct;
-        Posted(msg.sender, init, file, ct, input, 0, id);
+        t.code_storage = cs;
+        Posted(msg.sender, init, file, ct, cs, input, 0, id);
         return id;
     }
 
     // Perhaps it should lock the file?
-    function addWithFile(bytes32 init, string file, CodeType ct, uint input_file) public returns (uint) {
+    function addWithFile(bytes32 init, string file, CodeType ct, Storage cs, uint input_file) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
         Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
         t.file = file;
         t.input_file = input_file;
-        t.good = false;
+        t2.good = false;
         t.code_type = ct;
-        Posted(msg.sender, init, file, ct, "", input_file, id);
+        t.code_storage = cs;
+        Posted(msg.sender, init, file, ct, cs, "", input_file, id);
         return id;
     }
 
     function solve(uint id, bytes32 result, uint steps) public {
         Task storage t = tasks[id];
-        require(t.solver == 0 && t.good);
-        t.solver = msg.sender;
-        t.result = result;
-        t.steps = steps;
+        Task2 storage t2 = tasks2[id];
+        require(t2.solver == 0 && t2.good);
+        t2.solver = msg.sender;
+        t2.result = result;
+        t2.steps = steps;
         t.state = 1;
-        t.blocked = block.number + 10;
-        Solved(id, result, steps, t.init, t.file, t.code_type, t.input, t.input_file, t.solver);
+        t2.blocked = block.number + 10;
+        Solved(id, t2.result, t2.steps, t.init, t.file, t.code_type, t.code_storage, t.input, t.input_file, t2.solver);
     }
+    
+    /*
+    function getCodeType(uint id) public view returns (CodeType) {
+        return tasks[id].code_type;
+    }
+
+    function getCodeStorage(uint id) public view returns (Storage) {
+        // return tasks[id].code_storage;
+    }
+    */
 
     function ensureInputFile(uint id, bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
-        require(t.solver == 0);
+        Task2 storage t2 = tasks2[id];
+        require(t2.solver == 0);
         // check code
         require(roots[0] == t.init);
         require(state == iactive.calcStateHash(roots, pointers));
@@ -114,20 +141,22 @@ contract Tasks is Filesystem {
         
         require(getRoot(t.input_file) == proof[1] || getRoot(t.input_file) == proof[0]);
         
-        t.good = true;
+        t2.good = true;
     }
 
     function challenge(uint id) public {
         Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.make(id, t.solver, msg.sender, t.init, t.result, t.steps, 1, 10);
+        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 1, 10);
         challenges[uniq] = id;
     }
 
     function challengeFinality(uint id) public {
         Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.makeFinality(id, t.solver, msg.sender, t.init, t.result, t.steps, 10);
+        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 10);
         challenges[uniq] = id;
     }
     
@@ -137,19 +166,21 @@ contract Tasks is Filesystem {
     
     function finalize(uint id, uint output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
-        require(t.state == 1 && t.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
+        Task2 storage t2 = tasks2[id];
+        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
-        t.output_file = bytes32(output);
-        require(iactive.checkFileProof(t.result, roots, pointers, proof, file_num));
+        t2.output_file = bytes32(output);
+        require(iactive.checkFileProof(t2.result, roots, pointers, proof, file_num));
         require(getRoot(output) == proof[1] || getRoot(output) == proof[0]);
         
-        Callback(t.giver).solved(id, t.result, t.output_file);
+        Callback(t.giver).solved(id, t2.result, t2.output_file);
     }
     
     // no output file
     function finalizeTask(uint id) public {
         Task storage t = tasks[id];
-        require(t.state == 1 && t.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
+        Task2 storage t2 = tasks2[id];
+        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         
         Finalized(id);

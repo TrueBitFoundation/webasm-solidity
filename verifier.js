@@ -224,7 +224,7 @@ function runVerifier(congif) {
     socket.emit("config", config)
     config.input_file = "input.bin"
     config.code_file = "task." + common.getExtension(config.code_type)
-    common.getFile(config.filehash, config.code_type, function (filestr) {
+    common.getFile(config.filehash, config.code_storage, function (filestr) {
         common.getInputFile(config.inputhash, config.inputfile, function (input) {
             verifyTask({hash: config.hash, file: filestr, filehash:config.filehash, init: config.init, id:task_id, input:input.data, inputhash:input.name,
                         steps:config.steps}, verifier)

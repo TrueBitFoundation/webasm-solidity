@@ -26,6 +26,7 @@ var solver = { error: false, error_location: 0 }
 var verifier = { error: false, error_location: 0 }
 
 var CodeType = common.CodeType
+var Storage = common.Storage
 
 io.on("connection", function(socket) {
     logger.info("Got new socket.io client")
@@ -48,7 +49,16 @@ io.on("connection", function(socket) {
         logger.info("Creating WASM task", obj)
         fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
-        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM}))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, code_storage:Storage.IPFS}))
+        execInPath("giver.js", path)
+    })
+    socket.on("new_blockchain_task", function (obj) {
+        var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+        if (!fs.existsSync(path)) fs.mkdirSync(path)
+        logger.info("Creating WASM task for uploading into blockchain", obj)
+        fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
+        fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, code_storage:Storage.BLOCKCHAIN}))
         execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
@@ -78,6 +88,7 @@ contract.events.Posted(function (err, ev) {
         hash: args.hash,
         filehash:args.file,
         code_type: parseInt(args.ct),
+        code_storage: parseInt(args.cs),
         inputhash: args.input,
         inputfile: args.input_file,
         actor: solver,
@@ -106,6 +117,7 @@ contract.events.Solved("latest", function (err, ev) {
         init: args.init,
         filehash: args.file,
         code_type: parseInt(args.ct),
+        code_storage: parseInt(args.cs),
         inputhash: args.input,
         inputfile: args.input_file,
         steps: args.steps.toString(),

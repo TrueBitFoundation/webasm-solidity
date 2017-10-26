@@ -50,7 +50,7 @@
 
     button {
         font-family: 'Oswald', sans-serif;
-        font-size: 200%;
+        font-size: 130%;
         background-color: hsl(123, 30%, 80%);
     }
     
@@ -97,6 +97,7 @@
 <button onclick="smartContract();">Test Smart Contract</button>
 <input id="wasm_file" name="wasm_file" type="file">
 <button onclick="newWasmTask();">New task from WASM file</button>
+<button onclick="newWasmTaskBlockchain();">WASM task to blockchain</button>
 
 <h1>Solvers</h1>
 
@@ -239,6 +240,15 @@
         }
         fr.readAsBinaryString(el.files[0])
         
+    }
+    function newWasmTaskBlockchain() {
+        var el = document.querySelector("#wasm_file")
+        var fr = new FileReader()
+        fr.onload = function () {
+            console.log(fr.result)
+            socket.emit("new_blockchain_task", {task:fr.result, input:getInput()})
+        }
+        fr.readAsBinaryString(el.files[0])
     }
 
 </script>

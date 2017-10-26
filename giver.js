@@ -5,6 +5,9 @@ var appFile = common.appFile
 var ipfs = common.ipfs
 var send_opt = common.send_opt
 var contract = common.contract
+var logger = common.logger
+
+var Storage = common.Storage
 
 // Now the file names do not have to be special
 
@@ -15,14 +18,30 @@ function giveTask(obj) {
     obj.code_file = obj.taskfile
     obj.input_file = obj.inputfile
     obj.actor = {}
-    ipfs.files.add([task, input_buffer], function (err, res) {
-            if (err) return console.log(err)
-            console.log(res)
+    if (obj.code_storage == Storage.BLOCKCHAIN) common.upload(task).then(function (address) {
+        ipfs.files.add([input_buffer], function (err, res) {
+            if (err) return logger.error("IPFS error", err)
+            logger.info("IPFS", res)
             // store into filesystem
             common.initTask(obj, task, input_buffer, function (state) {
-                contract.methods.add(state, res[0].hash, obj.code_type, res[1].hash).send(send_opt, function (err, tr) {
-                    if (err) console.log(err)
-                    else console.log("Success", tr)
+                contract.methods.add(state, address, obj.code_type, obj.code_storage, res[0].hash).send(send_opt, function (err, tr) {
+                    if (err) logger.error("Failed to add task", err)
+                    else logger.error("Success", tr)
+                    process.exit(0)
+                })
+            })
+        })
+
+    })
+    else ipfs.files.add([task, input_buffer], function (err, res) {
+            if (err) return logger.error("IPFS error", err)
+            logger.info("IPFS", res)
+            // store into filesystem
+            common.initTask(obj, task, input_buffer, function (state) {
+                logger.info("Creating task ", {state:state, codehash: res[0].hash, codetype: obj.code_type, codestorage: obj.code_storage, inputhash: res[1].hash})
+                contract.methods.add(state, res[0].hash, obj.code_type, obj.code_storage, res[1].hash).send(send_opt, function (err, tr) {
+                    if (err) logger.error("Failed to add task", err)
+                    else logger.error("Success", tr)
                     process.exit(0)
                 })
             })
