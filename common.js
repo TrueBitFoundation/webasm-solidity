@@ -100,38 +100,53 @@ function buildArgs(args, config) {
         args.push("-insert-error")
         args.push("" + config.actor.error_location)
     }
-    args.push("-file")
-    args.push("" + config.input_file)
+    for (i in config.files) {
+        args.push("-file")
+        args.push("" + config.files[i])
+    }
     if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
     else ["-wasm", config.code_file].forEach(a => args.push(a))
     return args
 }
 
-function initTask(config, task, inp, cont) {
-    fs.writeFile(config.code_file, task, 'binary', function () {
-        fs.writeFile(config.input_file, inp, 'binary', function () {
-            // run init script
-            execFile(wasm_path, buildArgs(["-m", "-init"], config), (error, stdout, stderr) => {
-                if (error) {
-                    logger.error('initialization error %s', stderr)
-                    return
-                }
-                logger.info('initializing task %s', stdout)
-                cont(JSON.parse(stdout).vm.code)
-            })
+function exec(config, lst) {
+    var args = buildArgs(lst, config)
+    return new Promise(function (cont,err) {
+        execFile(wasm_path, args, function (error, stdout, stderr) {
+            if (stderr) logger.error('error %s', stderr, args)
+            if (stdout) logger.info('output %s', stdout, args)
+            if (error) err(error)
+            else cont(stdout)
         })
     })
 }
 
+function writeFiles(files) {
+    var n = 0
+    return new Promise(function (cont,err) {
+        var addFile = function (e) {
+            fs.writeFile(e.name, e.content, "binary", function () {
+                n++;
+                logger.info("wrote file %s", e.name)
+                if (n == files.length) cont()
+            })
+        }
+        files.forEach(addFile)
+    })
+}
+
+async function initTask(config, files) {
+    var stdout = await exec(config, ["-m", "-init"])
+    return JSON.parse(stdout).vm.code
+}
+
 exports.initTask = initTask
+
 
 function ensureInputFile(config, cont) {
     var args = buildArgs(["-m", "-input-proof", config.input_file], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            logger.error('stderr %s', stderr)
-            return
-        }
+        if (error) return logger.error('stderr %s', stderr)
         logger.info('input file proof %s', stdout)
         if (stdout) cont(JSON.parse(stdout))
     })
@@ -142,10 +157,7 @@ exports.ensureInputFile = ensureInputFile
 function ensureOutputFile(config, cont) {
     var args = buildArgs(["-m", "-output-proof", "blockchain"], config)
     execFile(wasm_path, args, function (error, stdout, stderr) {
-        if (error) {
-            logger.error('stderr %s', stderr)
-            return
-        }
+        if (error) return logger.error('stderr %s', stderr)
         logger.info('output file proof %s', stdout)
         cont(JSON.parse(stdout))
     })
@@ -157,10 +169,7 @@ function taskResult(config, cont) {
     if (config.actor.stop_early < 0) {
         var args = buildArgs(["-m", "-result"], config)
         execFile(wasm_path, args, function (error, stdout, stderr) {
-            if (error) {
-                logger.error('stderr %s', stderr)
-                return
-            }
+            if (error) return logger.error('stderr %s', stderr)
             logger.info('solved task %s', stdout)
             cont(JSON.parse(stdout))
         })
@@ -168,10 +177,7 @@ function taskResult(config, cont) {
     else {
         var args = buildArgs(["-m", "-location", config.actor.stop_early.toString()], config)
         execFile(wasm_path, args, function (error, stdout, stderr) {
-            if (error) {
-                logger.error('stderr %s', stderr)
-                return
-            }
+            if (error) return logger.error('stderr %s', stderr)
             logger.info('exited early %s', stdout)
             cont({steps: config.actor.stop_early, result:JSON.parse(stdout)})
         })
@@ -179,6 +185,45 @@ function taskResult(config, cont) {
 }
 
 exports.taskResult = taskResult
+
+// perhaps here we should just get and write to normal files
+function getStorage(config, cont) {
+    var fileid = config.storage
+    logger.info("getting storage %s", fileid)
+    if (config.storage_type == Storage.BLOCKCHAIN) {
+        get_code.methods.get(fileid).call(function (err,res) {
+            // dropping "0x"
+            if (err) return logger.error("Cannot load file from blockchain",err)
+            var buf = Buffer.from(res.substr(2), "hex")
+            fs.writeFile("task.wasm", buf, cont)
+        })
+    }
+    // First collect, then write
+    else ipfs.get(fileid, function (err, stream) {
+        if (err) return logger.error(err)
+        var len = fileid.length+1
+        var lst = []
+        stream.on('data', (file) => {
+            if (!file.content) return
+            var chunks = []
+            var name = file.path.substr(len)
+            if (name && name != config.code_file) config.files.push(name)
+            file.content.on("data", function (chunk) {
+                chunks.push(chunk);
+            })
+            file.content.on("end", function () {
+                lst.push({name:name, content:Buffer.concat(chunks)})
+                logger.info("Got file %s", file.path)
+            })
+        })
+        stream.on('end', function () {
+            logger.info("This stream ended, got files", lst)
+            writeFiles(lst).then(() => cont())
+        })
+    })
+}
+
+exports.getStorage = getStorage
 
 function getFile(fileid, ftype, cont) {
     logger.info("getting file %s", fileid)

@@ -23,7 +23,7 @@ function status(msg) {
 
 function solveTask(obj, config) {
     // store into filesystem
-    common.initTask(config, obj.file, obj.input, function (inithash) {
+    common.initTask(config).then(function (inithash) {
         if (inithash == obj.hash) {
             status("Initial hash was correct, now solving.")
         }
@@ -259,11 +259,16 @@ function runSolver(congif) {
     config.input_file = "input.bin"
     config.code_file = "task." + common.getExtension(config.code_type)
     socket.emit("config", config)
+    config.files = []
+    common.getStorage(config, function () {
+        solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
+    })
+    /*
     common.getFile(config.filehash, config.code_storage, function (filestr) {
         common.getAndEnsureInputFile(config, config.inputhash, config.inputfile, filestr, task_id, function (input) {
             solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:task_id, input:input.data, inputhash:input.name}, config)
         })
-    })
+    })*/
 }
 
 runSolver(JSON.parse(fs.readFileSync("solver.json")))
