@@ -260,7 +260,7 @@ function runSolver(congif) {
     config.code_file = "task." + common.getExtension(config.code_type)
     socket.emit("config", config)
     config.files = []
-    common.getStorage(config.storage, config.storage_type, function () {
+    common.getStorage(config, function () {
         solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
     })
     /*

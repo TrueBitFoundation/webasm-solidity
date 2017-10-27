@@ -206,7 +206,7 @@ function getStorage(config, cont) {
             if (!file.content) return
             var chunks = []
             var name = file.path.substr(len)
-            if (name 
+            if (name && name != config.code_file) config.files.push(name)
             file.content.on("data", function (chunk) {
                 chunks.push(chunk);
             })

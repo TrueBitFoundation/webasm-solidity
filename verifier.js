@@ -225,7 +225,7 @@ function runVerifier(congif) {
     // config.input_file = "input.bin"
     config.files = []
     config.code_file = "task." + common.getExtension(config.code_type)
-    common.getStorage(config.storage, config.storage_type, function () {
+    common.getStorage(config, function () {
         verifyTask({init: config.init, hash: config.hash, id:task_id}, config)
     })
 }
