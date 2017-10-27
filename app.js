@@ -40,7 +40,7 @@ io.on("connection", function(socket) {
         if (!fs.existsSync(path)) fs.mkdirSync(path)
         fs.writeFileSync(path + "/task.wast", obj.task)
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
-        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST}))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST, storage:Storage.IPFS}))
         execInPath("giver.js", path)
     })
     socket.on("new_wasm_task", function (obj) {
@@ -49,7 +49,7 @@ io.on("connection", function(socket) {
         logger.info("Creating WASM task", obj)
         fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
-        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, code_storage:Storage.IPFS}))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, storage:Storage.IPFS}))
         execInPath("giver.js", path)
     })
     socket.on("new_blockchain_task", function (obj) {
@@ -58,7 +58,7 @@ io.on("connection", function(socket) {
         logger.info("Creating WASM task for uploading into blockchain", obj)
         fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
-        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, code_storage:Storage.BLOCKCHAIN}))
+        fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, storage:Storage.BLOCKCHAIN}))
         execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
@@ -85,12 +85,10 @@ contract.events.Posted(function (err, ev) {
         message: "Starting solver",
         id: id,
         giver: args.giver,
-        hash: args.hash,
-        filehash:args.file,
+        init: args.hash,
+        storage:args.stor,
         code_type: parseInt(args.ct),
-        code_storage: parseInt(args.cs),
-        inputhash: args.input,
-        inputfile: args.input_file,
+        storage_type: parseInt(args.cs),
         actor: solver,
     }
     logger.info("Creating task", obj)
@@ -115,11 +113,9 @@ contract.events.Solved("latest", function (err, ev) {
         giver: args.giver,
         hash: args.hash,
         init: args.init,
-        filehash: args.file,
+        storage: args.stor,
         code_type: parseInt(args.ct),
-        code_storage: parseInt(args.cs),
-        inputhash: args.input,
-        inputfile: args.input_file,
+        storage_type: parseInt(args.cs),
         steps: args.steps.toString(),
         actor: verifier,
     }

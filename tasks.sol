@@ -33,16 +33,16 @@ contract Tasks is Filesystem {
         BLOCKCHAIN
     }
 
-    event Posted(address giver, bytes32 hash, string file, CodeType ct, Storage cs, string input, uint input_file, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, string file, CodeType ct, Storage cs, string input, uint input_file, address solver);
+    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id);
+    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
     event Finalized(uint id);
 
     Interactive iactive;
-    
+
     function Tasks(address contr) public {
         iactive = Interactive(contr);
     }
-    
+
     function getInteractive() public view returns (address) {
         return address(iactive);
     }
@@ -51,8 +51,6 @@ contract Tasks is Filesystem {
        bytes32 name;
        bytes32 size;
        bytes32 data;
-       string[] ipfs_files;
-       uint[] blockchain_files;
     }
 
     struct VMParameters {
@@ -73,16 +71,14 @@ contract Tasks is Filesystem {
         bool good; // has the file been loaded
         uint blocked; // how long we have to wait to accept solution
     }
-    
+
     struct Task {
         address giver;
         bytes32 init;
-        string file; // currently ipfs hash
-        string input; // also ipfs hash
-        uint input_file; // get file from the filesystem
-
+        string stor;
+        
         CodeType code_type;
-        Storage code_storage;
+        Storage storage_type;
         
         uint state;
     }
@@ -103,7 +99,7 @@ contract Tasks is Filesystem {
         param.call_size = 10;
     }
 
-    function add(bytes32 init, string file, CodeType ct, Storage cs, string input) public returns (uint) {
+    function add(bytes32 init, CodeType ct, Storage cs, string stor) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
         tasks2.length++;
@@ -113,29 +109,11 @@ contract Tasks is Filesystem {
         Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
-        t.file = file;
-        t.input = input;
+        t.stor = stor;
         t2.good = true;
         t.code_type = ct;
-        t.code_storage = cs;
-        Posted(msg.sender, init, file, ct, cs, input, 0, id);
-        return id;
-    }
-
-    // Perhaps it should lock the file?
-    function addWithFile(bytes32 init, string file, CodeType ct, Storage cs, uint input_file) public returns (uint) {
-        uint id = tasks.length;
-        tasks.length++;
-        Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
-        t.giver = msg.sender;
-        t.init = init;
-        t.file = file;
-        t.input_file = input_file;
-        t2.good = false;
-        t.code_type = ct;
-        t.code_storage = cs;
-        Posted(msg.sender, init, file, ct, cs, "", input_file, id);
+        t.storage_type = cs;
+        Posted(msg.sender, init, ct, cs, stor, id);
         return id;
     }
 
@@ -148,7 +126,7 @@ contract Tasks is Filesystem {
         t2.steps = steps;
         t.state = 1;
         t2.blocked = block.number + 10;
-        Solved(id, t2.result, t2.steps, t.init, t.file, t.code_type, t.code_storage, t.input, t.input_file, t2.solver);
+        Solved(id, t2.result, t2.steps, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
     }
 
     /*
@@ -163,6 +141,7 @@ contract Tasks is Filesystem {
 
     // The state here should be marked the same as 
     // This check shouldn't be needed unless there is a challenge, move it there
+    /*
     function ensureInputFile(uint id, bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
@@ -176,6 +155,7 @@ contract Tasks is Filesystem {
         
         t2.good = true;
     }
+    */
 
     function challenge(uint id) public {
         Task storage t = tasks[id];

@@ -26,7 +26,7 @@ function status(msg) {
 function verifyTask(obj, actor) {
     // store into filesystem
     logger.info("verifying task", obj)
-    common.initTask(actor, obj.file, obj.input, function (inithash) {
+    common.initTask(actor).then(function (inithash) {
         if (inithash == obj.init) logger.info("Initial hash matches")
         else {
             status("Initial hash was wrong, exiting.")
@@ -222,13 +222,11 @@ function runVerifier(congif) {
     config.pid = process.pid
     config.kind = "verifier"
     socket.emit("config", config)
-    config.input_file = "input.bin"
+    // config.input_file = "input.bin"
+    config.files = []
     config.code_file = "task." + common.getExtension(config.code_type)
-    common.getFile(config.filehash, config.code_storage, function (filestr) {
-        common.getInputFile(config.inputhash, config.inputfile, function (input) {
-            verifyTask({hash: config.hash, file: filestr, filehash:config.filehash, init: config.init, id:task_id, input:input.data, inputhash:input.name,
-                        steps:config.steps}, verifier)
-        })
+    common.getStorage(config.storage, config.storage_type, function () {
+        verifyTask({init: config.init, hash: config.hash, id:task_id}, config)
     })
 }
 

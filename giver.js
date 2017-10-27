@@ -18,28 +18,27 @@ function giveTask(obj) {
     obj.code_file = obj.taskfile
     obj.input_file = obj.inputfile
     obj.actor = {}
-    if (obj.code_storage == Storage.BLOCKCHAIN) common.upload(task).then(function (address) {
-        ipfs.files.add([input_buffer], function (err, res) {
-            if (err) return logger.error("IPFS error", err)
-            logger.info("IPFS", res)
+    obj.files = []
+    console.log("task", task)
+    if (obj.storage == Storage.BLOCKCHAIN) common.upload(task).then(function (address) {
             // store into filesystem
-            common.initTask(obj, task, input_buffer, function (state) {
+            common.simpleInitTask(obj, [{name:obj.code_file, content:task}], function (state) {
                 contract.methods.add(state, address, obj.code_type, obj.code_storage, res[0].hash).send(send_opt, function (err, tr) {
                     if (err) logger.error("Failed to add task", err)
                     else logger.error("Success", tr)
                     process.exit(0)
                 })
             })
-        })
-
     })
-    else ipfs.files.add([task, input_buffer], function (err, res) {
+    else ipfs.files.add([{content:task, path:"bundle/"+obj.code_file}, {content:input_buffer, path:"bundle/"+obj.input_file}], function (err, res) {
             if (err) return logger.error("IPFS error", err)
             logger.info("IPFS", res)
             // store into filesystem
-            common.initTask(obj, task, input_buffer, function (state) {
-                logger.info("Creating task ", {state:state, codehash: res[0].hash, codetype: obj.code_type, codestorage: obj.code_storage, inputhash: res[1].hash})
-                contract.methods.add(state, res[0].hash, obj.code_type, obj.code_storage, res[1].hash).send(send_opt, function (err, tr) {
+            obj.files = [obj.inputfile]
+            common.initTask(obj).then(function (state) {
+                logger.info("Creating task ", {state:state, codehash: res[0].hash, codetype: obj.code_type, codestorage: obj.code_storage, inputhash: res[1].hash,
+                                               dirhash: res[2].hash})
+                contract.methods.add(state, obj.code_type, obj.storage, res[2].hash).send(send_opt, function (err, tr) {
                     if (err) logger.error("Failed to add task", err)
                     else logger.error("Success", tr)
                     process.exit(0)
