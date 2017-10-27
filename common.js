@@ -373,6 +373,7 @@ async function upload(data) {
 
 exports.upload = upload
 
+exports.config = config
 exports.appFile = appFile
 exports.ipfs = ipfs
 exports.send_opt = send_opt

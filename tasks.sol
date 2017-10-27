@@ -195,6 +195,7 @@ contract Tasks is Filesystem {
     function finalizeTask(uint id) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
+        if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return;
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         

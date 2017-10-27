@@ -121,6 +121,7 @@ contract Interactive2 {
 
     function gameOver(bytes32 id) public {
         Record storage r = records[id];
+        if (!(block.number >= r.clock + r.timeout)) return;
         require(block.number >= r.clock + r.timeout);
         if (r.next == r.prover) {
             r.winner = r.challenger;

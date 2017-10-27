@@ -227,7 +227,7 @@ function tick() {
     })
 }
 
-setInterval(tick, 10000)
+setInterval(tick, common.config.timeout)
 
 http.listen(22448, function(){
     logger.info("listening on *:22448")

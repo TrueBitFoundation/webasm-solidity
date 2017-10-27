@@ -246,7 +246,7 @@ function forceTimeout() {
     })
 }
 
-setInterval(forceTimeout, 10000)
+setInterval(forceTimeout, common.config.timeout)
 
 function runSolver(congif) {
     config = congif
