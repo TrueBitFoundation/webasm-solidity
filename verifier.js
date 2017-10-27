@@ -1,6 +1,9 @@
 
 var fs = require("fs")
-var common = require("./common")
+
+exports.make = function (dir, config) {
+
+var common = require("./common").make(dir)
 var appFile = common.appFile
 var ipfs = common.ipfs
 var send_opt = common.send_opt
@@ -61,7 +64,7 @@ function verifyTask(obj, actor) {
             }
             else {
                 status("Result correct, exiting")
-                process.exit(0)
+                cleanup()
             }
         })
     })
@@ -201,7 +204,7 @@ iactive.events.WinnerSelected(function (err,ev) {
     var args = ev.returnValues
     if (challenge_id != args.id) return
     status("Selected winner for challenge, exiting.")
-    process.exit(0)
+    cleanup()
 })
 
 function forceTimeout() {
@@ -212,14 +215,17 @@ function forceTimeout() {
     })
 }
 
-setInterval(forceTimeout, common.config.timeout)
+var ival = setInterval(forceTimeout, common.config.timeout)
 
-function runVerifier(congif) {
-    config = congif
+function cleanup() {
+    clearInterval(ival)
+}
+
+function runVerifier() {
     logger.info("verifying", config)
     task_id = parseInt(config.id)
     verifier = config
-    config.pid = process.pid
+    config.pid = Math.floor(Math.random()*10000)
     config.kind = "verifier"
     socket.emit("config", config)
     // config.input_file = "input.bin"
@@ -230,6 +236,6 @@ function runVerifier(congif) {
     })
 }
 
-runVerifier(JSON.parse(fs.readFileSync("verifier.json")))
+runVerifier()
 
-
+}

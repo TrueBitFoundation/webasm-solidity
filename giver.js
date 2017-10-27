@@ -1,6 +1,8 @@
 
+exports.make = function (dir, config) {
+
 var fs = require("fs")
-var common = require("./common")
+var common = require("./common").make(dir)
 var appFile = common.appFile
 var ipfs = common.ipfs
 var send_opt = common.send_opt
@@ -12,8 +14,8 @@ var Storage = common.Storage
 // Now the file names do not have to be special
 
 function giveTask(obj) {
-    var task = fs.readFileSync(obj.taskfile)
-    var input = fs.readFileSync(obj.inputfile)
+    var task = fs.readFileSync(dir + "/" + obj.taskfile)
+    var input = fs.readFileSync(dir + "/" + obj.inputfile)
     var input_buffer = appFile.inputToBuffer(input)
     obj.code_file = obj.taskfile
     obj.input_file = obj.inputfile
@@ -37,14 +39,16 @@ function giveTask(obj) {
             common.initTask(obj).then(function (state) {
                 logger.info("Creating task ", {state:state, codehash: res[0].hash, codetype: obj.code_type, codestorage: obj.code_storage, inputhash: res[1].hash,
                                                dirhash: res[2].hash})
+                console.log("here")
                 contract.methods.add(state, obj.code_type, obj.storage, res[2].hash).send(send_opt, function (err, tr) {
                     if (err) logger.error("Failed to add task", err)
                     else logger.error("Success", tr)
-                    process.exit(0)
+                    // process.exit(0)
                 })
             })
     })
 }
 
-giveTask(JSON.parse(fs.readFileSync("giver.json")))
+giveTask(config)
 
+}
