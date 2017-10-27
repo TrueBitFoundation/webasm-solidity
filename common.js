@@ -200,6 +200,7 @@ function getStorage(config, cont) {
     }
     // First collect, then write
     else ipfs.get(fileid, function (err, stream) {
+        if (err) return logger.error(err)
         var len = fileid.length+1
         var lst = []
         stream.on('data', (file) => {

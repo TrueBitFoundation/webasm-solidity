@@ -19,11 +19,10 @@ function giveTask(obj) {
     obj.input_file = obj.inputfile
     obj.actor = {}
     obj.files = []
-    console.log("task", task)
     if (obj.storage == Storage.BLOCKCHAIN) common.upload(task).then(function (address) {
             // store into filesystem
-            common.simpleInitTask(obj, [{name:obj.code_file, content:task}], function (state) {
-                contract.methods.add(state, address, obj.code_type, obj.code_storage, res[0].hash).send(send_opt, function (err, tr) {
+            common.initTask(obj).then(function (state) {
+                contract.methods.add(state, obj.code_type, obj.storage, address).send(send_opt, function (err, tr) {
                     if (err) logger.error("Failed to add task", err)
                     else logger.error("Success", tr)
                     process.exit(0)
