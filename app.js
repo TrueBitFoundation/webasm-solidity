@@ -77,6 +77,7 @@ io.on("connection", function(socket) {
         logger.info("new configuration", obj)
         verifier_conf = obj.verifier
         solver_conf = obj.solver
+        enabled = obj.enabled
     })
     socket.on("config", function (obj) {
         // logger.info("process changed %s", obj.message)
