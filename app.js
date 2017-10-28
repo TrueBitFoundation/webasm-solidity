@@ -31,6 +31,8 @@ function execInPath(fname, path_name) {
 var solver_conf = { error: false, error_location: 0 }
 var verifier_conf = { error: false, error_location: 0, check_own: true }
 
+var enabled = true
+
 var CodeType = common.CodeType
 var Storage = common.Storage
 
@@ -88,6 +90,7 @@ contract.events.Posted(function (err, ev) {
     if (err) return logger.error("Event error", err)
     var args = ev.returnValues
     logger.info("posted", args)
+    if (!enabled) return logger.info("System disabled, ignoring")
     var id = args.id.toString()
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
@@ -114,6 +117,7 @@ contract.events.Solved("latest", function (err, ev) {
     if (err) return logger.error("Event error", err)
     var args = ev.returnValues
     logger.info("solved", args)
+    if (!enabled) return logger.info("System disabled, ignoring")
     if (args.solver.toLowerCase() == common.base.toLowerCase() && !verifier_conf.check_own) return logger.info("Not going to verify", verifier_conf)
     var id = args.id.toString()
     var path = "tmp.verifier_" + id

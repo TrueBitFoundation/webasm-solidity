@@ -117,6 +117,8 @@
     
 <h1>Solvers</h1>
 
+<input type="checkbox" checked class="error" id="enabled">Enable system
+<p>
 <input type="checkbox" class="error" id="solver_error">Make an error at position <input type="number" id="solver_location"  class="error" value="100">
 <p>
 <input type="checkbox" class="error" id="solver_error_stop">Stop execution at position <input type="number" id="solver_stop"  class="error" value="100">
@@ -224,7 +226,9 @@
         var e7 = document.querySelector("#solver_stop")
         var e8 = document.querySelector("#verifier_error_stop")
         var e9 = document.querySelector("#verifier_stop")
+        var e10 = document.querySelector("#enabled")
         socket.emit("setup_error", {
+            enabled: e10.checked,
             solver: { error: e1.checked, error_location: e2.value, stop_early: e6.checked ? e7.value : -1 },
             verifier: { error: e3.checked, error_location: e4.value, check_own: e5.value, stop_early: e8.checked ? e9.value : -1 },
             
