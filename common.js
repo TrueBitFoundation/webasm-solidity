@@ -16,7 +16,7 @@ var base = addresses.base
 
 web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
-var send_opt = {from:base, gas: 4000000, gasPrice:"1000000000"}
+var send_opt = {from:base, gas: 4000000, gasPrice:"21000000000"}
 var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Tasks.abi")), addresses.tasks)
 var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")), addresses.interactive)
 var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")), addresses.judge)

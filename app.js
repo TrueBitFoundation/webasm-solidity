@@ -29,7 +29,7 @@ function execInPath(fname, path_name) {
 }*/
 
 var solver_conf = { error: false, error_location: 0 }
-var verifier_conf = { error: false, error_location: 0 }
+var verifier_conf = { error: false, error_location: 0, check_own: true }
 
 var CodeType = common.CodeType
 var Storage = common.Storage
@@ -114,7 +114,7 @@ contract.events.Solved("latest", function (err, ev) {
     if (err) return logger.error("Event error", err)
     var args = ev.returnValues
     logger.info("solved", args)
-    if (args.solver == common.base && !verifier.check_own) return logger.info("Not going to verify", verifier)
+    if (args.solver.toLowerCase() == common.base.toLowerCase() && !verifier_conf.check_own) return logger.info("Not going to verify", verifier_conf)
     var id = args.id.toString()
     var path = "tmp.verifier_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
