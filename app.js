@@ -142,7 +142,7 @@ contract.events.Solved("latest", function (err, ev) {
 /// check verifier events
 
 iactive.events.Reported("latest", function (err,ev) {
-    console.log(err)
+    // console.log(err)
     if (err) return logger.error(err)
     var args = ev.returnValues
     logger.info("Reported ", args)

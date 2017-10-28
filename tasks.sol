@@ -192,14 +192,15 @@ contract Tasks is Filesystem {
     }
     
     // no output file
-    function finalizeTask(uint id) public {
+    function finalizeTask(uint id) public returns (bool) {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
-        if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return;
+        if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return false;
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         
         Finalized(id);
+        return true;
     }
     
     uint tick_var;

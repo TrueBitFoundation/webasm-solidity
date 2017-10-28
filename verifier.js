@@ -207,9 +207,11 @@ iactive.events.WinnerSelected(function (err,ev) {
     cleanup()
 })
 
-function forceTimeout() {
+async function forceTimeout() {
     if (!challenge_id) return
-    iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
+    var good = await iactive.methods.gameOver(challenge_id).call(send_opt)
+    logger.info("Testing timeout", good)
+    if (good) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })
