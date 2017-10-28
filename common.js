@@ -370,6 +370,7 @@ async function upload(data) {
 
 exports.upload = upload
 
+exports.web3 = web3
 exports.config = addresses
 exports.appFile = appFile
 exports.ipfs = ipfs

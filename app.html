@@ -17,6 +17,10 @@
         color: black;
     }
     
+    table {
+        color: gray;
+    }
+    
     div#clearEvents:active {
         color: black;
         text-shadow: 0px 0px 3px #000000;
@@ -68,6 +72,14 @@
 <div id="content">
 
 <title>Test node</title>
+
+    <table style="width:100%;">
+        <tr>
+            <td>Block <span id="block">0</span></td>
+            <td>Address <span id="address">0</span></td>
+            <td>Balance <span id="balance">0</span></td>
+        </tr>
+    </table>
 
 <h1>Post tasks</h1>
 
@@ -188,14 +200,20 @@
         return elem
     }
     
+    socket.on("info", function (obj) {
+        document.querySelector("#block").innerHTML = obj.block
+        document.querySelector("#address").innerHTML = obj.address
+        document.querySelector("#balance").innerHTML = obj.balance
+    })
+
     socket.on("config", function (obj) {
         console.log(obj)
         var elem = findElem(obj)
         elem.innerHTML = printObject(obj, obj.kind.toUpperCase() + " " + obj.pid + '<span class="removeElem" onclick="removeElem(event);">Remove</span>')
     })
-    
+
     socket.emit("request-ui", {})
-    
+
     function handleErrorUI() {
         var e1 = document.querySelector("#solver_error")
         var e2 = document.querySelector("#solver_location")
