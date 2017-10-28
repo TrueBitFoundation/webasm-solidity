@@ -99,6 +99,10 @@
 <button onclick="newWasmTask();">New task from WASM file</button>
 <button onclick="newWasmTaskBlockchain();">WASM task to blockchain</button>
 
+<h1>Task givers</h1>
+
+    <div id="givers"></div>
+    
 <h1>Solvers</h1>
 
 <input type="checkbox" class="error" id="solver_error">Make an error at position <input type="number" id="solver_location"  class="error" value="100">
@@ -177,7 +181,7 @@
         var id = obj.kind+obj.pid
         var elem = document.getElementById(id)
         if (elem) return elem
-        var cont = obj.kind == "solver" ? document.querySelector("#solvers") : document.querySelector("#verifiers")
+        var cont = document.querySelector("#"+obj.kind+"s")
         elem = document.createElement("div")
         cont.appendChild(elem)
         elem.id = id
