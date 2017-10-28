@@ -119,8 +119,9 @@ contract Interactive2 {
         return uniq;
     }
 
-    function gameOver(bytes32 id) public {
+    function gameOver(bytes32 id) public returns (bool) {
         Record storage r = records[id];
+        if (!(block.number >= r.clock + r.timeout)) return false;
         require(block.number >= r.clock + r.timeout);
         if (r.next == r.prover) {
             r.winner = r.challenger;
@@ -131,6 +132,7 @@ contract Interactive2 {
             blocked[r.task_id] = 0;
         }
         WinnerSelected(id);
+        return true;
     }
     
     function isRejected(uint id) public view returns (bool) {

@@ -1,6 +1,9 @@
 
 var fs = require("fs")
-var common = require("./common")
+
+exports.make = function (dir, config) {
+
+var common = require("./common").make(dir)
 var appFile = common.appFile
 var ipfs = common.ipfs
 var send_opt = common.send_opt
@@ -61,7 +64,7 @@ function verifyTask(obj, actor) {
             }
             else {
                 status("Result correct, exiting")
-                process.exit(0)
+                cleanup()
             }
         })
     })
@@ -201,25 +204,30 @@ iactive.events.WinnerSelected(function (err,ev) {
     var args = ev.returnValues
     if (challenge_id != args.id) return
     status("Selected winner for challenge, exiting.")
-    process.exit(0)
+    cleanup()
 })
 
-function forceTimeout() {
+async function forceTimeout() {
     if (!challenge_id) return
-    iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
+    var good = await iactive.methods.gameOver(challenge_id).call(send_opt)
+    logger.info("Testing timeout", good)
+    if (good == true) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })
 }
 
-setInterval(forceTimeout, 10000)
+var ival = setInterval(forceTimeout, common.config.timeout)
 
-function runVerifier(congif) {
-    config = congif
+function cleanup() {
+    clearInterval(ival)
+}
+
+function runVerifier() {
     logger.info("verifying", config)
     task_id = parseInt(config.id)
     verifier = config
-    config.pid = process.pid
+    config.pid = Math.floor(Math.random()*10000)
     config.kind = "verifier"
     socket.emit("config", config)
     // config.input_file = "input.bin"
@@ -230,6 +238,6 @@ function runVerifier(congif) {
     })
 }
 
-runVerifier(JSON.parse(fs.readFileSync("verifier.json")))
+runVerifier()
 
-
+}

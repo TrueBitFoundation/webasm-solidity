@@ -1,0 +1,7 @@
+{"judge":"0xC9Aad72f57f83f108aA557B4a03b8Cb9d614B644",
+"interactive":"0xE103f8295BE5ccCE53cAc93e627720aadaEF8D55",
+"host":"localhost",
+"base":"0x955d03dec0bd58c8f950f184b25308e0db2ccc0b",
+"tasks":"0xC70A5a0B8F64F57b12176bF66Ba8e39e8BBF996C",
+"get_code":"0x9300A5F4c0dADEAA10a065Fae708eDd699a72e2C",
+"timeout":10000}

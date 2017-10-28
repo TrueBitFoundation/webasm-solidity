@@ -1,6 +1,9 @@
 
 var fs = require("fs")
-var common = require("./common")
+
+exports.make = function (dir, config) {
+
+var common = require("./common").make(dir)
 var appFile = common.appFile
 var ipfs = common.ipfs
 var send_opt = common.send_opt
@@ -38,9 +41,9 @@ function solveTask(obj, config) {
                 if (err) logger.error(err)
                 else {
                     status("Solved task " + tr)
-                    fs.access("blockchain.out", fs.constants.R_OK, function (err) {
+                    fs.access(dir+"/blockchain.out", fs.constants.R_OK, function (err) {
                         if (!err) {
-                            fs.readFile("blockchain.out", function (err, buf) {
+                            fs.readFile(dir+"/blockchain.out", function (err, buf) {
                                 if (err) logger.error(err)
                                 else appFile.createFile(contract, "task.out", buf, function (id) {
                                     status("Uploaded file " + id.toString(16))
@@ -226,7 +229,7 @@ iactive.events.WinnerSelected(function (err,ev) {
         if (err) return logger.error(err)
         if (!res) return status("A challenge was rejected")
         status("My solution was rejected, exiting.")
-        process.exit(0)
+        cleanup()
     })
 })
 
@@ -235,26 +238,31 @@ contract.events.Finalized(function (err,ev) {
     var args = ev.returnValues
     if (task_id.toString() != args.id) return
     status("Task accepted, exiting.")
-    process.exit(0)
+    cleanup()
 })
 
-function forceTimeout() {
+async function forceTimeout() {
     if (!config) return
-    contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
+    var good = await contract.methods.finalizeTask(task_id).call(send_opt)
+    logger.info("Testing timeout", {good:good})
+    if (good == true) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })
 }
 
-setInterval(forceTimeout, 10000)
+var ival = setInterval(forceTimeout, common.config.timeout)
 
-function runSolver(congif) {
-    config = congif
+function cleanup() {
+    clearInterval(ival)
+}
+
+function runSolver() {
     // download file from IPFS
     logger.info("solving", config)
     task_id = parseInt(config.id)
     solver = config
-    config.pid = process.pid
+    config.pid = Math.floor(Math.random()*10000)
     config.kind = "solver"
     config.input_file = "input.bin"
     config.code_file = "task." + common.getExtension(config.code_type)
@@ -271,5 +279,6 @@ function runSolver(congif) {
     })*/
 }
 
-runSolver(JSON.parse(fs.readFileSync("solver.json")))
+runSolver()
 
+}

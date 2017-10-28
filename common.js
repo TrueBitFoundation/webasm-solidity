@@ -12,7 +12,24 @@ var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 var host = addresses.host || "localhost"
 
-var dir = process.argv[2] ? process.cwd() + "/" + process.argv[2] : process.cwd()
+var base = addresses.base
+
+web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
+
+var send_opt = {from:base, gas: 4000000, gasPrice:"21000000000"}
+var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Tasks.abi")), addresses.tasks)
+var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")), addresses.interactive)
+var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")), addresses.judge)
+var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/GetCode.abi")), addresses.get_code)
+
+// connect to ipfs daemon API server
+var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
+
+exports.make = function (dir) {
+
+var exports = {}
+
+// var dir = process.argv[2] ? process.cwd() + "/" + process.argv[2] : process.cwd()
 
 // console.log(dir)
 
@@ -31,27 +48,7 @@ const logger = winston.createLogger({
   ]
 })
 
-// connect to ipfs daemon API server
-var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
-
-web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
-
-var solver_error = true
-var verifier_error = false
-
-var base = addresses.base
-
 logger.info("Using address %s", base)
-
-var send_opt = {from:base, gas: 4000000}
-
-var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Tasks.abi")), addresses.tasks)
-
-var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")), addresses.interactive)
-
-var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")), addresses.judge)
-
-var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/GetCode.abi")), addresses.get_code)
 
 appFile.configure(web3, base)
 
@@ -63,7 +60,7 @@ logger.info('using offchain interpreter at %s', wasm_path)
 // var wasm_path = "../webasm/interpreter/wasm"
 
 // change current directory here?
-if (process.argv[2]) process.chdir(process.argv[2])
+// if (process.argv[2]) process.chdir(process.argv[2])
 
 // perhaps have more stuff in config
 
@@ -112,7 +109,7 @@ function buildArgs(args, config) {
 function exec(config, lst) {
     var args = buildArgs(lst, config)
     return new Promise(function (cont,err) {
-        execFile(wasm_path, args, function (error, stdout, stderr) {
+        execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
             if (stderr) logger.error('error %s', stderr, args)
             if (stdout) logger.info('output %s', stdout, args)
             if (error) err(error)
@@ -125,7 +122,7 @@ function writeFiles(files) {
     var n = 0
     return new Promise(function (cont,err) {
         var addFile = function (e) {
-            fs.writeFile(e.name, e.content, "binary", function () {
+            fs.writeFile(dir + "/" + e.name, e.content, "binary", function () {
                 n++;
                 logger.info("wrote file %s", e.name)
                 if (n == files.length) cont()
@@ -145,7 +142,7 @@ exports.initTask = initTask
 
 function ensureInputFile(config, cont) {
     var args = buildArgs(["-m", "-input-proof", config.input_file], config)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
+    execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
         if (error) return logger.error('stderr %s', stderr)
         logger.info('input file proof %s', stdout)
         if (stdout) cont(JSON.parse(stdout))
@@ -156,7 +153,7 @@ exports.ensureInputFile = ensureInputFile
 
 function ensureOutputFile(config, cont) {
     var args = buildArgs(["-m", "-output-proof", "blockchain"], config)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
+    execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
         if (error) return logger.error('stderr %s', stderr)
         logger.info('output file proof %s', stdout)
         cont(JSON.parse(stdout))
@@ -168,7 +165,7 @@ exports.ensureOutputFile = ensureOutputFile
 function taskResult(config, cont) {
     if (config.actor.stop_early < 0) {
         var args = buildArgs(["-m", "-result"], config)
-        execFile(wasm_path, args, function (error, stdout, stderr) {
+        execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
             if (error) return logger.error('stderr %s', stderr)
             logger.info('solved task %s', stdout)
             cont(JSON.parse(stdout))
@@ -176,7 +173,7 @@ function taskResult(config, cont) {
     }
     else {
         var args = buildArgs(["-m", "-location", config.actor.stop_early.toString()], config)
-        execFile(wasm_path, args, function (error, stdout, stderr) {
+        execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
             if (error) return logger.error('stderr %s', stderr)
             logger.info('exited early %s', stdout)
             cont({steps: config.actor.stop_early, result:JSON.parse(stdout)})
@@ -283,7 +280,7 @@ exports.getAndEnsureInputFile = getAndEnsureInputFile
 
 function getLocation(place, config, cont) {
     var args = buildArgs(["-m", "-location", place], config)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
+    execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
         if (error) console.error('stderr %s', stderr)
         else {
             logger.info("Got location " + place + ": " + stdout)
@@ -296,7 +293,7 @@ exports.getLocation = getLocation
 
 function getStep(place, config, cont) {
     var args = buildArgs(["-m", "-step", place], config)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
+    execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
@@ -306,7 +303,7 @@ exports.getStep = getStep
 
 function getErrorStep(place, config, cont) {
     var args = insertError(["-m", "-error-step", place], config)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
+    execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
@@ -316,7 +313,7 @@ exports.getErrorStep = getErrorStep
 
 function getFinality(place, config, cont) {
     var args = insertError(["-m", "-final", place], config)
-    execFile(wasm_path, args, function (error, stdout, stderr) {
+    execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
         if (error) logger.error('stderr %s', stderr)
         else cont(JSON.parse(stdout))
     })
@@ -373,6 +370,8 @@ async function upload(data) {
 
 exports.upload = upload
 
+exports.web3 = web3
+exports.config = addresses
 exports.appFile = appFile
 exports.ipfs = ipfs
 exports.send_opt = send_opt
@@ -382,3 +381,6 @@ exports.base = base
 
 exports.logger = logger
 
+return exports
+
+}
