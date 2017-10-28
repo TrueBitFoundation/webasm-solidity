@@ -211,7 +211,7 @@ async function forceTimeout() {
     if (!challenge_id) return
     var good = await iactive.methods.gameOver(challenge_id).call(send_opt)
     logger.info("Testing timeout", good)
-    if (good) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
+    if (good == true) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })

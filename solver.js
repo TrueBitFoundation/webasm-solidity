@@ -245,7 +245,7 @@ async function forceTimeout() {
     if (!config) return
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", {good:good})
-    if (good) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
+    if (good == true) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })
