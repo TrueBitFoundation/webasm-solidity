@@ -1,8 +1,7 @@
-{
-"judge":       "0xc9E46EdbC248CB2471f68B5033e61D631c8020C4",
-"interactive": "0x17f577E6aEC6b5528732421901BbC1C26937A92D",
-"host":        "localhost",
-"tasks":       "0xA5c2648dF909Bf84285034587088de71457280D4",
-"get_code":    "0x411f25F83E477b5d34E60F9cd20B565aC0dBB524",
-"timeout":     30000
-}
+{"judge":"0xAD29099a4ee15674CD175225142504a5097ef082",
+"interactive":"0xBbBFF7152cA82F2D24407A079A6227F5659F23A2",
+"host":"localhost",
+"base":"0x0061fab6c03f5daa05a8c2e58a056b2603e74dc0",
+"tasks":"0xB20A4b15a253860b88477405f582b8a560e2385a",
+"get_code":"0x42Ed431Fd8029d4ec9ab70107Ff20eE6b23b9eDc",
+"timeout":10000}

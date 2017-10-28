@@ -243,9 +243,9 @@ contract.events.Finalized(function (err,ev) {
 
 async function forceTimeout() {
     if (!config) return
-    var good = await iactive.methods.gameOver(challenge_id).call(send_opt)
+    var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", good)
-    contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
+    if (good) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })

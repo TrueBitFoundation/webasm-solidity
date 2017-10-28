@@ -237,6 +237,14 @@ contract.events.Finalized("latest", function (err,ev) {
     io.emit("event", {message: "Finalized task", uniq:args.id})
 })
 
+contract.events.allEvents(function (err,ev) {
+    logger.info("event, is this better")
+})
+
+iactive.events.allEvents(function (err,ev) {
+    logger.info("event, is this better")
+})
+
 async function update() {
     var block = await common.web3.eth.getBlockNumber()
     var balance = await common.web3.eth.getBalance(common.config.base)

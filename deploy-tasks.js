@@ -21,7 +21,7 @@ var abi4 = JSON.parse(fs.readFileSync("contracts/GetCode.abi"))
 
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
-    var send_opt = {gas:5000000, from:accts[0]}
+    var send_opt = {gas:4000000, from:accts[0]}
     var judge = await new web3.eth.Contract(abi3).deploy({data: code3}).send(send_opt)
     var iactive = await new web3.eth.Contract(abi2).deploy({data: code2, arguments:[judge.options.address]}).send(send_opt)
     var tasks = await new web3.eth.Contract(abi).deploy({data: code, arguments:[iactive.options.address]}).send(send_opt)
