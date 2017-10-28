@@ -251,7 +251,7 @@ function tick() {
     })
 }
 
-setInterval(tick, common.config.timeout)
+// setInterval(tick, common.config.timeout)
 setInterval(update, 10000)
 
 http.listen(22448, function(){
