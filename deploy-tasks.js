@@ -5,7 +5,7 @@ var web3 = new Web3()
 
 var host = process.argv[2] || "localhost"
 
-web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
+web3.setProvider(new web3.providers.WebsocketProvider('ws://' + host + ':8546'))
 
 var code = "0x" + fs.readFileSync("contracts/Tasks.bin")
 var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
