@@ -9,7 +9,8 @@ web3.setProvider(new web3.providers.WebsocketProvider('http://' + config.host + 
 
 async function main() {
     var accts = await web3.eth.getAccounts()
-    console.log(JSON.stringify(accts[0]))
+    config.base = accts[0]
+    console.log(JSON.stringify(config))
     process.exit(0)
 }
 
