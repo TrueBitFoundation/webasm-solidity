@@ -268,8 +268,11 @@ function runSolver() {
     config.code_file = "task." + common.getExtension(config.code_type)
     socket.emit("config", config)
     config.files = []
-    common.getStorage(config, function () {
-        solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
+    contract.methods.getSolver(task_id).call().then(function (solver) {
+        if (parseInt(solver)) return logger.error("Already solved", {solver:solver})
+        common.getStorage(config, function () {
+            solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
+        })
     })
     /*
     common.getFile(config.filehash, config.code_storage, function (filestr) {

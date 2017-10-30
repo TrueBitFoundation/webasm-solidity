@@ -35,6 +35,7 @@ async function doDeploy() {
         tasks: tasks.options.address,
         get_code: get_code.options.address,
         timeout: 5000,
+        tick: true,
     }
     console.log(JSON.stringify(config))
     process.exit(0)

@@ -70,6 +70,8 @@ contract Tasks is Filesystem {
         
         bool good; // has the file been loaded
         uint blocked; // how long we have to wait to accept solution
+        
+        bytes32[] challenges;
     }
 
     struct Task {
@@ -115,6 +117,10 @@ contract Tasks is Filesystem {
         t.storage_type = cs;
         Posted(msg.sender, init, ct, cs, stor, id);
         return id;
+    }
+
+    function getSolver(uint id) public view returns (address) {
+        return tasks2[id].solver;
     }
 
     function solve(uint id, bytes32 result, uint steps) public {
