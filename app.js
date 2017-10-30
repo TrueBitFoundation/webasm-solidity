@@ -46,6 +46,7 @@ io.on("connection", function(socket) {
     socket.on("new_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
         if (!fs.existsSync(path)) fs.mkdirSync(path)
+        logger.info("Creating task", obj)
         fs.writeFileSync(path + "/task.wast", obj.task)
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
         var config = {taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST, storage:Storage.IPFS}
@@ -82,6 +83,13 @@ io.on("connection", function(socket) {
     socket.on("config", function (obj) {
         // logger.info("process changed %s", obj.message)
         io.to("ui").emit("config", obj)
+    })
+    socket.on("logs", function (fname) {
+        fs.readFile(fname, function (err, str) {
+            if (err) return logger.error("Cannot load logs", err)
+            logger.info("Sending logs from " + fname)
+            socket.emit("logs", str.toString())
+        })
     })
 })
 

@@ -50,6 +50,8 @@ const logger = winston.createLogger({
 
 logger.info("Using address %s", base)
 
+exports.log_file = dir+'/combined.log'
+
 appFile.configure(web3, base)
 
 var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"

@@ -229,6 +229,7 @@ function runVerifier() {
     verifier = config
     config.pid = Math.floor(Math.random()*10000)
     config.kind = "verifier"
+    config.log_file = common.log_file
     socket.emit("config", config)
     // config.input_file = "input.bin"
     config.files = []

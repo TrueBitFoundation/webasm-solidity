@@ -31,14 +31,16 @@ function giveTask(obj) {
     obj.files = []
     config.kind = "giver"
     config.pid = Math.floor(Math.random()*10000)
+    config.log_file = common.log_file
     status("Loaded task")
+    
     if (obj.storage == Storage.BLOCKCHAIN) common.upload(task).then(function (address) {
             // store into filesystem
             common.initTask(obj).then(function (state) {
                 contract.methods.add(state, obj.code_type, obj.storage, address).send(send_opt, function (err, tr) {
                     if (err) logger.error("Failed to add task", err)
                     else logger.error("Success", tr)
-                    process.exit(0)
+                    // process.exit(0)
                 })
             })
     })
@@ -52,7 +54,7 @@ function giveTask(obj) {
                 logger.info("Creating task ", {state:state, codehash: res[0].hash, codetype: obj.code_type, codestorage: obj.code_storage, inputhash: res[1].hash,
                                                dirhash: res[2].hash})
                 contract.methods.add(state, obj.code_type, obj.storage, res[2].hash).send(send_opt, function (err, tr) {
-                    if (err) return logger.error("Failed to add task", err)
+                    if (err) return logger.error("Failed to add task", {error:err, tx:tr})
                     logger.info("Success %s", tr)
                     status("Task created, exiting " + tr)
                     // process.exit(0)

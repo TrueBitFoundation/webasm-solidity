@@ -1,18 +1,31 @@
 <!doctype html>
 
 <style>
-    
+
     @import url('https://fonts.googleapis.com/css?family=Oswald|Share+Tech+Mono');
-    
+
     body {
         font-family: 'Oswald', sans-serif;
         background-color: hsl(123, 10%, 93%);
     }
-    
+
     div#clearEvents {
         color: gray;
     }
-    
+
+    div#log_dialog {
+        position: fixed;
+        top:10%;
+        left:10%;
+        width:80%;
+        height:80%;
+        overflow:scroll;
+        background-color: hsl(123, 10%, 90%);
+        border: 1px solid gray;
+        padding: 10px;
+        box-shadow: 0px 0px 25px rgba(20, 20, 20, 0.9);
+    }
+
     div#clearEvents:hover {
         color: black;
     }
@@ -29,6 +42,7 @@
     span.removeElem {
         float: right;
         color: gray;
+        padding: 0px 10px;
     }
     
     span.removeElem:hover {
@@ -36,6 +50,23 @@
     }
     
     span.removeElem:active {
+        color: black;
+        text-shadow: 0px 0px 3px #000000;
+    }
+    
+    span.closeElem {
+        float: right;
+        position: sticky;
+        top: 0;
+        color: gray;
+        padding: 0px 10px;
+    }
+    
+    span.closeElem:hover {
+        color: black;
+    }
+    
+    span.closeElem:active {
         color: black;
         text-shadow: 0px 0px 3px #000000;
     }
@@ -68,6 +99,11 @@
     }
     
 </style>
+
+<div hiddenid="log_dialog">
+    <span class="closeElem" onclick="closeLogs();">Close</span>
+    <div id="logs"></div>
+</div>
 
 <div id="content">
 
@@ -207,11 +243,34 @@
         document.querySelector("#address").innerHTML = obj.address
         document.querySelector("#balance").innerHTML = obj.balance
     })
+    
+    var logs = {}
+    
+    socket.on("logs", function (obj) {
+        var elem = document.querySelector("#logs")
+        elem.innerHTML = obj.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>")
+        console.log(obj.toString())
+        var dlg = document.querySelector("#log_dialog")
+        dlg.hidden = false
+    })
+
+    function closeLogs() {
+        var elem = document.querySelector("#log_dialog")
+        elem.hidden = true
+    }
+
+    function showLogs(num) {
+        socket.emit("logs", logs[num])
+    }
 
     socket.on("config", function (obj) {
         console.log(obj)
         var elem = findElem(obj)
-        elem.innerHTML = printObject(obj, obj.kind.toUpperCase() + " " + obj.pid + '<span class="removeElem" onclick="removeElem(event);">Remove</span>')
+        logs[obj.pid] = obj.log_file
+        delete obj.log_file
+        elem.innerHTML = printObject(obj, obj.kind.toUpperCase() + " " + obj.pid +
+                                     '<span class="removeElem" onclick="showLogs(' + obj.pid +  ');">Logs</span>' +
+                                     '<span class="removeElem" onclick="removeElem(event);">Remove</span>')
     })
 
     socket.emit("request-ui", {})

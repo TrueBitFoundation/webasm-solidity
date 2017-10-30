@@ -266,6 +266,7 @@ function runSolver() {
     config.kind = "solver"
     config.input_file = "input.bin"
     config.code_file = "task." + common.getExtension(config.code_type)
+    config.log_file = common.log_file
     socket.emit("config", config)
     config.files = []
     contract.methods.getSolver(task_id).call().then(function (solver) {
