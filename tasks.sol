@@ -171,6 +171,7 @@ contract Tasks is Filesystem {
         bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 1, 10);
         // iactive.setParameters(uniq, p.stack_size, p.memory_size, p.call_size, p.globals_size, p.table_size);
         challenges[uniq] = id;
+        t2.challenges.push(uniq);
     }
 
     function challengeFinality(uint id) public {
@@ -179,12 +180,17 @@ contract Tasks is Filesystem {
         require(t.state == 1);
         bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 10);
         challenges[uniq] = id;
+        t2.challenges.push(uniq);
     }
-    
+
     function queryChallenge(bytes32 uniq) constant public returns (uint) {
         return challenges[uniq];
     }
-    
+
+    function getChallenges(uint id) public view returns (bytes32[]) {
+        return tasks2[id].challenges;
+    }
+
     function finalize(uint id, uint output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
