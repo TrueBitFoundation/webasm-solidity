@@ -55,7 +55,7 @@ function giveTask(obj) {
                                                dirhash: res[2].hash})
                 contract.methods.add(state, obj.code_type, obj.storage, res[2].hash).send(send_opt, function (err, tr) {
                     if (err) return logger.error("Failed to add task", {error:err, tx:tr})
-                    logger.info("Success %s", tr)
+                    logger.info("Success", {tr:tr})
                     status("Task created, exiting " + tr)
                     // process.exit(0)
                 })

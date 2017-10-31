@@ -241,8 +241,52 @@ contract.events.Finalized(function (err,ev) {
     cleanup()
 })
 
+async function checkChallenge(id) {
+    var state = await iactive.methods.getState(id).call(send_opt)
+    logger.info("Challenge %s is in state %d", id, state)
+    if (state == 0) {
+        logger.info("Not yet initialized")
+    }
+    else if (state == 1) {
+        logger.info("Running at",  await iactive.methods.getIndices(id).call(send_opt))
+    }
+    else if (state == 2) {
+        logger.info("Winner %s", await iactive.methods.getWinner(id).call(send_opt))
+    }
+    else if (state == 3) {
+        // NeedErrorPhases
+    }
+    else if (state == 4) {
+        logger.info("Need phases for state", await iactive.methods.getIndices(id).call(send_opt))
+    }
+    else if (state == 5) {
+        // PostedErrorPhases,
+    }
+    else if (state == 6) {
+        logger.info("Posted phases", await iactive.methods.getIndices(id).call(send_opt))
+    }
+    else if (state == 7) {
+        // SelectedErrorPhase,
+    }
+    else if (state == 8) {
+        logger.info("Selected phase %s", await iactive.methods.getPhase(id).call(send_opt))
+    }
+    else if (state == 9) {
+        /* Special states for finality */
+        logger.info("This was a challenge for finality of the end state")
+    }
+}
+
+async function checkState() {
+    // Using task id, get all challengers
+    var lst = await contract.methods.getChallenges(task_id).call(send_opt)
+    logger.info("Current challengers", {lst:lst})
+    lst.forEach(checkChallenge)
+}
+
 async function forceTimeout() {
     if (!config) return
+    checkState()
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", {good:good})
     if (good == true) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
