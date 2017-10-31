@@ -241,6 +241,12 @@ contract.events.Finalized(function (err,ev) {
     cleanup()
 })
 
+function getPlace(idx) {
+    var idx1 = parseInt(idx.idx1)
+    var idx2 = parseInt(idx.idx2)
+    return Math.floor((idx2-idx1)/2 + idx1)
+}
+
 async function checkChallenge(id) {
     var state = await iactive.methods.getState(id).call(send_opt)
     logger.info("Challenge %s is in state %d", id, state)
@@ -248,7 +254,13 @@ async function checkChallenge(id) {
         logger.info("Not yet initialized")
     }
     else if (state == 1) {
-        logger.info("Running at",  await iactive.methods.getIndices(id).call(send_opt))
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        logger.info("Running at", idx)
+        var state = await iactive.methods.getStateAt(id, getPlace(idx))
+        if (parseInt(state) == 0) {
+            replyChallenge(id, parseInt(idx.idx1), parseInt(idx.idx2))
+        }
+        else logger.info("Waiting if challenger will reply")
     }
     else if (state == 2) {
         logger.info("Winner %s", await iactive.methods.getWinner(id).call(send_opt))
@@ -257,19 +269,24 @@ async function checkChallenge(id) {
         // NeedErrorPhases
     }
     else if (state == 4) {
-        logger.info("Need phases for state", await iactive.methods.getIndices(id).call(send_opt))
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        logger.info("Need phases for state", idx)
+        replyChallenge(args.id, getPlace(idx), getPlace(idx))
     }
     else if (state == 5) {
         // PostedErrorPhases,
     }
     else if (state == 6) {
-        logger.info("Posted phases", await iactive.methods.getIndices(id).call(send_opt))
+        logger.info("Posted phases, waiting for challenger", await iactive.methods.getIndices(id).call(send_opt))
     }
     else if (state == 7) {
         // SelectedErrorPhase,
     }
     else if (state == 8) {
-        logger.info("Selected phase %s", await iactive.methods.getPhase(id).call(send_opt))
+        var phase = await iactive.methods.getPhase(id).call(send_opt)
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        logger.info("Selected phase %s", phase)
+        submitProof(id, getPlace(idx), phase)
     }
     else if (state == 9) {
         /* Special states for finality */

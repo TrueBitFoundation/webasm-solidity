@@ -207,8 +207,54 @@ iactive.events.WinnerSelected(function (err,ev) {
     cleanup()
 })
 
+async function checkChallenge(id) {
+    var state = await iactive.methods.getState(id).call(send_opt)
+    logger.info("Challenge %s is in state %d", id, state)
+    if (state == 0) {
+        logger.info("Not yet initialized")
+    }
+    else if (state == 1) {
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        logger.info("Running at", idx)
+        var state = await iactive.methods.getStateAt(id, getPlace(idx))
+        if (parseInt(state) == 0) {
+            replyChallenge(id, parseInt(idx.idx1), parseInt(idx.idx2))
+        }
+        else logger.info("Waiting if challenger will reply")
+    }
+    else if (state == 2) {
+        logger.info("Winner %s", await iactive.methods.getWinner(id).call(send_opt))
+    }
+    else if (state == 3) {
+        // NeedErrorPhases
+    }
+    else if (state == 4) {
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        logger.info("Waiting for solver to post phases", idx)
+    }
+    else if (state == 5) {
+        // PostedErrorPhases,
+    }
+    else if (state == 6) {
+        logger.info("Posted phases, waiting for challenger", await iactive.methods.getIndices(id).call(send_opt))
+    }
+    else if (state == 7) {
+        // SelectedErrorPhase,
+    }
+    else if (state == 8) {
+        var phase = await iactive.methods.getPhase(id).call(send_opt)
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        logger.info("Selected phase %s, waiting for solver", phase)
+    }
+    else if (state == 9) {
+        /* Special states for finality */
+        logger.info("This was a challenge for finality of the end state")
+    }
+}
+
 async function forceTimeout() {
     if (!challenge_id) return
+    checkChallenge(challenge_id)
     var good = await iactive.methods.gameOver(challenge_id).call(send_opt)
     logger.info("Testing timeout", good)
     if (good == true) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
