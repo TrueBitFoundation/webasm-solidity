@@ -120,6 +120,10 @@ contract Interactive2 {
         return (r.proof[0], r.steps, r.proof[r.steps-1]);
     }
     
+    function getChallenger(bytes32 id) public view returns (address) {
+       return records[id].challenger;
+    }
+    
     function getIndices(bytes32 id) public view returns (uint idx1, uint idx2) {
         Record storage r = records[id];
         return (r.idx1, r.idx2);
@@ -261,10 +265,6 @@ contract Interactive2 {
         r.result = arr;
         r.next = r.challenger;
         PostedPhases(id, i1, arr);
-    }
-
-    function getPhaseAt(bytes32 id, uint loc) view public returns (bytes32) {
-        return records[id].result[loc];
     }
 
     event PostedErrorPhases(bytes32 id, uint idx1, bytes32[13] arr);

@@ -11,12 +11,11 @@ var contract = common.contract
 var iactive = common.iactive
 var base = common.base
 var logger = common.logger
+var getPlace = common.getPlace
 
 var socket = require('socket.io-client')('http://localhost:22448')
 
 var task_id, solver, steps
-
-var config
 
 function status(msg) {
     config.message = msg
@@ -146,105 +145,103 @@ function submitProof(id, idx1, phase) {
 
 var challenges = {}
 
-iactive.events.StartChallenge(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (args.p.toLowerCase() != base) return
-    logger.error("Got challenge", ev)
-    contract.methods.queryChallenge(args.uniq).call(function (err, id) {
-        if (err) {
-            logger.error(err)
-            return
-        }
-        logger.info("Got task id ", id)
-        var id = parseInt(id)
-        if (task_id != id) return
-        challenges[args.uniq] = {
-            prover: args.p,
-            task: id,
-            challenger: args.c,
-            init: args.s,
-            result: args.e,
-            size: parseInt(args.par),
-        }
-        replyChallenge(args.uniq, parseInt(args.idx1), parseInt(args.idx2))
-    })
-})
-
-iactive.events.StartFinalityChallenge(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (args.p.toLowerCase() != base) return
-    logger.info("Got finality challenge", args)
-    contract.methods.queryChallenge(args.uniq).call(function (err, id) {
-        if (err) return logger.error(err)
-        logger.info("Got task id ", id)
-        var id = parseInt(id)
-        if (task_id != id) return
-        logger.info("Challenge to us")
-        challenges[args.uniq] = {
-            prover: args.p,
-            task: id,
-            challenger: args.c,
-            init: args.s,
-            result: args.e,
-        }
-        replyFinalityChallenge(args.uniq, parseInt(args.step))
-    })
-})
 
 function myId(ev) {
     return !!challenges[ev.returnValues.id]
 }
 
-iactive.events.Queried(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (!myId(ev)) return
-    logger.info("Query ", args)
-    replyChallenge(args.id, parseInt(args.idx1), parseInt(args.idx2))
-})
+if (!common.config.events_disabled) {
+    
+    iactive.events.StartChallenge(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (args.p.toLowerCase() != base) return
+        logger.error("Got challenge", ev)
+        contract.methods.queryChallenge(args.uniq).call(function (err, id) {
+            if (err) {
+                logger.error(err)
+                return
+            }
+            logger.info("Got task id ", id)
+            var id = parseInt(id)
+            if (task_id != id) return
+            challenges[args.uniq] = {
+                prover: args.p,
+                task: id,
+                challenger: args.c,
+                init: args.s,
+                result: args.e,
+                size: parseInt(args.par),
+            }
+            replyChallenge(args.uniq, parseInt(args.idx1), parseInt(args.idx2))
+        })
+    })
 
-iactive.events.PostedErrorPhases(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (!myId(ev)) return
-    logger.info("Error phases ", args)
-    replyErrorPhases(args.id, parseInt(args.idx1), args.arr)
-})
+    iactive.events.StartFinalityChallenge(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (args.p.toLowerCase() != base) return
+        logger.info("Got finality challenge", args)
+        contract.methods.queryChallenge(args.uniq).call(function (err, id) {
+            if (err) return logger.error(err)
+            logger.info("Got task id ", id)
+            var id = parseInt(id)
+            if (task_id != id) return
+            logger.info("Challenge to us")
+            challenges[args.uniq] = {
+                prover: args.p,
+                task: id,
+                challenger: args.c,
+                init: args.s,
+                result: args.e,
+            }
+            replyFinalityChallenge(args.uniq, parseInt(args.step))
+        })
+    })
 
-iactive.events.SelectedPhase(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (!myId(ev)) return
-    logger.info("Challenger selected phase ", args)
-    submitProof(args.id, parseInt(args.idx1), args.phase)
-})
+    iactive.events.Queried(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (!myId(ev)) return
+        logger.info("Query ", args)
+        replyChallenge(args.id, parseInt(args.idx1), parseInt(args.idx2))
+    })
 
-iactive.events.WinnerSelected(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (!myId(ev)) return
-    iactive.methods.isRejected(task_id).call(send_opt, function (err, res) {
-        if (err) return logger.error(err)
-        if (!res) return status("A challenge was rejected")
-        status("My solution was rejected, exiting.")
+    iactive.events.PostedErrorPhases(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (!myId(ev)) return
+        logger.info("Error phases ", args)
+        replyErrorPhases(args.id, parseInt(args.idx1), args.arr)
+    })
+
+    iactive.events.SelectedPhase(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (!myId(ev)) return
+        logger.info("Challenger selected phase ", args)
+        submitProof(args.id, parseInt(args.idx1), args.phase)
+    })
+
+    iactive.events.WinnerSelected(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (!myId(ev)) return
+        iactive.methods.isRejected(task_id).call(send_opt, function (err, res) {
+            if (err) return logger.error(err)
+            if (!res) return status("A challenge was rejected")
+            status("My solution was rejected, exiting.")
+            cleanup()
+        })
+            })
+
+    contract.events.Finalized(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (task_id.toString() != args.id) return
+        status("Task accepted, exiting.")
         cleanup()
     })
-})
-
-contract.events.Finalized(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (task_id.toString() != args.id) return
-    status("Task accepted, exiting.")
-    cleanup()
-})
-
-function getPlace(idx) {
-    var idx1 = parseInt(idx.idx1)
-    var idx2 = parseInt(idx.idx2)
-    return Math.floor((idx2-idx1)/2 + idx1)
 }
 
 async function checkChallenge(id) {
@@ -256,7 +253,7 @@ async function checkChallenge(id) {
     else if (state == 1) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Running at", idx)
-        var state = await iactive.methods.getStateAt(id, getPlace(idx))
+        var state = await iactive.methods.getStateAt(id, getPlace(idx)).call(send_opt)
         if (parseInt(state) == 0) {
             replyChallenge(id, parseInt(idx.idx1), parseInt(idx.idx2))
         }
@@ -271,7 +268,7 @@ async function checkChallenge(id) {
     else if (state == 4) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Need phases for state", idx)
-        replyChallenge(args.id, getPlace(idx), getPlace(idx))
+        replyChallenge(id, parseInt(idx.idx1), parseInt(idx.idx2))
     }
     else if (state == 5) {
         // PostedErrorPhases,
@@ -297,13 +294,13 @@ async function checkChallenge(id) {
 async function checkState() {
     // Using task id, get all challengers
     var lst = await contract.methods.getChallenges(task_id).call(send_opt)
-    logger.info("Current challengers", {lst:lst})
+    logger.info("Current challengers for task %d", task_id, {lst:lst})
     lst.forEach(checkChallenge)
 }
 
 async function forceTimeout() {
     if (!config) return
-    checkState()
+    if (common.config.poll) checkState()
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", {good:good})
     if (good == true) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {

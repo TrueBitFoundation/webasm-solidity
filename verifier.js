@@ -12,13 +12,13 @@ var iactive = common.iactive
 var base = common.base
 var logger = common.logger
 
+var getPlace = common.getPlace
+
 var socket = require('socket.io-client')('http://localhost:22448')
 
 var task_id, verifier, steps, challenge_id
 
 var error_hash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
-var config
 
 function status(msg) {
     config.message = msg
@@ -134,78 +134,80 @@ function postErrorPhases(id, idx1) {
     })
 }
 
-iactive.events.Reported(function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    if (challenge_id != args.id) return
-    logger.info("Reported ", args)
-    replyReported(args.id, parseInt(args.idx1), parseInt(args.idx2), args.arr[0])
-})
-
-iactive.events.NeedErrorPhases(function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    if (challenge_id != args.id) return
-    logger.info("Query ", args)
-    postErrorPhases(args.id, parseInt(args.idx1))
-})
-
-iactive.events.PostedPhases(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (challenge_id != args.id) return
-    logger.info("Phases ", args)
-    replyPhases(args.id, parseInt(args.idx1), args.arr)
-})
-
-
-iactive.events.SelectedErrorPhase(function (err,ev) {
-    if (err) return logger.error(err);
-    var args = ev.returnValues
-    if (challenge_id != args.id) return
-    logger.info("Prover selected error phase ", args)
-    submitErrorProof(args.id, parseInt(args.idx1), args.phase)
-})
-
-iactive.events.StartChallenge(function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Got challenge", args)
-    if (args.c.toLowerCase() != base) return
-    logger.info("Got challenge to our address", args)
-    contract.methods.queryChallenge(args.uniq).call(function (err, id) {
+if (!common.config.events_disabled) {
+    iactive.events.Reported(function (err,ev) {
         if (err) return logger.error(err)
-        logger.info("Got task id ", id)
-        var id = parseInt(id.toString())
-        if (task_id != id) return
-        challenge_id = args.uniq
-        logger.info("Got challenge that we are handling", ev)
-        status("Got challenge id")
+        var args = ev.returnValues
+        if (challenge_id != args.id) return
+        logger.info("Reported ", args)
+        replyReported(args.id, parseInt(args.idx1), parseInt(args.idx2), args.arr[0])
     })
-})
 
-iactive.events.StartFinalityChallenge(function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Got finality challenge", args)
-    if (args.c.toLowerCase() != base) return
-    contract.methods.queryChallenge(args.uniq).call(function (err, id) {
+    iactive.events.NeedErrorPhases(function (err,ev) {
         if (err) return logger.error(err)
-        logger.info("Got task id %s", id)
-        var id = parseInt(id.toString())
-        if (task_id != id) return
-        challenge_id = args.uniq
-        status("Got challenge id")
+        var args = ev.returnValues
+        if (challenge_id != args.id) return
+        logger.info("Query ", args)
+        postErrorPhases(args.id, parseInt(args.idx1))
     })
-})
 
-iactive.events.WinnerSelected(function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    if (challenge_id != args.id) return
-    status("Selected winner for challenge, exiting.")
-    cleanup()
-})
+    iactive.events.PostedPhases(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (challenge_id != args.id) return
+        logger.info("Phases ", args)
+        replyPhases(args.id, parseInt(args.idx1), args.arr)
+    })
+
+
+    iactive.events.SelectedErrorPhase(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (challenge_id != args.id) return
+        logger.info("Prover selected error phase ", args)
+        submitErrorProof(args.id, parseInt(args.idx1), args.phase)
+    })
+
+    iactive.events.StartChallenge(function (err,ev) {
+        if (err) return logger.error(err)
+        var args = ev.returnValues
+        logger.info("Got challenge", args)
+        if (args.c.toLowerCase() != base) return
+        logger.info("Got challenge to our address", args)
+        contract.methods.queryChallenge(args.uniq).call(function (err, id) {
+            if (err) return logger.error(err)
+            logger.info("Got task id ", id)
+            var id = parseInt(id.toString())
+            if (task_id != id) return
+            challenge_id = args.uniq
+            logger.info("Got challenge that we are handling", ev)
+            status("Got challenge id")
+        })
+    })
+
+    iactive.events.StartFinalityChallenge(function (err,ev) {
+        if (err) return logger.error(err)
+        var args = ev.returnValues
+        logger.info("Got finality challenge", args)
+        if (args.c.toLowerCase() != base) return
+        contract.methods.queryChallenge(args.uniq).call(function (err, id) {
+            if (err) return logger.error(err)
+            logger.info("Got task id %s", id)
+            var id = parseInt(id.toString())
+            if (task_id != id) return
+            challenge_id = args.uniq
+            status("Got challenge id")
+        })
+            })
+
+    iactive.events.WinnerSelected(function (err,ev) {
+        if (err) return logger.error(err)
+        var args = ev.returnValues
+        if (challenge_id != args.id) return
+        status("Selected winner for challenge, exiting.")
+        cleanup()
+    })
+}
 
 async function checkChallenge(id) {
     var state = await iactive.methods.getState(id).call(send_opt)
@@ -216,11 +218,14 @@ async function checkChallenge(id) {
     else if (state == 1) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Running at", idx)
-        var state = await iactive.methods.getStateAt(id, getPlace(idx))
+        var state = await iactive.methods.getStateAt(id, getPlace(idx)).call(send_opt)
         if (parseInt(state) == 0) {
-            replyChallenge(id, parseInt(idx.idx1), parseInt(idx.idx2))
+            logger.info("No state posted yet, waiting")
         }
-        else logger.info("Waiting if challenger will reply")
+        else {
+            logger.info("Doing query")
+            replyReported(id, parseInt(idx.idx1), parseInt(idx.idx2), state)
+        }
     }
     else if (state == 2) {
         logger.info("Winner %s", await iactive.methods.getWinner(id).call(send_opt))
@@ -236,7 +241,10 @@ async function checkChallenge(id) {
         // PostedErrorPhases,
     }
     else if (state == 6) {
-        logger.info("Posted phases, waiting for challenger", await iactive.methods.getIndices(id).call(send_opt))
+        var idx = await iactive.methods.getIndices(id).call(send_opt)
+        var phases = await iactive.methods.getResult(id).call(send_opt)
+        logger.info("Posted phases, have to select the wrong one", idx)
+        replyPhases(id, getPlace(idx), phases)
     }
     else if (state == 7) {
         // SelectedErrorPhase,
@@ -252,9 +260,24 @@ async function checkChallenge(id) {
     }
 }
 
+async function testChallenge(id) {
+    var addr = await iactive.methods.getChallenger(id).call(send_opt)
+    if (addr.toLowerCase() != base) return
+    logger.info("Found my challenge ID %s", id)
+    challenge_id = id
+}
+
+async function checkForChallenge() {
+    // Using task id, get all challengers
+    if (!common.config.poll) return
+    var lst = await contract.methods.getChallenges(task_id).call(send_opt)
+    logger.info("Current challenges", {lst:lst})
+    lst.forEach(testChallenge)
+}
+
 async function forceTimeout() {
-    if (!challenge_id) return
-    checkChallenge(challenge_id)
+    if (!challenge_id) return checkForChallenge()
+    if (common.config.poll) checkChallenge(challenge_id)
     var good = await iactive.methods.gameOver(challenge_id).call(send_opt)
     logger.info("Testing timeout", good)
     if (good == true) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {

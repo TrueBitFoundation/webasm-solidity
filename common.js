@@ -369,6 +369,13 @@ async function upload(data) {
     
     return contract.options.address
 }
+    
+exports.getPlace = function (idx) {
+    var idx1 = parseInt(idx.idx1)
+    var idx2 = parseInt(idx.idx2)
+    return Math.floor((idx2-idx1)/2 + idx1)
+}
+
 
 exports.upload = upload
 

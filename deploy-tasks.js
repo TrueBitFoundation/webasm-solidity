@@ -30,10 +30,11 @@ async function doDeploy() {
         judge: judge.options.address,
         interactive: iactive.options.address,
         host: host,
-/*        base: web3.eth.Iban.toAddress(web3.eth.Iban.fromEthereumAddress(send_opt.from)), */
         base: send_opt.from,
         tasks: tasks.options.address,
         get_code: get_code.options.address,
+        events_disabled: false,
+        poll: false,
         timeout: 5000,
         tick: true,
     }
