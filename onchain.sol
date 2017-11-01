@@ -401,5 +401,36 @@ contract Onchain {
         m.vm = hashVM();
         state = hashMachine();
     }
+    
+    function makeZero(uint n) internal pure returns (bytes32) {
+       bytes32 res = 0;
+       for (uint i = 0; i < n; i++) res = keccak256(res, res);
+       return res;
+    }
+    
+    function setStackSize(uint sz) internal {
+        vm_r.stack = makeZero(sz);
+    }
+
+    function setCallStackSize(uint sz) internal {
+        vm_r.call_stack = makeZero(sz);
+    }
+
+    function setGlobalsSize(uint sz) internal {
+        vm_r.globals = makeZero(sz);
+    }
+
+    function setMemorySize(uint sz) internal {
+        vm_r.mem = makeZero(sz);
+    }
+
+    function setTableSize(uint sz) internal {
+        vm_r.calltable = makeZero(sz);
+    }
+
+    function setTableTypesSize(uint sz) internal {
+        vm_r.calltypes = makeZero(sz);
+    }
+
 
 }
