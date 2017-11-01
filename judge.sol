@@ -5,7 +5,7 @@ import "./common-onchain.sol";
 contract Judge is CommonOnchain {
 
     address winner;
-    
+
     function judge(bytes32[13] res, uint q,
                         bytes32[] _proof,
                         bytes32 vm_, bytes32 op, uint[4] regs,
@@ -32,7 +32,7 @@ contract Judge is CommonOnchain {
         return q;
         // return (q, state, debug);
     }
-    
+
     function judgeFinality(bytes32[13] res, bytes32[] _proof,
                         bytes32[10] roots, uint[4] pointers) public returns (uint) {
         setVM2(roots, pointers);
@@ -45,16 +45,20 @@ contract Judge is CommonOnchain {
         require(m.op == 0x0000000000000000000000000000000000000000040006060001000106000000);
         return 1;
     }
-    
+
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, uint loc) public returns (bool) {
         setVM2(roots, pointers);
         proof = _proof;
         return state == hashVM() && vm_r.input_data == getRoot(loc);
     }
-    
+
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {
         setVM2(roots, pointers);
         return hashVM();
+    }
+
+    function calcIOHash(bytes32[10] roots) public pure returns (bytes32) {
+        return keccak256(roots[0], roots[7], roots[8], roots[9]);
     }
 
 }

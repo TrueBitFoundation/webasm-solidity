@@ -99,12 +99,25 @@ function buildArgs(args, config) {
         args.push("-insert-error")
         args.push("" + config.actor.error_location)
     }
+    if (config.vm_parameters) {
+        args.push("-memory-size")
+        args.push(config.vm_parameters.mem)
+        args.push("-stack-size")
+        args.push(config.vm_parameters.stack)
+        args.push("-table-size")
+        args.push(config.vm_parameters.table)
+        args.push("-globals-size")
+        args.push(config.vm_parameters.globals)
+        args.push("-call-stack-size")
+        args.push(config.vm_parameters.call)
+    }
     for (i in config.files) {
         args.push("-file")
         args.push("" + config.files[i])
     }
     if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
     else ["-wasm", config.code_file].forEach(a => args.push(a))
+    logger.info("Built args", {args:args})
     return args
 }
 
@@ -166,7 +179,7 @@ exports.ensureOutputFile = ensureOutputFile
 
 function taskResult(config, cont) {
     if (config.actor.stop_early < 0) {
-        var args = buildArgs(["-m", "-result"], config)
+        var args = buildArgs(["-m", "-output"], config)
         execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
             if (error) return logger.error('stderr %s', stderr)
             logger.info('solved task %s', stdout)

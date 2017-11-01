@@ -76,7 +76,7 @@ contract Tasks is Filesystem {
 
     struct Task {
         address giver;
-        bytes32 init;
+        bytes32 init; // includes code and input roots, the output should be similar
         string stor;
         
         CodeType code_type;
