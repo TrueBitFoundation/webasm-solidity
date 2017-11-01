@@ -34,14 +34,6 @@ contract Interactive2 {
         Finality
     }
 
-    struct VMParameters {
-        uint8 stack_size;
-        uint8 memory_size;
-        uint8 call_size;
-        uint8 globals_size;
-        uint8 table_size;
-    }
-
     struct Record {
         uint256 task_id;
     
@@ -79,12 +71,12 @@ contract Interactive2 {
     }
 
     mapping (bytes32 => Record) records;
-    mapping (bytes32 => VMParameters) params;
+    // mapping (bytes32 => VMParameters) params;
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint256 par, uint to) public returns (bytes32) {
-        bytes32 uniq = keccak256(task_id, p, c, s, e, _steps, par, to);
+    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32) {
+        bytes32 uniq = keccak256(task_id, p, c, s, e, par, to);
         Record storage r = records[uniq];
         r.task_id = task_id;
         r.prover = p;
@@ -106,21 +98,19 @@ contract Interactive2 {
         r.proof[r.steps-1] = e;
         r.idx2 = r.steps-1;
         */
-        r.state = State.Running;
+        r.state = State.Started;
         StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
         return uniq;
     }
     
-    function initialize(bytes32 id, bytes32 s_state, bytes32[10] s_roots, uint[4] s_pointers, uint _steps,
-                                    bytes32 e_state, bytes32[10] e_roots, uint[4] e_pointers) public {
+    function initialize(bytes32 id, bytes32[10] s_roots, uint[4] s_pointers, uint _steps,
+                                    bytes32[10] e_roots, uint[4] e_pointers) public {
         Record storage r = records[id];
         require(msg.sender == r.next && r.state == State.Started);
         // check first state here
-        require (s_state == judge.calcStateHash(s_roots, s_pointers));
         require (r.start_state == judge.calcIOHash(s_roots));
         // then last one
-        require (e_state == judge.calcStateHash(e_roots, e_pointers));
         require (r.end_state == judge.calcIOHash(e_roots));
         
         // Now we can initialize
@@ -128,8 +118,9 @@ contract Interactive2 {
         if (r.size > r.steps - 2) r.size = r.steps-2;
         r.idx2 = r.steps-1;
         r.proof.length = r.steps;
-        r.proof[0] = s_state;
-        r.proof[r.steps-1] = e_state;
+        r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
+        r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
+        r.state = State.Running;
     }
     
     function getDescription(bytes32 id) public view returns (bytes32 init, uint steps, bytes32 last) {

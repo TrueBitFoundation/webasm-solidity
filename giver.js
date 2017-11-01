@@ -24,7 +24,7 @@ function status(msg) {
 function giveTask(obj) {
     var task = fs.readFileSync(dir + "/" + obj.taskfile)
     var input = fs.readFileSync(dir + "/" + obj.inputfile)
-    var input_buffer = appFile.inputToBuffer(input)
+    // var input_buffer = appFile.inputToBuffer(input)
     obj.code_file = obj.taskfile
     obj.input_file = obj.inputfile
     obj.actor = {}
@@ -44,7 +44,7 @@ function giveTask(obj) {
                 })
             })
     })
-    else ipfs.files.add([{content:task, path:"bundle/"+obj.code_file}, {content:input_buffer, path:"bundle/"+obj.input_file}], function (err, res) {
+    else ipfs.files.add([{content:task, path:"bundle/"+obj.code_file}, {content:input, path:"bundle/"+obj.input_file}], function (err, res) {
             if (err) return logger.error("IPFS error", err)
             logger.info("IPFS", res)
             // store into filesystem

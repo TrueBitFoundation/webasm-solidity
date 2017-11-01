@@ -37,7 +37,7 @@ function verifyTask(obj, actor) {
             return
         }
         common.taskResult(actor, function (res) {
-            steps = res.steps
+            /* steps = res.steps
             if (res.steps < obj.steps) {
                 logger.error("Too many steps")
                 contract.methods.challenge(obj.id).send(send_opt, function (err, tx) {
@@ -56,7 +56,9 @@ function verifyTask(obj, actor) {
                     })
                 })
             }
-            else if (res.result != obj.hash) {
+            else */
+            steps = res.steps
+            if (res.hash != obj.hash) {
                 logger.info("Result mismatch")
                 contract.methods.challenge(obj.id).send(send_opt, function (err, tx) {
                     if (!err) status("Result mismatch, challenge initiated " + tx + " at task " + obj.id)

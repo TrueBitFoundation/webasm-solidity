@@ -3,8 +3,7 @@ pragma solidity ^0.4.16;
 import "./fs.sol";
 
 interface Interactive {
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 steps,
-        uint256 par, uint to) public returns (bytes32);
+    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
     function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
     
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
@@ -34,7 +33,7 @@ contract Tasks is Filesystem {
     }
 
     event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id);
-    event Solved(uint id, bytes32 hash, uint steps, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
+    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
     event Finalized(uint id);
 
     Interactive iactive;
@@ -64,7 +63,6 @@ contract Tasks is Filesystem {
     struct Task2 {
         address solver;
         bytes32 result;
-        uint steps;
         
         bytes32 output_file;
         
@@ -143,16 +141,15 @@ contract Tasks is Filesystem {
         return tasks2[id].solver;
     }
 
-    function solve(uint id, bytes32 result, uint steps) public {
+    function solve(uint id, bytes32 result) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         require(t2.solver == 0 && t2.good);
         t2.solver = msg.sender;
         t2.result = result;
-        t2.steps = steps;
         t.state = 1;
         t2.blocked = block.number + 10;
-        Solved(id, t2.result, t2.steps, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
     }
 
     /*
@@ -188,8 +185,7 @@ contract Tasks is Filesystem {
         Task2 storage t2 = tasks2[id];
         // VMParameters storage p = params[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 1, 10);
-        // iactive.setParameters(uniq, p.stack_size, p.memory_size, p.call_size, p.globals_size, p.table_size);
+        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, 10);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
     }
@@ -198,7 +194,7 @@ contract Tasks is Filesystem {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, t2.steps, 10);
+        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, 10);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
     }

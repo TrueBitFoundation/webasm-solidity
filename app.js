@@ -141,7 +141,7 @@ contract.events.Solved("latest", function (err, ev) {
         storage: args.stor,
         code_type: parseInt(args.ct),
         storage_type: parseInt(args.cs),
-        steps: args.steps.toString(),
+        // steps: args.steps.toString(),
         actor: verifier_conf,
     }
     io.emit("event", obj)

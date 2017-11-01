@@ -31,12 +31,13 @@ function solveTask(obj, config) {
         }
         else {
             status("Initial hash was wrong, exiting.")
-            process.exit(0)
+            return
+            // process.exit(0)
         }
 
         common.taskResult(config, function (res) {
             steps = res.steps
-            contract.methods.solve(obj.id, res.result, res.steps).send(send_opt, function (err, tr) {
+            contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
                     status("Solved task " + tr)
@@ -150,6 +151,20 @@ function myId(ev) {
     return !!challenges[ev.returnValues.id]
 }
 
+async function initChallenge(id) {
+    var stdout1 = await common.exec(config, ["-m", "-input"])
+    var obj1 = JSON.parse(stdout1)
+    var stdout2 = await common.exec(config, ["-m", "-output"])
+    var obj2 = JSON.parse(stdout2)
+    var steps = obj2.steps
+    iactive.methods.initialize(id, common.getRoots(obj1.vm), common.getPointers(obj1.vm), steps,
+                                common.getRoots(obj2.vm), common.getPointers(obj2.vm)).send(send_opt, function (err,tx) {
+        if (err) return logger.error(err);
+        status("Initialized challenge " + tx)
+        replyChallenge(id, 0, steps-1)
+    })
+}
+
 if (!common.config.events_disabled) {
     
     iactive.events.StartChallenge(function (err,ev) {
@@ -173,7 +188,8 @@ if (!common.config.events_disabled) {
                 result: args.e,
                 size: parseInt(args.par),
             }
-            replyChallenge(args.uniq, parseInt(args.idx1), parseInt(args.idx2))
+            // replyChallenge(args.uniq, parseInt(args.idx1), parseInt(args.idx2))
+            initChallenge(args.uniq)
         })
     })
 
@@ -249,6 +265,7 @@ async function checkChallenge(id) {
     logger.info("Challenge %s is in state %d", id, state)
     if (state == 0) {
         logger.info("Not yet initialized")
+        initChallenge(id)
     }
     else if (state == 1) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)

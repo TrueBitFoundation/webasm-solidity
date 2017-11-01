@@ -132,6 +132,8 @@ function exec(config, lst) {
         })
     })
 }
+    
+exports.exec = exec
 
 function writeFiles(files) {
     var n = 0
@@ -147,13 +149,12 @@ function writeFiles(files) {
     })
 }
 
-async function initTask(config, files) {
-    var stdout = await exec(config, ["-m", "-init"])
-    return JSON.parse(stdout).vm.code
+async function initTask(config) {
+    var stdout = await exec(config, ["-m", "-input"])
+    return JSON.parse(stdout).hash
 }
 
 exports.initTask = initTask
-
 
 function ensureInputFile(config, cont) {
     var args = buildArgs(["-m", "-input-proof", config.input_file], config)
@@ -187,7 +188,7 @@ function taskResult(config, cont) {
         })
     }
     else {
-        var args = buildArgs(["-m", "-location", config.actor.stop_early.toString()], config)
+        var args = buildArgs(["-m", "-location", config.actor.stop_early.toString()], config) // need to have something new here
         execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
             if (error) return logger.error('stderr %s', stderr)
             logger.info('exited early %s', stdout)
