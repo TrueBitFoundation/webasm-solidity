@@ -15,7 +15,7 @@ var getPlace = common.getPlace
 
 var socket = require('socket.io-client')('http://localhost:22448')
 
-var task_id, solver, steps
+var task_id, steps
 
 function status(msg) {
     config.message = msg
@@ -69,7 +69,7 @@ function replyChallenge(id, idx1, idx2) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
     if (idx1 + 1 == idx2) {
         // Now we are sending the intermediate states
-        common.getStep(idx1, solver, function (obj) {
+        common.getStep(idx1, config, function (obj) {
             iactive.methods.postPhases(id, idx1, obj.states).send(send_opt, function (err,tx) {
                 if (err) logger.error(err)
                 else {
@@ -79,7 +79,7 @@ function replyChallenge(id, idx1, idx2) {
         })
         return
     }
-    common.getLocation(place, solver, function (hash) {
+    common.getLocation(place, config, function (hash) {
         iactive.methods.report(id, idx1, idx2, [hash]).send(send_opt, function (err,tx) {
             if (err) logger.error(err)
             else {
@@ -91,7 +91,7 @@ function replyChallenge(id, idx1, idx2) {
 
 function replyFinalityChallenge(id, idx1, idx2) {
     // Now we are sending the intermediate states
-    common.getFinality(idx1, solver, function (obj) {
+    common.getFinality(idx1, config, function (obj) {
         iactive.methods.callFinalityJudge(id, idx1, obj.location,
                            common.getRoots(obj.vm), common.getPointers(obj.vm)).send(send_opt, function (err, res) {
             if (err) logger.error(err)
@@ -102,7 +102,7 @@ function replyFinalityChallenge(id, idx1, idx2) {
 
 function replyErrorPhases(id, idx1, arr) {
     // Now we are checking the intermediate states
-    common.getErrorStep(idx1, solver, function (obj) {
+    common.getErrorStep(idx1, config, function (obj) {
         for (var i = 1; i < obj.states.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.methods.selectErrorPhase(id, idx1, arr[i-1], i-1).send(send_opt, function (err,tx) {
@@ -122,7 +122,7 @@ function replyErrorPhases(id, idx1, arr) {
 
 function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
-    common.getStep(idx1, solver, function (obj) {
+    common.getStep(idx1, config, function (obj) {
         var proof = obj[common.phase_table[phase]]
         var merkle = proof.proof || []
         var loc = proof.location || 0
@@ -319,7 +319,6 @@ async function runSolver() {
     // download file from IPFS
     logger.info("solving", config)
     task_id = parseInt(config.id)
-    solver = config
     config.pid = Math.floor(Math.random()*10000)
     config.kind = "solver"
     config.input_file = "input.bin"
