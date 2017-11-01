@@ -35,6 +35,37 @@ contract Offchain {
     Machine m;
     
     uint debug;
+    
+    // TODO: these should be cleared first
+    function setStackSize(uint sz) internal {
+        vm_r.stack.length = 0;
+        vm_r.stack.length = 2**sz;
+    }
+
+    function setCallStackSize(uint sz) internal {
+        vm_r.call_stack.length = 0;
+        vm_r.call_stack.length = 2**sz;
+    }
+
+    function setGlobalsSize(uint sz) internal {
+        vm_r.globals.length = 0;
+        vm_r.globals.length = 2**sz;
+    }
+
+    function setMemorySize(uint sz) internal {
+        vm_r.mem.length = 0;
+        vm_r.mem.length = 2**sz;
+    }
+
+    function setTableSize(uint sz) internal {
+        vm_r.calltable.length = 0;
+        vm_r.calltable.length = 2**sz;
+    }
+
+    function setTableTypesSize(uint sz) internal {
+        vm_r.calltypes.length = 0;
+        vm_r.calltypes.length = 2**sz;
+    }
 
     function getCode(uint loc) internal view returns (bytes32) {
         return vm_r.code[loc];
