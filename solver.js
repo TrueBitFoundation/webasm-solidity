@@ -315,7 +315,7 @@ function cleanup() {
     clearInterval(ival)
 }
 
-function runSolver() {
+async function runSolver() {
     // download file from IPFS
     logger.info("solving", config)
     task_id = parseInt(config.id)
@@ -327,11 +327,11 @@ function runSolver() {
     config.log_file = common.log_file
     socket.emit("config", config)
     config.files = []
-    contract.methods.getSolver(task_id).call().then(function (solver) {
-        if (parseInt(solver)) return logger.error("Already solved", {solver:solver})
-        common.getStorage(config, function () {
-            solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
-        })
+    config.vm_parameters = await contract.methods.getVMParameters(task_id).call(send_opt)
+    var solver = contract.methods.getSolver(task_id).call()
+    if (parseInt(solver)) return logger.error("Already solved", {solver:solver})
+    common.getStorage(config, function () {
+        solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
     })
     /*
     common.getFile(config.filehash, config.code_storage, function (filestr) {

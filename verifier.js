@@ -292,7 +292,7 @@ function cleanup() {
     clearInterval(ival)
 }
 
-function runVerifier() {
+async function runVerifier() {
     logger.info("verifying", config)
     task_id = parseInt(config.id)
     verifier = config
@@ -303,6 +303,7 @@ function runVerifier() {
     // config.input_file = "input.bin"
     config.files = []
     config.code_file = "task." + common.getExtension(config.code_type)
+    config.vm_parameters = await contract.methods.getVMParameters(task_i).call(send_opt)
     common.getStorage(config, function () {
         verifyTask({init: config.init, hash: config.hash, id:task_id}, config)
     })

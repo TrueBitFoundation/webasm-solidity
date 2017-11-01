@@ -95,9 +95,9 @@ contract Tasks is Filesystem {
     function defaultParameters(uint id) internal {
         VMParameters storage param = params[id];
         param.stack_size = 14;
-        param.memory_size = 14;
-        param.globals_size = 6;
-        param.table_size = 6;
+        param.memory_size = 16;
+        param.globals_size = 8;
+        param.table_size = 8;
         param.call_size = 10;
     }
 
@@ -115,8 +115,28 @@ contract Tasks is Filesystem {
         t2.good = true;
         t.code_type = ct;
         t.storage_type = cs;
+        defaultParameters(id);
         Posted(msg.sender, init, ct, cs, stor, id);
         return id;
+    }
+    
+    function setVMParameters(uint id, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public {
+        require(msg.sender == tasks[id].giver);
+        VMParameters storage param = params[id];
+        param.stack_size = stack;
+        param.memory_size = mem;
+        param.globals_size = globals;
+        param.table_size = table;
+        param.call_size = call;
+    }
+
+    function getVMParameters(uint id) public view returns (uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) {
+        VMParameters storage param = params[id];
+        stack = param.stack_size;
+        mem = param.memory_size;
+        globals = param.globals_size;
+        table = param.table_size;
+        call = param.call_size;
     }
 
     function getSolver(uint id) public view returns (address) {
