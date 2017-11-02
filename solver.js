@@ -15,7 +15,7 @@ var getPlace = common.getPlace
 
 var socket = require('socket.io-client')('http://localhost:22448')
 
-var task_id, solver, steps
+var task_id, steps
 
 function status(msg) {
     config.message = msg
@@ -31,12 +31,13 @@ function solveTask(obj, config) {
         }
         else {
             status("Initial hash was wrong, exiting.")
-            process.exit(0)
+            return
+            // process.exit(0)
         }
 
         common.taskResult(config, function (res) {
             steps = res.steps
-            contract.methods.solve(obj.id, res.result, res.steps).send(send_opt, function (err, tr) {
+            contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
                     status("Solved task " + tr)
@@ -69,7 +70,7 @@ function replyChallenge(id, idx1, idx2) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
     if (idx1 + 1 == idx2) {
         // Now we are sending the intermediate states
-        common.getStep(idx1, solver, function (obj) {
+        common.getStep(idx1, config, function (obj) {
             iactive.methods.postPhases(id, idx1, obj.states).send(send_opt, function (err,tx) {
                 if (err) logger.error(err)
                 else {
@@ -79,7 +80,7 @@ function replyChallenge(id, idx1, idx2) {
         })
         return
     }
-    common.getLocation(place, solver, function (hash) {
+    common.getLocation(place, config, function (hash) {
         iactive.methods.report(id, idx1, idx2, [hash]).send(send_opt, function (err,tx) {
             if (err) logger.error(err)
             else {
@@ -91,7 +92,7 @@ function replyChallenge(id, idx1, idx2) {
 
 function replyFinalityChallenge(id, idx1, idx2) {
     // Now we are sending the intermediate states
-    common.getFinality(idx1, solver, function (obj) {
+    common.getFinality(idx1, config, function (obj) {
         iactive.methods.callFinalityJudge(id, idx1, obj.location,
                            common.getRoots(obj.vm), common.getPointers(obj.vm)).send(send_opt, function (err, res) {
             if (err) logger.error(err)
@@ -102,7 +103,7 @@ function replyFinalityChallenge(id, idx1, idx2) {
 
 function replyErrorPhases(id, idx1, arr) {
     // Now we are checking the intermediate states
-    common.getErrorStep(idx1, solver, function (obj) {
+    common.getErrorStep(idx1, config, function (obj) {
         for (var i = 1; i < obj.states.length; i++) {
             if (obj.states[i] != arr[i]) {
                 iactive.methods.selectErrorPhase(id, idx1, arr[i-1], i-1).send(send_opt, function (err,tx) {
@@ -122,7 +123,7 @@ function replyErrorPhases(id, idx1, arr) {
 
 function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
-    common.getStep(idx1, solver, function (obj) {
+    common.getStep(idx1, config, function (obj) {
         var proof = obj[common.phase_table[phase]]
         var merkle = proof.proof || []
         var loc = proof.location || 0
@@ -150,6 +151,20 @@ function myId(ev) {
     return !!challenges[ev.returnValues.id]
 }
 
+async function initChallenge(id) {
+    var stdout1 = await common.exec(config, ["-m", "-input"])
+    var obj1 = JSON.parse(stdout1)
+    var stdout2 = await common.exec(config, ["-m", "-output"])
+    var obj2 = JSON.parse(stdout2)
+    var steps = obj2.steps
+    iactive.methods.initialize(id, common.getRoots(obj1.vm), common.getPointers(obj1.vm), steps,
+                                common.getRoots(obj2.vm), common.getPointers(obj2.vm)).send(send_opt, function (err,tx) {
+        if (err) return logger.error(err);
+        status("Initialized challenge " + tx)
+        replyChallenge(id, 0, steps-1)
+    })
+}
+
 if (!common.config.events_disabled) {
     
     iactive.events.StartChallenge(function (err,ev) {
@@ -173,7 +188,8 @@ if (!common.config.events_disabled) {
                 result: args.e,
                 size: parseInt(args.par),
             }
-            replyChallenge(args.uniq, parseInt(args.idx1), parseInt(args.idx2))
+            // replyChallenge(args.uniq, parseInt(args.idx1), parseInt(args.idx2))
+            initChallenge(args.uniq)
         })
     })
 
@@ -249,6 +265,7 @@ async function checkChallenge(id) {
     logger.info("Challenge %s is in state %d", id, state)
     if (state == 0) {
         logger.info("Not yet initialized")
+        initChallenge(id)
     }
     else if (state == 1) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
@@ -315,11 +332,10 @@ function cleanup() {
     clearInterval(ival)
 }
 
-function runSolver() {
+async function runSolver() {
     // download file from IPFS
     logger.info("solving", config)
     task_id = parseInt(config.id)
-    solver = config
     config.pid = Math.floor(Math.random()*10000)
     config.kind = "solver"
     config.input_file = "input.bin"
@@ -327,11 +343,16 @@ function runSolver() {
     config.log_file = common.log_file
     socket.emit("config", config)
     config.files = []
-    contract.methods.getSolver(task_id).call().then(function (solver) {
-        if (parseInt(solver)) return logger.error("Already solved", {solver:solver})
-        common.getStorage(config, function () {
-            solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
-        })
+    config.vm_parameters = await contract.methods.getVMParameters(task_id).call(send_opt)
+    var solver = await contract.methods.getSolver(task_id).call()
+    logger.info("Got solver", {solver:solver, id:task_id})
+    if (parseInt(solver)) {
+        cleanup()
+        status("Already solved, nothing to do.")
+        return logger.error("Already solved", {solver:solver})
+    }
+    common.getStorage(config, function () {
+        solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
     })
     /*
     common.getFile(config.filehash, config.code_storage, function (filestr) {

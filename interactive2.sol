@@ -9,6 +9,7 @@ interface JudgeInterface {
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
+    function calcIOHash(bytes32[10] roots) public returns (bytes32);
 }
 
 contract Interactive2 {
@@ -33,22 +34,14 @@ contract Interactive2 {
         Finality
     }
 
-    struct VMParameters {
-        uint8 stack_size;
-        uint8 memory_size;
-        uint8 call_size;
-        uint8 globals_size;
-        uint8 table_size;
-    }
-
     struct Record {
         uint256 task_id;
     
         address prover;
         address challenger;
         
-        bytes32 start_state;
-        bytes32 end_state;
+        bytes32 start_state; // actually initial code + input
+        bytes32 end_state; // actually output
         
         // Maybe number of steps should be finished
         uint256 steps;
@@ -78,41 +71,56 @@ contract Interactive2 {
     }
 
     mapping (bytes32 => Record) records;
-    mapping (bytes32 => VMParameters) params;
+    // mapping (bytes32 => VMParameters) params;
 
-    function testMake() public returns (bytes32) {
-        return make(0, msg.sender, msg.sender, bytes32(123), bytes32(123),
-                    10, 1, 10);
-    }
+    event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
-    event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 idx1, uint256 idx2,
-        uint256 par, uint to, bytes32 uniq);
-
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps,
-        uint256 par, uint to) public returns (bytes32) {
-        bytes32 uniq = keccak256(task_id, p, c, s, e, _steps, par, to);
+    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32) {
+        bytes32 uniq = keccak256(task_id, p, c, s, e, par, to);
         Record storage r = records[uniq];
         r.task_id = task_id;
         r.prover = p;
         r.challenger = c;
         r.start_state = s;
         r.end_state = e;
-        r.steps = _steps;
-        r.size = par;
-        if (r.size > r.steps - 2) r.size = r.steps-2;
         r.timeout = to;
         r.clock = block.number;
         r.next = r.prover;
         r.idx1 = 0;
-        r.idx2 = r.steps-1;
+        r.phase = 16;
+        r.size = par;
+        r.state = State.Started;
+        /*
+        r.steps = _steps;
+        if (r.size > r.steps - 2) r.size = r.steps-2;
         r.proof.length = r.steps;
         r.proof[0] = s;
         r.proof[r.steps-1] = e;
-        r.phase = 16;
-        r.state = State.Running;
-        StartChallenge(p, c, s, e, r.idx1, r.idx2, r.size, to, uniq);
+        r.idx2 = r.steps-1;
+        */
+        r.state = State.Started;
+        StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
         return uniq;
+    }
+    
+    function initialize(bytes32 id, bytes32[10] s_roots, uint[4] s_pointers, uint _steps,
+                                    bytes32[10] e_roots, uint[4] e_pointers) public {
+        Record storage r = records[id];
+        require(msg.sender == r.next && r.state == State.Started);
+        // check first state here
+        require (r.start_state == judge.calcIOHash(s_roots));
+        // then last one
+        require (r.end_state == judge.calcIOHash(e_roots));
+        
+        // Now we can initialize
+        r.steps = _steps;
+        if (r.size > r.steps - 2) r.size = r.steps-2;
+        r.idx2 = r.steps-1;
+        r.proof.length = r.steps;
+        r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
+        r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
+        r.state = State.Running;
     }
     
     function getDescription(bytes32 id) public view returns (bytes32 init, uint steps, bytes32 last) {
@@ -206,7 +214,7 @@ contract Interactive2 {
         return records[id].proof[loc];
     }
     
-    function roundsTest(uint rounds, uint stuff) internal returns (uint it, uint i1, uint i2) {
+/*    function roundsTest(uint rounds, uint stuff) internal returns (uint it, uint i1, uint i2) {
         bytes32 id = testMake();
         Record storage r = records[id];
         for (uint i = 0; i < rounds; i++) {
@@ -217,7 +225,7 @@ contract Interactive2 {
             stuff = stuff/2;
         }
         return getIter(id);
-    }
+    } */
 
     event Queried(bytes32 id, uint idx1, uint idx2);
     event NeedErrorPhases(bytes32 id, uint idx1);
