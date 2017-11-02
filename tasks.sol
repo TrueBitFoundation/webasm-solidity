@@ -87,9 +87,9 @@ contract Tasks is Filesystem {
     Task2[] public tasks2;
     VMParameters[] params;
     IO[] io_roots;
-    
+
     mapping (bytes32 => uint) challenges;
-    
+
     function defaultParameters(uint id) internal {
         VMParameters storage param = params[id];
         param.stack_size = 14;
@@ -117,6 +117,11 @@ contract Tasks is Filesystem {
         Posted(msg.sender, init, ct, cs, stor, id);
         return id;
     }
+
+    function taskInfo(uint unq) public view returns (address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id) {
+        Task storage t = tasks[unq];
+        return (t.giver, t.init, t.code_type, t.storage_type, t.stor, unq);
+    }
     
     function setVMParameters(uint id, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public {
         require(msg.sender == tasks[id].giver);
@@ -136,6 +141,10 @@ contract Tasks is Filesystem {
         table = param.table_size;
         call = param.call_size;
     }
+    
+    function nextTask() public view returns (uint) {
+        return tasks.length;
+    }
 
     function getSolver(uint id) public view returns (address) {
         return tasks2[id].solver;
@@ -150,6 +159,12 @@ contract Tasks is Filesystem {
         t.state = 1;
         t2.blocked = block.number + 10;
         Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+    }
+
+    function solutionInfo(uint unq) public view returns (uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver) {
+        Task storage t = tasks[unq];
+        Task2 storage t2 = tasks2[unq];
+        return (unq, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
     }
 
     /*

@@ -9,6 +9,7 @@ var execFile = require('child_process').execFile
 var contract = common.contract
 var iactive = common.iactive
 var logger = common.logger
+var send_opt = common.send_opt
 
 var giver = require("./giver")
 var solver = require("./solver")
@@ -28,8 +29,8 @@ function execInPath(fname, path_name) {
     })
 }*/
 
-var solver_conf = { error: false, error_location: 0 }
-var verifier_conf = { error: false, error_location: 0, check_own: true }
+var solver_conf = { error: false, error_location: 0, stop_early: -1 }
+var verifier_conf = { error: false, error_location: 0, check_own: true, stop_early: -1 }
 
 var enabled = true
 
@@ -95,14 +96,16 @@ io.on("connection", function(socket) {
 
 // We should listen to contract events
 
-contract.events.Posted(function (err, ev) {
-    if (err) return logger.error("Event error", err)
-    var args = ev.returnValues
+var handled_tasks = {}
+var handled_solutions = {}
+
+function startSolver(args) {
     logger.info("posted", args)
     if (!enabled) return logger.info("System disabled, ignoring")
     var id = args.id.toString()
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
+    handled_tasks[id] = true
     var obj = {
         message: "Starting solver",
         id: id,
@@ -117,15 +120,25 @@ contract.events.Posted(function (err, ev) {
     io.emit("event", obj)
     
     solver.make(process.cwd()+"/"+path, obj)
+}
 
-    // fs.writeFileSync(path + "/solver.json", JSON.stringify(obj))
-    // execInPath("solver.js", path)
-})
+async function pollTasks() {
+    var next_id = await contract.methods.nextTask().call(send_opt)
+    if (parseInt(next_id) == 0) return
+    var id = (parseInt(next_id) - 1) + ""
+    logger.info("latest task", {id:id})
+    // 
+    if (handled_tasks[id]) return
+    handled_tasks[id] = true
+    var info = await contract.methods.taskInfo(id).call(send_opt)
+    logger.info("polled task", info)
+    startSolver(info)
+}
 
-contract.events.Solved("latest", function (err, ev) {
-    if (err) return logger.error("Event error", err)
-    var args = ev.returnValues
+function startVerifier(args) {
     logger.info("solved", args)
+    if (parseInt(args.solver) == 0) return logger.info("Task has not been solved yet")
+    handled_solutions[args.id] = true
     if (!enabled) return logger.info("System disabled, ignoring")
     if (args.solver.toLowerCase() == common.base.toLowerCase() && !verifier_conf.check_own) return logger.info("Not going to verify", verifier_conf)
     var id = args.id.toString()
@@ -146,11 +159,33 @@ contract.events.Solved("latest", function (err, ev) {
     }
     io.emit("event", obj)
     verifier.make(process.cwd()+"/"+path, obj)
-    /*
-    fs.writeFileSync(path + "/verifier.json", JSON.stringify(obj))
-    execInPath("verifier.js", path)
-    */
+}
+
+/*
+contract.events.Solved("latest", function (err, ev) {
+    if (err) return logger.error("Event error", err)
+    startVerifier(ev.returnValues)
 })
+
+contract.events.Posted(function (err, ev) {
+    if (err) return logger.error("Event error", err)
+    startSolver(ev.returnValues)
+})
+*/
+
+async function pollSolutions() {
+    var next_id = await contract.methods.nextTask().call(send_opt)
+    if (parseInt(next_id) == 0) return
+    var id = (parseInt(next_id) - 1) + ""
+    // 
+    for (var i = 0; i < 3; i++) {
+        var id2 = (parseInt(id)-i)+""
+        if (handled_solutions[id2] || i > parseInt(id)) continue
+        var info = await contract.methods.solutionInfo(id2).call(send_opt).error(err => logger.error("Cannot poll", err))
+        logger.info("polled solution", info)
+        startVerifier(info)
+    }
+}
 
 /// check verifier events
 
@@ -266,6 +301,10 @@ async function update() {
     var obj = {block:block, address:common.config.base, balance: common.web3.utils.fromWei(balance, "ether")}
     logger.info("Info to ui", obj)
     io.emit("info", obj)
+    if (common.config.poll) {
+        pollTasks()
+        pollSolutions()
+    }
 }
 
 function tick() {

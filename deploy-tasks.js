@@ -33,8 +33,8 @@ async function doDeploy() {
         base: send_opt.from,
         tasks: tasks.options.address,
         get_code: get_code.options.address,
-        events_disabled: false,
-        poll: false,
+        // events_disabled: true, poll: true,
+        events_disabled: false, poll: false,
         timeout: 5000,
         tick: true,
     }

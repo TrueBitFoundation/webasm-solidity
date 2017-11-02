@@ -344,8 +344,13 @@ async function runSolver() {
     socket.emit("config", config)
     config.files = []
     config.vm_parameters = await contract.methods.getVMParameters(task_id).call(send_opt)
-    var solver = contract.methods.getSolver(task_id).call()
-    if (parseInt(solver)) return logger.error("Already solved", {solver:solver})
+    var solver = await contract.methods.getSolver(task_id).call()
+    logger.info("Got solver", {solver:solver, id:task_id})
+    if (parseInt(solver)) {
+        cleanup()
+        status("Already solved, nothing to do.")
+        return logger.error("Already solved", {solver:solver})
+    }
     common.getStorage(config, function () {
         solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
     })
