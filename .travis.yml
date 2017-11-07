@@ -25,7 +25,7 @@ matrix:
 install: 
   - travis_retry sudo apt-get update -y
   - npm install -g ethereumjs-testrpc -y
-  - cd node && npm install
+  - cd node && npm install && cd ..
 
 script: 
   - chmod +x ./compile.sh
