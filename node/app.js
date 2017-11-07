@@ -161,7 +161,6 @@ function startVerifier(args) {
     verifier.make(process.cwd()+"/"+path, obj)
 }
 
-/*
 contract.events.Solved("latest", function (err, ev) {
     if (err) return logger.error("Event error", err)
     startVerifier(ev.returnValues)
@@ -171,7 +170,6 @@ contract.events.Posted(function (err, ev) {
     if (err) return logger.error("Event error", err)
     startSolver(ev.returnValues)
 })
-*/
 
 async function pollSolutions() {
     var next_id = await contract.methods.nextTask().call(send_opt)
