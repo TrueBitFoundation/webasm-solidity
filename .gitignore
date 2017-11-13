@@ -1,13 +1,13 @@
-contracts
-node_modules
+node/node_modules
 upload_tests
 *~
 config.json
 Q*.json
 *.o
 Q*.wast
-common-offchain.sol
-common-onchain.sol
+contracts/compiled
+contracts/common-offchain.sol
+contracts/common-onchain.sol
 *.out
 vm
 *.bin

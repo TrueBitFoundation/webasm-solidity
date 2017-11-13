@@ -16,11 +16,13 @@ var base = addresses.base
 
 web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
+var contract_dir = "../contracts/compiled/"
+
 var send_opt = {from:base, gas: 4000000, gasPrice:"21000000000"}
-var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Tasks.abi")), addresses.tasks)
-var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Interactive2.abi")), addresses.interactive)
-var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/Judge.abi")), addresses.judge)
-var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync("contracts/GetCode.abi")), addresses.get_code)
+var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Tasks.abi")), addresses.tasks)
+var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Interactive2.abi")), addresses.interactive)
+var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Judge.abi")), addresses.judge)
+var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "GetCode.abi")), addresses.get_code)
 
 // connect to ipfs daemon API server
 var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
@@ -54,7 +56,7 @@ exports.log_file = dir+'/combined.log'
 
 appFile.configure(web3, base)
 
-var wasm_path = process.cwd() + "/ocaml-offchain/interpreter/wasm"
+var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
 
 logger.info('using offchain interpreter at %s', wasm_path)
 

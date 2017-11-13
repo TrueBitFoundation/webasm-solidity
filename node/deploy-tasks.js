@@ -7,17 +7,19 @@ var host = process.argv[2] || "localhost"
 
 web3.setProvider(new web3.providers.WebsocketProvider('ws://' + host + ':8546'))
 
-var code = "0x" + fs.readFileSync("contracts/Tasks.bin")
-var abi = JSON.parse(fs.readFileSync("contracts/Tasks.abi"))
+var dir = "../contracts/compiled/"
 
-var code2 = "0x" + fs.readFileSync("contracts/Interactive2.bin")
-var abi2 = JSON.parse(fs.readFileSync("contracts/Interactive2.abi"))
+var code = "0x" + fs.readFileSync(dir + "Tasks.bin")
+var abi = JSON.parse(fs.readFileSync(dir + "Tasks.abi"))
 
-var code3 = "0x" + fs.readFileSync("contracts/Judge.bin")
-var abi3 = JSON.parse(fs.readFileSync("contracts/Judge.abi"))
+var code2 = "0x" + fs.readFileSync(dir + "Interactive2.bin")
+var abi2 = JSON.parse(fs.readFileSync(dir + "Interactive2.abi"))
 
-var code4 = "0x" + fs.readFileSync("contracts/GetCode.bin")
-var abi4 = JSON.parse(fs.readFileSync("contracts/GetCode.abi"))
+var code3 = "0x" + fs.readFileSync(dir + "Judge.bin")
+var abi3 = JSON.parse(fs.readFileSync(dir + "Judge.abi"))
+
+var code4 = "0x" + fs.readFileSync(dir + "GetCode.bin")
+var abi4 = JSON.parse(fs.readFileSync(dir + "GetCode.abi"))
 
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
@@ -43,5 +45,4 @@ async function doDeploy() {
 }
 
 doDeploy()
-
 
