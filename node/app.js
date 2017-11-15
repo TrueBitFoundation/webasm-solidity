@@ -138,6 +138,7 @@ async function pollTasks() {
 function startVerifier(args) {
     logger.info("solved", args)
     if (parseInt(args.solver) == 0) return logger.info("Task has not been solved yet")
+    if (handled_solutions[args.id]) return
     handled_solutions[args.id] = true
     if (!enabled) return logger.info("System disabled, ignoring")
     if (args.solver.toLowerCase() == common.base.toLowerCase() && !verifier_conf.check_own) return logger.info("Not going to verify", verifier_conf)
