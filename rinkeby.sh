@@ -13,6 +13,7 @@ ipfs daemon &
 
 sleep 10
 
+cd node
 node setup.js rinkeby.json > config.json
 node app.js
 
