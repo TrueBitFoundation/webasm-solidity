@@ -1,7 +1,10 @@
-{"judge":"0xC9Aad72f57f83f108aA557B4a03b8Cb9d614B644",
-"interactive":"0xE103f8295BE5ccCE53cAc93e627720aadaEF8D55",
+{"judge":"0x207A5d7a7B404c54941b9B31fc9B308295d04199",
+"interactive":"0xc755155Fd515ccA8047CaD8c1E6314970D7d2362",
 "host":"localhost",
-"base":"0x955d03dec0bd58c8f950f184b25308e0db2ccc0b",
-"tasks":"0xC70A5a0B8F64F57b12176bF66Ba8e39e8BBF996C",
-"get_code":"0x9300A5F4c0dADEAA10a065Fae708eDd699a72e2C",
-"timeout":10000}
+"base":"0xfefd1cbc50782efd35e4805920483ae614678ffc",
+"tasks":"0xC6A6A2ca6395e387C8EF38D14A392F16aE9746D5",
+"get_code":"0x223574f3e4ED966ff54e47c36955E8eE73B36AaB",
+"events_disabled":false,
+"poll":false,
+"timeout":10000,
+"tick":false}
