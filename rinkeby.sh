@@ -13,7 +13,7 @@ ipfs daemon &
 
 sleep 10
 
-cd node
+cd webasm-solidity/node
 node setup.js rinkeby.json > config.json
 node app.js
 
