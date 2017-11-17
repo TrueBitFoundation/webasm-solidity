@@ -1,8 +1,8 @@
 #!/bin/sh
 
+echo plort > supersecret.txt
 if [ ! -f myaddress ]
 then
-  echo plort > supersecret.txt
   geth --rinkeby account new --password supersecret.txt
 fi
 
