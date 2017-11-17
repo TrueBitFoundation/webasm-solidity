@@ -3,10 +3,6 @@
 if [ ! -f supersecret.txt ]
 then
   echo "" > supersecret.txt
-  parity --chain dev &
-  sleep 10
-  killall parity
-  sleep 10
 fi
 
 service apache2 restart
