@@ -247,7 +247,7 @@ contract Tasks is Filesystem {
         return tasks2[id].challenges;
     }
 
-    function finalize(uint id, uint output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
+    function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);

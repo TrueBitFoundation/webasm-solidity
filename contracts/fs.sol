@@ -1,7 +1,7 @@
 pragma solidity ^0.4.16;
 
 interface Consumer {
-   function consume(uint id, bytes32[] dta) public;
+   function consume(bytes32 id, bytes32[] dta) public;
 }
 
 /* Calculate a merkle tree in solidity */
@@ -14,7 +14,7 @@ contract Filesystem {
      bytes32[][] data;
      string name;
    }
-   mapping (uint => File) files;
+   mapping (bytes32 => File) files;
    function Filesystem() public {
       zero.length = 32;
       zero[0] = bytes32(0);
@@ -23,20 +23,20 @@ contract Filesystem {
       }
    }
    
-   function createFileWithContents(string name, uint nonce, bytes32[] arr, uint sz) public returns (uint) {
-      uint id = createFile(name, nonce);
+   function createFileWithContents(string name, uint nonce, bytes32[] arr, uint sz) public returns (bytes32) {
+      bytes32 id = createFile(name, nonce);
       setSize(id, arr.length);
       setLeafs(id, arr, 0, arr.length);
       setByteSize(id, sz);
       return id;
    }
    
-   function calcId(uint nonce) public view returns (uint) {
-         return uint(keccak256(msg.sender, nonce));
+   function calcId(uint nonce) public view returns (bytes32) {
+         return keccak256(msg.sender, nonce);
    }
 
-   function createFile(string name, uint nonce) public returns (uint) {
-      uint id = uint(keccak256(msg.sender, nonce));
+   function createFile(string name, uint nonce) public returns (bytes32) {
+      bytes32 id = keccak256(msg.sender, nonce);
       File storage f = files[id];
       f.data.length = 2;
       f.data[0].length = 2;
@@ -49,7 +49,7 @@ contract Filesystem {
       return id;
    }
    
-   function expand(uint id) internal {
+   function expand(bytes32 id) internal {
       File storage f = files[id];
       for (uint i = 0; i < f.data.length; i++) {
          f.data[i].length = f.data[i].length*2;
@@ -60,54 +60,54 @@ contract Filesystem {
       f.data[f.data.length-1][0] = keccak256(f.data[f.data.length-2][0], f.data[f.data.length-2][1]);
    }
    
-   function setSize(uint id, uint sz) public {
+   function setSize(bytes32 id, uint sz) public {
       File storage f = files[id];
       while (2 ** (f.data.length-1) < sz) expand(id);
       f.size = sz;
    }
    
-   function getName(uint id) public view returns (string) {
+   function getName(bytes32 id) public view returns (string) {
       return files[id].name;
    }
    
-   function getSize(uint id) public view returns (uint) {
+   function getSize(bytes32 id) public view returns (uint) {
       return files[id].size;
    }
 
-   function getByteSize(uint id) public view returns (uint) {
+   function getByteSize(bytes32 id) public view returns (uint) {
       return files[id].bytesize;
    }
 
-   function setByteSize(uint id, uint sz) public returns (uint) {
+   function setByteSize(bytes32 id, uint sz) public returns (uint) {
       files[id].bytesize = sz;
    }
 
-   function getData(uint id) public view returns (bytes32[]) {
+   function getData(bytes32 id) public view returns (bytes32[]) {
       File storage f = files[id];
       bytes32[] memory res = new bytes32[](f.size);
       for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
       return res;
    }
    
-   function forwardData(uint id, address a) public {
+   function forwardData(bytes32 id, address a) public {
       File storage f = files[id];
       bytes32[] memory res = new bytes32[](f.size);
       for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
       Consumer(a).consume(id, res);
    }
    
-   function getRoot(uint id) public view returns (bytes32) {
+   function getRoot(bytes32 id) public view returns (bytes32) {
       File storage f = files[id];
       return f.data[f.data.length-1][0];
    }
-   function getLeaf(uint id, uint loc) public view returns (bytes32) {
+   function getLeaf(bytes32 id, uint loc) public view returns (bytes32) {
       File storage f = files[id];
       return f.data[0][loc];
    }
-   function setLeafs(uint id, bytes32[] arr, uint loc, uint len) public {
+   function setLeafs(bytes32 id, bytes32[] arr, uint loc, uint len) public {
       for (uint i = 0; i < len; i++) setLeaf(id, loc+i, arr[i]);
    }
-   function setLeaf(uint id, uint loc, bytes32 v) public {
+   function setLeaf(bytes32 id, uint loc, bytes32 v) public {
       File storage f = files[id];
       f.data[0][loc] = v;
       for (uint i = 1; i < f.data.length; i++) {
@@ -122,27 +122,46 @@ contract Filesystem {
 
    // Methods to build IO blocks
    struct Bundle {
-      uint name_file;
-      uint data_file;
-      uint size_file;
+      bytes32 name_file;
+      bytes32 data_file;
+      bytes32 size_file;
       uint pointer;
       address code;
+      bytes32 init;
+      /*
+      bytes32 io_name;
+      bytes32 io_data;
+      bytes32 io_size;
+      */
+      bytes32[] files;
    }
 
    mapping (bytes32 => Bundle) bundles;
-
-   function makeBundle(uint num, address code, uint sz) public returns (bytes32) {
+   
+   function makeSimpleBundle(uint num, address code, bytes32 code_init, bytes32 file_id) public returns (bytes32) {
        bytes32 id = keccak256(msg.sender, num);
        Bundle storage b = bundles[id];
-       b.name_file = createFile("names", uint(id));
-       b.data_file = createFile("data", uint(id)+1);
-       b.size_file = createFile("size", uint(id)+2);
        b.code = code;
-       setSize(b.name_file, sz);
-       setSize(b.data_file, sz);
-       setSize(b.size_file, sz);
+
+       bytes32 res1 = bytes32(getSize(id));
+       for (uint i = 0; i < 3; i++) res1 = keccak256(res1, zero[i]);
        
+       bytes32 res2 = hashName(getName(id));
+       for (i = 0; i < 3; i++) res2 = keccak256(res2, zero[i]);
+       
+       bytes32 res3 = getRoot(id);
+       for (i = 0; i < 3; i++) res3 = keccak256(res3, zero[i]);
+       
+       b.init = keccak256(code_init, res1, res2, res3);
+
+       b.files.push(file_id);
+
        return id;
+   }
+   
+   function getInitHash(bytes32 bid) public view returns (bytes32) {
+       Bundle storage b = bundles[bid];
+       return b.init;
    }
    
    function getCode(bytes32 bid) public view returns (bytes) {
@@ -172,6 +191,7 @@ contract Filesystem {
       return makeMerkle(bytes(name), 0, 8);
    }
 
+   /*
    function addToBundle(bytes32 bid, bytes32 id) public {
        Bundle storage b = bundles[bid];
        setLeaf(b.data_file, b.pointer, getRoot(uint(id)));
@@ -180,5 +200,20 @@ contract Filesystem {
        b.pointer++;
    }
 
+   function makeBundle(uint num, address code, uint sz) public returns (bytes32) {
+       bytes32 id = keccak256(msg.sender, num);
+       Bundle storage b = bundles[id];
+       b.name_file = createFile("names", uint(id));
+       b.data_file = createFile("data", uint(id)+1);
+       b.size_file = createFile("size", uint(id)+2);
+       b.code = code;
+       setSize(b.name_file, sz);
+       setSize(b.data_file, sz);
+       setSize(b.size_file, sz);
+       
+       return id;
+   }
+   */
+   
 }
 
