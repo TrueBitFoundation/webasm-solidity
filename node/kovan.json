@@ -1,0 +1,10 @@
+{"judge":"0xeAa6B4c4CF8af192e43CBD85e23A12966E67f7Fb",
+"interactive":"0xD11bC26BbC45b51d51Cf5A8e9E974B628bF9EfDd",
+"host":"localhost",
+"base":"0x0fd6172f3f4b6169fb9166831cf14c99fb53ea0f",
+"tasks":"0xaAb5b8518Bb032c3915a040F44E999E0c47AAfF8",
+"get_code":"0xDF7f953C74627a862d8B98ccA6aF129df433f8d7",
+"events_disabled":false,
+"poll":false,
+"timeout":10000,
+"tick":false}
