@@ -246,6 +246,8 @@ contract Tasks is Filesystem {
     function getChallenges(uint id) public view returns (bytes32[]) {
         return tasks2[id].challenges;
     }
+    
+    /*
 
     function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
@@ -258,6 +260,7 @@ contract Tasks is Filesystem {
         
         Callback(t.giver).solved(id, t2.result, t2.output_file);
     }
+    */
     
     // no output file
     function finalizeTask(uint id) public returns (bool) {

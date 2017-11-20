@@ -143,13 +143,13 @@ contract Filesystem {
        Bundle storage b = bundles[id];
        b.code = code;
 
-       bytes32 res1 = bytes32(getSize(id));
+       bytes32 res1 = bytes32(getSize(file_id));
        for (uint i = 0; i < 3; i++) res1 = keccak256(res1, zero[i]);
        
-       bytes32 res2 = hashName(getName(id));
+       bytes32 res2 = hashName(getName(file_id));
        for (i = 0; i < 3; i++) res2 = keccak256(res2, zero[i]);
        
-       bytes32 res3 = getRoot(id);
+       bytes32 res3 = getRoot(file_id);
        for (i = 0; i < 3; i++) res3 = keccak256(res3, zero[i]);
        
        b.init = keccak256(code_init, res1, res2, res3);
