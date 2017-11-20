@@ -5,6 +5,7 @@ config.json
 Q*.json
 *.o
 Q*.wast
+*.wasm
 contracts/compiled
 contracts/common-offchain.sol
 contracts/common-onchain.sol

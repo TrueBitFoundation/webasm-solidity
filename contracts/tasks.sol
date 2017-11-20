@@ -118,11 +118,36 @@ contract Tasks is Filesystem {
         return id;
     }
 
+    function addWithParameters(bytes32 init, CodeType ct, Storage cs, string stor, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public returns (uint) {
+        uint id = tasks.length;
+        tasks.length++;
+        tasks2.length++;
+        params.length++;
+        io_roots.length++;
+        Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        t.giver = msg.sender;
+        t.init = init;
+        t.stor = stor;
+        t2.good = true;
+        t.code_type = ct;
+        t.storage_type = cs;
+        
+        VMParameters storage param = params[id];
+        param.stack_size = stack;
+        param.memory_size = mem;
+        param.globals_size = globals;
+        param.table_size = table;
+        param.call_size = call;
+        Posted(msg.sender, init, ct, cs, stor, id);
+        return id;
+    }
+
     function taskInfo(uint unq) public view returns (address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id) {
         Task storage t = tasks[unq];
         return (t.giver, t.init, t.code_type, t.storage_type, t.stor, unq);
     }
-    
+    /*
     function setVMParameters(uint id, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public {
         require(msg.sender == tasks[id].giver);
         VMParameters storage param = params[id];
@@ -131,7 +156,7 @@ contract Tasks is Filesystem {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-    }
+    }*/
 
     function getVMParameters(uint id) public view returns (uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) {
         VMParameters storage param = params[id];
