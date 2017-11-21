@@ -57,6 +57,7 @@ exports.log_file = dir+'/combined.log'
 appFile.configure(web3, base)
 
 var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
+// var wasm_path = "/home/sami/webasm/interpreter/wasm"
 
 logger.info('using offchain interpreter at %s', wasm_path)
 
@@ -147,7 +148,8 @@ function writeFiles(files) {
                 if (n == files.length) cont()
             })
         }
-        files.forEach(addFile)
+        if (files.length == 0) cont()
+        else files.forEach(addFile)
     })
 }
 
@@ -201,16 +203,59 @@ function taskResult(config, cont) {
 
 exports.taskResult = taskResult
 
+function parseId(str) {
+    var res = ""
+    for (var i = 0; i < str.length; i++) res = (str.charCodeAt(i)-65).toString(16) + res
+    return "0x" + res;
+}
+
+async function loadFilesFromChain(config, id) {
+    var lst = await contract.methods.getFiles(id).call(send_opt)
+    var res = []
+    logger.info("got files", {files:lst})
+    for (var i = 0; i < lst.length; i++) {
+        var size = await contract.methods.getSize(lst[i]).call(send_opt)
+        var data = await contract.methods.getData(lst[i]).call(send_opt)
+        var name = await contract.methods.getName(lst[i]).call(send_opt)
+        logger.info("file name %s", name, {content:data})
+        var buf = Buffer.from(data.map(a => parseInt(a)))
+        res.push({name:name, content:buf})
+        config.files.push(name)
+    }
+    return writeFiles(res)
+}
+
+async function createFile(fname, buf) {
+    var nonce = await web3.eth.getTransactionCount(base)
+    var arr = []
+    for (var i = 0; i < buf.length; i++) {
+        if (buf[i] > 15) arr.push("0x" + buf[i].toString(16))
+        else arr.push("0x0" + buf[i].toString(16))
+    }
+    logger.info("Nonce %s file", nonce, {arr:arr})
+    var tx = await contract.methods.createFileWithContents(fname, nonce, arr, buf.length).send(send_opt)
+    var id = await contract.methods.calcId(nonce).call(send_opt)
+    return id
+}
+
+exports.createFile = createFile
+
 // perhaps here we should just get and write to normal files
 function getStorage(config, cont) {
     var fileid = config.storage
-    logger.info("getting storage %s", fileid)
+    logger.info("getting storage %s %s", fileid, config.storage)
     if (config.storage_type == Storage.BLOCKCHAIN) {
-        get_code.methods.get(fileid).call(function (err,res) {
+        var fileid = parseId(config.storage)
+        contract.methods.getCode(fileid).call(function (err,res) {
             // dropping "0x"
             if (err) return logger.error("Cannot load file from blockchain",err)
+            logger.info("loaded from blockchain %s", res)
             var buf = Buffer.from(res.substr(2), "hex")
-            fs.writeFile("task.wasm", buf, cont)
+            fs.writeFile(dir + "/task." + getExtension(config.code_type), buf, function () {
+                // then rest of the files
+                // push them to config
+                loadFilesFromChain(config, fileid).then(cont)
+            })
         })
     }
     // First collect, then write

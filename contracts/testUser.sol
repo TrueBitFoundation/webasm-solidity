@@ -4,8 +4,8 @@ pragma solidity ^0.4.16;
 interface TrueBit {
 
    function createFileWithContents(string name, uint nonce, bytes32[] arr, uint sz) public returns (bytes32);
-   function getSize(uint id) public view returns (uint);
-   function forwardData(uint id, address a) public;
+   function getSize(bytes32 id) public view returns (uint);
+   function forwardData(bytes32 id, address a) public;
    
    function idToString(bytes32 id) public pure returns (string);
    function getInitHash(bytes32 bid) public view returns (bytes32);
@@ -24,7 +24,7 @@ contract TestUser {
 
    bytes32 val;
 
-   event Success();
+   event Success(bytes32[] data);
 
    function TestUser(address tb, address code_address, bytes32 init_hash) public {
       truebit = TrueBit(tb);
@@ -34,8 +34,8 @@ contract TestUser {
    
       
    function idToString(bytes32 id) public pure returns (string) {
-      bytes memory res = new bytes(32);
-      for (uint i = 0; i < 32; i++) res[i] = bytes1((uint(id) / (2**(8*i))));
+      bytes memory res = new bytes(64);
+      for (uint i = 0; i < 64; i++) res[i] = bytes1(((uint(id) / (2**(4*i))) & 0xf) + 65);
       return string(res);
    }
 
@@ -47,7 +47,17 @@ contract TestUser {
       nonce++;
       bytes32 bundle = truebit.makeSimpleBundle(nonce, code, init, file);
       
-      truebit.add(truebit.getInitHash(bundle), 1, 1, idToString(bundle));
+      truebit.add(truebit.getInitHash(bundle), 0, 1, idToString(bundle));
+   }
+   
+   function makeMerkle(bytes arr, uint idx, uint level) internal returns (bytes32) {
+      if (level == 0) return idx < arr.length ? bytes32(uint(arr[idx])) : bytes32(0);
+      else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**(level-1)), level-1));
+   }
+
+   // assume 256 bytes?
+   function hashName(string name) public returns (bytes32) {
+      return makeMerkle(bytes(name), 0, 8);
    }
 
    function debugStuff() public returns (bytes32, bytes32, uint) {
@@ -63,15 +73,15 @@ contract TestUser {
       return (file, bundle, id);
    }
    
-   function consume(uint /* file_id */, bytes32[] arr) public {
+   function consume(bytes32 /* file_id */, bytes32[] arr) public {
       val = arr[2];
-      Success();
+      Success(arr);
    }
    
    // this is the callback name
    function solved(uint /* id */, bytes32 /* result */, bytes32 file) public {
       // could check the task id
-      truebit.forwardData(uint(file), this);
+      truebit.forwardData(file, this);
    }
 
 }

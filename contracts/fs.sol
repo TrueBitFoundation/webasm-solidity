@@ -16,9 +16,9 @@ contract Filesystem {
    }
    mapping (bytes32 => File) files;
    function Filesystem() public {
-      zero.length = 32;
+      zero.length = 20;
       zero[0] = bytes32(0);
-      for (uint i = 1; i < 32; i++) {
+      for (uint i = 1; i < zero.length; i++) {
          zero[i] = keccak256(zero[i-1], zero[i-1]);
       }
    }
@@ -169,6 +169,11 @@ contract Filesystem {
        return getCodeAtAddress(b.code);
    }
    
+   function getFiles(bytes32 bid) public view returns (bytes32[]) {
+       Bundle storage b = bundles[bid];
+       return b.files;
+   }
+   
    function getCodeAtAddress(address a) internal view returns (bytes) {
         uint len;
         assembly {
@@ -182,12 +187,12 @@ contract Filesystem {
    }
 
    function makeMerkle(bytes arr, uint idx, uint level) internal returns (bytes32) {
-      if (level == 0) return idx < arr.length ? bytes32(arr[idx]) : bytes32(0);
-      else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**level), level-1));
+      if (level == 0) return idx < arr.length ? bytes32(uint(arr[idx])) : bytes32(0);
+      else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**(level-1)), level-1));
    }
 
    // assume 256 bytes?
-   function hashName(string name) internal returns (bytes32) {
+   function hashName(string name) public returns (bytes32) {
       return makeMerkle(bytes(name), 0, 8);
    }
 
