@@ -43,21 +43,7 @@ function solveTask(obj, config) {
                     status("Solved task " + tr)
                     fs.access(dir+"/blockchain.out", fs.constants.R_OK, function (err) {
                         if (!err) {
-                            fs.readFile(dir+"/blockchain.out", function (err, buf) {
-                                if (err) logger.error(err)
-                                else appFile.createFile(contract, "task.out", buf, function (id) {
-                                    status("Uploaded file " + id.toString(16))
-                                    contract.methods.getRoot(id).call(function (err,res) {
-                                        logger.info("Output file root", res)
-                                    })
-                                    common.ensureOutputFile(config, function (proof) {
-                                        contract.methods.finalize(obj.id, id, common.getRoots(proof.vm), common.getPointers(proof.vm),
-                                                          proof.loc.list, proof.loc.location).send(send_opt, function (err, res) {
-                                            logger.info("finalized task", err, res)
-                                        })
-                                    })
-                                })
-                            })
+                            config.upload_file = true
                         }
                     })
                 }
@@ -315,12 +301,30 @@ async function checkState() {
     lst.forEach(checkChallenge)
 }
 
+function doFinalization(cont) {
+    if (!config.upload_file) return contract.methods.finalizeTask(task_id).send(send_opt, cont)
+    fs.readFile(dir+"/blockchain.out", function (err, buf) {
+        if (err) logger.error(err)
+        else common.createFile("task.out", buf).then(function (id) {
+            status("Uploaded file " + id.toString(16))
+            contract.methods.getRoot(id).call(function (err,res) {
+                if (err) logger.error(err)
+                else logger.info("Output file root", {root:res})
+            })
+            common.ensureOutputFile(config, function (proof) {
+                contract.methods.finalize(task_id, id, common.getRoots(proof.vm), common.getPointers(proof.vm),
+                                          proof.loc.list, proof.loc.location).send(send_opt, cont)
+            })
+        })
+    })
+}
+    
 async function forceTimeout() {
     if (!config) return
     if (common.config.poll) checkState()
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", {good:good})
-    if (good == true) contract.methods.finalizeTask(task_id).send(send_opt, function (err,tx) {
+    if (good == true) doFinalization(function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })

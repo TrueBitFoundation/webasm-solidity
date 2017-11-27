@@ -246,8 +246,8 @@ contract Tasks is Filesystem {
     function getChallenges(uint id) public view returns (bytes32[]) {
         return tasks2[id].challenges;
     }
-
-    function finalize(uint id, uint output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
+    
+    function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
@@ -257,6 +257,7 @@ contract Tasks is Filesystem {
         require(getRoot(output) == proof[1] || getRoot(output) == proof[0]);
         
         Callback(t.giver).solved(id, t2.result, t2.output_file);
+        Finalized(id);
     }
     
     // no output file

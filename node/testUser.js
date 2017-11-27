@@ -6,31 +6,38 @@ var web3 = new Web3()
 
 var host = process.argv[2] || "localhost"
 
-web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
+web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
-var base = web3.eth.coinbase
-
-var code = fs.readFileSync("contracts/TestUser.bin")
-var abi = JSON.parse(fs.readFileSync("contracts/TestUser.abi"))
-
-var send_opt = {from:base, gas: 4000000}
-
-var contract = web3.eth.contract(abi)
+var code = fs.readFileSync("../contracts/compiled/TestUser.bin")
+var abi = JSON.parse(fs.readFileSync("../contracts/compiled/TestUser.abi"))
 
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
-contract.new(addresses.tasks,
-             "QmeDCHMmkagYPhHJc5GwhWQqugDFQj8zQuBRKNoxFoDYLF",
-             "0x60c6604347f37fe76b02c9be08f96f87bb586016b75e076525e96311abeafb24",
-             {from: base, data: '0x' + code, gas: '5000000'},
-             function (e, contract) {
-    if (e) console.error(e)
-    else if (typeof contract.address !== 'undefined') {
-        console.log("made contract")
-        // contract.debugStuff.call(send_opt, (err,args) => console.log(args[0].toString(16), args[1].toString(16)))
-        contract.doStuff(send_opt, console.log)
-        contract.Success("latest").watch(console.log)
-    }
-})
+async function doDeploy() {
+    var accts = await web3.eth.getAccounts()
+    var send_opt = {gas:4000000, from:accts[0]}
+    
+    var args = [addresses.tasks, "0xd1BA7647fC50548BdF1F48198C2Cf35eBBBee248", "0xab70b7c98d9a629c6b3bf672463dd2a031dd194da2ba752e1e2d5af6422241ba"]
+    
+    /*
+    var tasks = new web3.eth.Contract(JSON.parse(fs.readFileSync("../contracts/compiled/Tasks.abi")), addresses.tasks)
+    */
+    
+    var contract = await new web3.eth.Contract(abi).deploy({data: "0x" + code, arguments:args}).send(send_opt)
+    console.log("made contract " + contract.options.address)
+    var hash = await contract.methods.hashName("test.data").call(send_opt)
+    
+    console.log("hashed name: " + hash)
+    var res = await contract.methods.debugStuff().call(send_opt)
+    console.log(res)
+    // console.log(res[0].toString(16), res[1].toString(16), res)
+    var tx = await contract.methods.doStuff().send(send_opt)
+    console.log("working", tx)
+    contract.events.Success("latest", function (err,res) {
+        console.log(res)
+        process.exit(0)
+    })
+}
 
+doDeploy()
 

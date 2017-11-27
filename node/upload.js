@@ -13,10 +13,10 @@ var file = process.argv[2]
 
 web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
-var data = fs.readFileSync(file)
+var data = fs.readFileSync(file, "hex")
 
-var abi = JSON.parse(fs.readFileSync("contracts/GetCode.abi"))
-var code = fs.readFileSync("contracts/GetCode.bin")
+var abi = JSON.parse(fs.readFileSync("../contracts/compiled/GetCode.abi"))
+var code = fs.readFileSync("../contracts/compiled/GetCode.bin")
 
 /*
     Assembly of the code that we want to use as init-code in the new contract, 
