@@ -127,12 +127,8 @@ contract Filesystem {
       bytes32 size_file;
       uint pointer;
       address code;
+      string code_file;
       bytes32 init;
-      /*
-      bytes32 io_name;
-      bytes32 io_data;
-      bytes32 io_size;
-      */
       bytes32[] files;
    }
 
@@ -157,6 +153,33 @@ contract Filesystem {
        b.files.push(file_id);
 
        return id;
+   }
+
+   function finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public {
+       Bundle storage b = bundles[id];
+       bytes32[] memory res1 = new bytes32[](b.files.length);
+       bytes32[] memory res2 = new bytes32[](b.files.length);
+       bytes32[] memory res3 = new bytes32[](b.files.length);
+       
+       for (uint i = 0; i < b.files.length; i++) {
+          res1[i] = bytes32(getSize(b.files[i]));
+          res2[i] = hashName(getName(b.files[i]));
+          res3[i] = getRoot(b.files[i]);
+       }
+       
+       b.code_file = file;
+       
+       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkle(res3, 0, 4));
+   }
+   
+   function makeBundle(uint num) public view returns (bytes32) {
+       bytes32 id = keccak256(msg.sender, num);
+       return id;
+   }
+
+   function addToBundle(bytes32 id, bytes32 file_id) public returns (bytes32) {
+       Bundle storage b = bundles[id];
+       b.files.push(file_id);
    }
    
    function getInitHash(bytes32 bid) public view returns (bytes32) {
@@ -189,6 +212,11 @@ contract Filesystem {
    function makeMerkle(bytes arr, uint idx, uint level) internal returns (bytes32) {
       if (level == 0) return idx < arr.length ? bytes32(uint(arr[idx])) : bytes32(0);
       else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**(level-1)), level-1));
+   }
+
+   function calcMerkle(bytes32[] arr, uint idx, uint level) internal returns (bytes32) {
+      if (level == 0) return idx < arr.length ? arr[idx] : bytes32(0);
+      else return keccak256(calcMerkle(arr, idx, level-1), calcMerkle(arr, idx+(2**(level-1)), level-1));
    }
 
    // assume 256 bytes?
