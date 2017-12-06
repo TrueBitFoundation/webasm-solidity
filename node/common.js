@@ -296,7 +296,6 @@ async function createIPFSFile(fname) {
 
 exports.createIPFSFile = createIPFSFile
 
-
 function writeFile(fname, buf) {
     return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (res, err) { cont() }) })
 }
