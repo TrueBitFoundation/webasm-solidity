@@ -203,10 +203,50 @@ function taskResult(config, cont) {
 
 exports.taskResult = taskResult
 
+function uploadIPFS(fname) {
+    return new Promise(function (cont,err) {
+        fs.readFile(fname, function (err, buf) {
+            ipfs.files.add([{content:buf, path:fname}], function (err, res) {
+                cont(res[0])
+            })
+        })
+    })
+}
+
+
 function parseId(str) {
     var res = ""
     for (var i = 0; i < str.length; i++) res = (str.charCodeAt(i)-65).toString(16) + res
     return "0x" + res;
+}
+
+function getIPFSFiles(fileid, cont) {
+    ipfs.get(fileid, function (err, stream) {
+        if (err) return logger.error(err)
+        var len = fileid.length+1
+        var lst = []
+        stream.on('data', (file) => {
+            if (!file.content) return
+            var chunks = []
+            var name = file.path.substr(len)
+            if (name && name != config.code_file) config.files.push(name)
+            file.content.on("data", function (chunk) {
+                chunks.push(chunk);
+            })
+            file.content.on("end", function () {
+                lst.push({name:name, content:Buffer.concat(chunks)})
+                logger.info("Got file %s", file.path)
+            })
+        })
+        stream.on('end', function () {
+            logger.info("This stream ended, got files", lst)
+            writeFiles(lst).then(() => cont())
+        })
+    })
+}
+
+function getIPFSFilesPromise(fileid) {
+    return new Promise(function (cont,err) { getIPFSFiles(fileid, cont) })
 }
 
 async function loadFilesFromChain(config, id) {
@@ -214,6 +254,11 @@ async function loadFilesFromChain(config, id) {
     var res = []
     logger.info("got files", {files:lst})
     for (var i = 0; i < lst.length; i++) {
+        var ipfs_hash = await contract.methods.getHash(lst[i]).call(send_opt)
+        if (ipfs_hash) {
+            await getIPFSFilesPromise(ipfs_hash)
+            continue
+        }
         var size = await contract.methods.getSize(lst[i]).call(send_opt)
         var data = await contract.methods.getData(lst[i]).call(send_opt)
         var name = await contract.methods.getName(lst[i]).call(send_opt)
@@ -240,22 +285,47 @@ async function createFile(fname, buf) {
 
 exports.createFile = createFile
 
+async function createIPFSFile(fname) {
+    var hash = await uploadIPFS(fname)
+    var info = await exec(config, ["-hash-file", fname])
+    var nonce = await web3.eth.getTransactionCount(base)
+    await contract.methods.addIPFSFile(fname, info.size, hash, info.root, nonce).send(send_opt)
+    var id = await contract.methods.calcId(nonce).call(send_opt)
+    return id
+}
+
+exports.createIPFSFile = createIPFSFile
+
+
+function writeFile(fname, buf) {
+    return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (res, err) { cont() }) })
+}
+
+async function loadMixedCode(fileid) {
+    var hash = await contract.methods.getIPFSCode(fileid).call(send_opt)
+    if (hash) {
+        return getIPFSFilesPromise(hash)
+    }
+    else {
+        var res = await contract.methods.getCode(fileid).call(send_opt)
+        // dropping "0x"
+        var buf = Buffer.from(res.substr(2), "hex")
+        return writeFile(dir + "/task." + getExtension(config.code_type), buf)
+    }
+}
+
 // perhaps here we should just get and write to normal files
 function getStorage(config, cont) {
     var fileid = config.storage
     logger.info("getting storage %s %s", fileid, config.storage)
     if (config.storage_type == Storage.BLOCKCHAIN) {
         var fileid = parseId(config.storage)
-        contract.methods.getCode(fileid).call(function (err,res) {
-            // dropping "0x"
-            if (err) return logger.error("Cannot load file from blockchain",err)
+        loadMixedCode(fileid).then(function (res) {
+            // if (err) return logger.error("Cannot load file from blockchain",err)
             logger.info("loaded from blockchain %s", res)
-            var buf = Buffer.from(res.substr(2), "hex")
-            fs.writeFile(dir + "/task." + getExtension(config.code_type), buf, function () {
-                // then rest of the files
-                // push them to config
-                loadFilesFromChain(config, fileid).then(cont)
-            })
+            // then rest of the files
+            // push them to config
+            loadFilesFromChain(config, fileid).then(cont)
         })
     }
     // First collect, then write

@@ -13,6 +13,9 @@ contract Filesystem {
      uint bytesize;
      bytes32[][] data;
      string name;
+     
+     string ipfs_hash;
+     bytes32 root;
    }
    mapping (bytes32 => File) files;
    function Filesystem() public {
@@ -49,6 +52,17 @@ contract Filesystem {
       return id;
    }
    
+   // the IPFS file should have same contents and name
+   function addIPFSFile(string name, uint size, string hash, bytes32 root, uint nonce) public returns (bytes32) {
+      bytes32 id = keccak256(msg.sender, nonce);
+      File storage f = files[id];
+      f.size = 0;
+      f.name = name;
+      f.ipfs_hash = hash;
+      f.root = root;
+      return id;
+   }
+   
    function expand(bytes32 id) internal {
       File storage f = files[id];
       for (uint i = 0; i < f.data.length; i++) {
@@ -68,6 +82,10 @@ contract Filesystem {
    
    function getName(bytes32 id) public view returns (string) {
       return files[id].name;
+   }
+   
+   function getHash(bytes32 id) public view returns (string) {
+      return files[id].ipfs_hash;
    }
    
    function getSize(bytes32 id) public view returns (uint) {
@@ -98,7 +116,8 @@ contract Filesystem {
    
    function getRoot(bytes32 id) public view returns (bytes32) {
       File storage f = files[id];
-      return f.data[f.data.length-1][0];
+      if (f.root) return f.root;
+      else return f.data[f.data.length-1][0];
    }
    function getLeaf(bytes32 id, uint loc) public view returns (bytes32) {
       File storage f = files[id];
@@ -190,6 +209,11 @@ contract Filesystem {
    function getCode(bytes32 bid) public view returns (bytes) {
        Bundle storage b = bundles[bid];
        return getCodeAtAddress(b.code);
+   }
+   
+   function getIPFSCode(bytes32 bid) public view returns (bytes) {
+       Bundle storage b = bundles[bid];
+       return b.code_file;
    }
    
    function getFiles(bytes32 bid) public view returns (bytes32[]) {
