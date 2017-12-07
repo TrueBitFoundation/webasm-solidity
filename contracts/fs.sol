@@ -56,7 +56,7 @@ contract Filesystem {
    function addIPFSFile(string name, uint size, string hash, bytes32 root, uint nonce) public returns (bytes32) {
       bytes32 id = keccak256(msg.sender, nonce);
       File storage f = files[id];
-      f.size = 0;
+      f.size = size;
       f.name = name;
       f.ipfs_hash = hash;
       f.root = root;
@@ -116,7 +116,7 @@ contract Filesystem {
    
    function getRoot(bytes32 id) public view returns (bytes32) {
       File storage f = files[id];
-      if (f.root) return f.root;
+      if (f.root != 0) return f.root;
       else return f.data[f.data.length-1][0];
    }
    function getLeaf(bytes32 id, uint loc) public view returns (bytes32) {
@@ -211,7 +211,7 @@ contract Filesystem {
        return getCodeAtAddress(b.code);
    }
    
-   function getIPFSCode(bytes32 bid) public view returns (bytes) {
+   function getIPFSCode(bytes32 bid) public view returns (string) {
        Bundle storage b = bundles[bid];
        return b.code_file;
    }

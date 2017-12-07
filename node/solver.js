@@ -37,6 +37,7 @@ function solveTask(obj, config) {
 
         common.taskResult(config, function (res) {
             steps = res.steps
+            config.output_files = res.files
             contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
@@ -301,8 +302,18 @@ async function checkState() {
     lst.forEach(checkChallenge)
 }
 
+async function uploadOutputs() {
+    for (var i = 0; i < config.output_files.length; i++) {
+        var fname = config.output_files[i]
+        if (!fname.match(/upload/)) continue
+        
+    }
+}
+    
 function doFinalization(cont) {
     if (!config.upload_file) return contract.methods.finalizeTask(task_id).send(send_opt, cont)
+    // upload all output files
+    
     fs.readFile(dir+"/blockchain.out", function (err, buf) {
         if (err) logger.error(err)
         else common.createFile("task.out", buf).then(function (id) {

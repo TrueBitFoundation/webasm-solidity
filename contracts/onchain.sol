@@ -211,20 +211,49 @@ contract Onchain {
         state = hashMachine();
     }
 
+    function setInputSize(uint loc, uint v) internal {
+        require(hashMachine() == state && hashVM() == m.vm);
+        require(getRoot(loc) == vm_r.input_size);
+        setLeaf(loc, v);
+        vm_r.input_size = getRoot(loc);
+        m.vm = hashVM();
+        state = hashMachine();
+    }
+    
+    function setNthByte(uint a, uint n, uint8 bte) pure internal returns (uint) {
+       uint mask = uint(-1)*(2**(8*(32-n))) | uint(-1)/(2**(8*(n+1)));
+       return (a&mask) | (2**(8*(32-n)))*uint256(bte);
+    }
+    
     function setInputData(uint loc, uint loc2, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.input_data);
-        require(getRoot2(loc2) == bytes32(getLeaf2(loc)));
-        setLeaf2(loc2, v);
+        require(getRoot2(loc2/32) == bytes32(getLeaf2(loc)));
+        uint leaf = getLeaf2(loc2/32);
+        uint idx = loc2 % 32;
+        
+        uint nleaf = setNthByte(leaf, idx, uint8(v));
+        
+        setLeaf2(loc2/32, nleaf);
         setLeaf(loc, getLeaf2(loc));
         vm_r.input_data = getRoot(loc);
         m.vm = hashVM();
         state = hashMachine();
     }
     
+    function getInputData(uint loc, uint loc2) internal view returns (uint) {
+        require(hashMachine() == state && hashVM() == m.vm);
+        require(getRoot(loc) == vm_r.input_data);
+        require(getRoot2(loc2/32) == bytes32(getLeaf2(loc)));
+        uint leaf = getLeaf2(loc2/32);
+        uint idx = loc2 % 32;
+        return (leaf / 2**(idx*8)) & 0xff;
+    }
+    
     function createInputData(uint loc, uint sz) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.input_data);
+        sz = sz/32;
         bytes32 zero = keccak256(bytes32(0), bytes32(0));
         while (sz > 1) {
             sz = sz/2;
@@ -236,22 +265,6 @@ contract Onchain {
         state = hashMachine();
     }
 
-    function setInputSize(uint loc, uint v) internal {
-        require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_size);
-        setLeaf(loc, v);
-        vm_r.input_size = getRoot(loc);
-        m.vm = hashVM();
-        state = hashMachine();
-    }
-
-    function getInputData(uint loc, uint loc2) internal view returns (uint) {
-        require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_data);
-        require(getRoot2(loc2) == bytes32(getLeaf2(loc)));
-        return getLeaf2(loc2);
-    }
-    
     function setCallStack(uint loc, uint v) internal  {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.call_stack);
