@@ -13,6 +13,9 @@ contract Filesystem {
      uint bytesize;
      bytes32[][] data;
      string name;
+     
+     string ipfs_hash;
+     bytes32 root;
    }
    mapping (bytes32 => File) files;
    function Filesystem() public {
@@ -49,6 +52,17 @@ contract Filesystem {
       return id;
    }
    
+   // the IPFS file should have same contents and name
+   function addIPFSFile(string name, uint size, string hash, bytes32 root, uint nonce) public returns (bytes32) {
+      bytes32 id = keccak256(msg.sender, nonce);
+      File storage f = files[id];
+      f.size = size;
+      f.name = name;
+      f.ipfs_hash = hash;
+      f.root = root;
+      return id;
+   }
+   
    function expand(bytes32 id) internal {
       File storage f = files[id];
       for (uint i = 0; i < f.data.length; i++) {
@@ -68,6 +82,10 @@ contract Filesystem {
    
    function getName(bytes32 id) public view returns (string) {
       return files[id].name;
+   }
+   
+   function getHash(bytes32 id) public view returns (string) {
+      return files[id].ipfs_hash;
    }
    
    function getSize(bytes32 id) public view returns (uint) {
@@ -98,7 +116,8 @@ contract Filesystem {
    
    function getRoot(bytes32 id) public view returns (bytes32) {
       File storage f = files[id];
-      return f.data[f.data.length-1][0];
+      if (f.root != 0) return f.root;
+      else return f.data[f.data.length-1][0];
    }
    function getLeaf(bytes32 id, uint loc) public view returns (bytes32) {
       File storage f = files[id];
@@ -127,12 +146,8 @@ contract Filesystem {
       bytes32 size_file;
       uint pointer;
       address code;
+      string code_file;
       bytes32 init;
-      /*
-      bytes32 io_name;
-      bytes32 io_data;
-      bytes32 io_size;
-      */
       bytes32[] files;
    }
 
@@ -158,6 +173,33 @@ contract Filesystem {
 
        return id;
    }
+
+   function finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public {
+       Bundle storage b = bundles[id];
+       bytes32[] memory res1 = new bytes32[](b.files.length);
+       bytes32[] memory res2 = new bytes32[](b.files.length);
+       bytes32[] memory res3 = new bytes32[](b.files.length);
+       
+       for (uint i = 0; i < b.files.length; i++) {
+          res1[i] = bytes32(getSize(b.files[i]));
+          res2[i] = hashName(getName(b.files[i]));
+          res3[i] = getRoot(b.files[i]);
+       }
+       
+       b.code_file = file;
+       
+       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkle(res3, 0, 4));
+   }
+   
+   function makeBundle(uint num) public view returns (bytes32) {
+       bytes32 id = keccak256(msg.sender, num);
+       return id;
+   }
+
+   function addToBundle(bytes32 id, bytes32 file_id) public returns (bytes32) {
+       Bundle storage b = bundles[id];
+       b.files.push(file_id);
+   }
    
    function getInitHash(bytes32 bid) public view returns (bytes32) {
        Bundle storage b = bundles[bid];
@@ -167,6 +209,11 @@ contract Filesystem {
    function getCode(bytes32 bid) public view returns (bytes) {
        Bundle storage b = bundles[bid];
        return getCodeAtAddress(b.code);
+   }
+   
+   function getIPFSCode(bytes32 bid) public view returns (string) {
+       Bundle storage b = bundles[bid];
+       return b.code_file;
    }
    
    function getFiles(bytes32 bid) public view returns (bytes32[]) {
@@ -189,6 +236,11 @@ contract Filesystem {
    function makeMerkle(bytes arr, uint idx, uint level) internal returns (bytes32) {
       if (level == 0) return idx < arr.length ? bytes32(uint(arr[idx])) : bytes32(0);
       else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**(level-1)), level-1));
+   }
+
+   function calcMerkle(bytes32[] arr, uint idx, uint level) internal returns (bytes32) {
+      if (level == 0) return idx < arr.length ? arr[idx] : bytes32(0);
+      else return keccak256(calcMerkle(arr, idx, level-1), calcMerkle(arr, idx+(2**(level-1)), level-1));
    }
 
    // assume 256 bytes?
