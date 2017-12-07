@@ -249,6 +249,17 @@ function getIPFSFilesPromise(fileid) {
     return new Promise(function (cont,err) { getIPFSFiles(fileid, cont) })
 }
 
+function parseData(lst, size) {
+    var res = []
+    lst.forEach(function (v) {
+        for (var i = 1; i <= 32; i++) {
+            res.push(parseInt(v.substr(i*2, 2), 16))
+        }
+    })
+    res.length = size
+    return res
+}
+
 async function loadFilesFromChain(config, id) {
     var lst = await contract.methods.getFiles(id).call(send_opt)
     var res = []
@@ -259,7 +270,7 @@ async function loadFilesFromChain(config, id) {
             await getIPFSFilesPromise(ipfs_hash)
             continue
         }
-        var size = await contract.methods.getSize(lst[i]).call(send_opt)
+        var size = await contract.methods.getByteSize(lst[i]).call(send_opt)
         var data = await contract.methods.getData(lst[i]).call(send_opt)
         var name = await contract.methods.getName(lst[i]).call(send_opt)
         logger.info("file name %s", name, {content:data})
