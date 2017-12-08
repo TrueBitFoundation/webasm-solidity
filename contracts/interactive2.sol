@@ -8,6 +8,8 @@ interface JudgeInterface {
     function judgeFinality(bytes32[13] res, bytes32[] _proof,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool);
+
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
     function calcIOHash(bytes32[10] roots) public returns (bytes32);
 }
@@ -380,6 +382,10 @@ contract Interactive2 {
 
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool) {
         return judge.checkFileProof(state, roots, pointers, proof, loc);
+    }
+    
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool) {
+        return judge.checkProof(hash, root, proof, loc);
     }
 
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {

@@ -52,6 +52,11 @@ contract Judge is CommonOnchain {
         return state == calcIOHash(roots) && vm_r.input_data == getRoot(loc);
     }
 
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] _proof, uint loc) public returns (bool) {
+        proof = _proof;
+        return uint(hash) == getLeaf(loc) && root == getRoot(loc);
+    }
+
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {
         setVM2(roots, pointers);
         return hashVM();

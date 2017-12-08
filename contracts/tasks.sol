@@ -8,6 +8,7 @@ interface Interactive {
     
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool);
     
     // Check if a task has been rejected
     function isRejected(uint id) public returns (bool);
@@ -46,10 +47,18 @@ contract Tasks is Filesystem {
         return address(iactive);
     }
     
+    struct RequiredFile {
+       bytes32 name_hash;
+       Storage file_storage;
+       bytes32 file_id;
+    }
+
     struct IO {
        bytes32 name;
        bytes32 size;
        bytes32 data;
+       
+       RequiredFile[] uploads;
     }
 
     struct VMParameters {
@@ -141,6 +150,27 @@ contract Tasks is Filesystem {
         param.call_size = call;
         Posted(msg.sender, init, ct, cs, stor, id);
         return id;
+    }
+    
+    function requireFile(uint id, bytes32 hash, Storage st) public {
+        IO storage io = io_roots[id];
+        io.uploads.push(RequiredFile(hash, st, 0));
+    }
+    
+    function getUploadNames(uint id) public view returns (bytes32[]) {
+        RequiredFile[] storage lst = io_roots[id].uploads;
+        bytes32[] memory arr = new bytes32[](lst.length);
+        for (uint i = 0; i < arr.length; i++) arr[i] = lst[i].name_hash;
+        return arr;
+        
+    }
+
+    function getUploadTypes(uint id) public view returns (Storage[]) {
+        RequiredFile[] storage lst = io_roots[id].uploads;
+        Storage[] memory arr = new Storage[](lst.length);
+        for (uint i = 0; i < arr.length; i++) arr[i] = lst[i].file_storage;
+        return arr;
+        
     }
 
     function taskInfo(uint unq) public view returns (address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id) {
@@ -247,15 +277,30 @@ contract Tasks is Filesystem {
         return tasks2[id].challenges;
     }
     
+    function uploadFile(uint id, uint num, bytes32 file_id, bytes32[] name_proof, bytes32[] data_proof, uint file_num) public {
+        IO storage io = io_roots[id];
+        RequiredFile storage file = io.uploads[num];
+        require(iactive.checkProof(getRoot(file_id), io.data, data_proof, file_num));
+        require(iactive.checkProof(hashName(getName(file_id)), io.name, name_proof, file_num));
+        
+        file.file_id = file_id;
+    }
+    
     function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
+        IO storage io = io_roots[id];
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         t2.output_file = bytes32(output);
+        
+        io.size = roots[7];
+        io.name = roots[8];
+        io.data = roots[9];
+
         require(iactive.checkFileProof(t2.result, roots, pointers, proof, file_num));
         require(getRoot(output) == proof[1] || getRoot(output) == proof[0]);
-        
+
         Callback(t.giver).solved(id, t2.result, t2.output_file);
         Finalized(id);
     }
