@@ -296,11 +296,12 @@ async function createFile(fname, buf) {
 
 exports.createFile = createFile
 
-async function createIPFSFile(fname) {
+async function createIPFSFile(fname, new_name) {
+    new_name = new_name || fname
     var hash = await uploadIPFS(fname)
     var info = await exec(config, ["-hash-file", fname])
     var nonce = await web3.eth.getTransactionCount(base)
-    await contract.methods.addIPFSFile(fname, info.size, hash, info.root, nonce).send(send_opt)
+    await contract.methods.addIPFSFile(new_name, info.size, hash, info.root, nonce).send(send_opt)
     var id = await contract.methods.calcId(nonce).call(send_opt)
     return id
 }
@@ -310,6 +311,12 @@ exports.createIPFSFile = createIPFSFile
 function writeFile(fname, buf) {
     return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (res, err) { cont() }) })
 }
+
+function readFile(fname) {
+    return new Promise(function (cont,err) { fs.readFile(fname, function (buf, err) { cont(buf) }) })
+}
+    
+exports.readFile = readFile
 
 async function loadMixedCode(fileid) {
     var hash = await contract.methods.getIPFSCode(fileid).call(send_opt)
