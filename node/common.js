@@ -6,7 +6,7 @@ var web3 = new Web3()
 var execFile = require('child_process').execFile
 var ipfsAPI = require('ipfs-api')
 
-var appFile = require("./appFileBytes")
+// var appFile = require("./appFileBytes")
 
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
@@ -22,6 +22,7 @@ var send_opt = {from:base, gas: 4000000, gasPrice:"21000000000"}
 var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Tasks.abi")), addresses.tasks)
 var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Interactive2.abi")), addresses.interactive)
 var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Judge.abi")), addresses.judge)
+var filesystem = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Filesystem.abi")), addresses.fs)
 var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "GetCode.abi")), addresses.get_code)
 
 // connect to ipfs daemon API server
@@ -54,7 +55,7 @@ logger.info("Using address %s", base)
 
 exports.log_file = dir+'/combined.log'
 
-appFile.configure(web3, base)
+// appFile.configure(web3, base)
 
 var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
 // var wasm_path = "/home/sami/webasm/interpreter/wasm"
@@ -261,18 +262,18 @@ function parseData(lst, size) {
 }
 
 async function loadFilesFromChain(config, id) {
-    var lst = await contract.methods.getFiles(id).call(send_opt)
+    var lst = await filesystem.methods.getFiles(id).call(send_opt)
     var res = []
     logger.info("got files", {files:lst})
     for (var i = 0; i < lst.length; i++) {
-        var ipfs_hash = await contract.methods.getHash(lst[i]).call(send_opt)
+        var ipfs_hash = await filesystem.methods.getHash(lst[i]).call(send_opt)
         if (ipfs_hash) {
             await getIPFSFilesPromise(ipfs_hash)
             continue
         }
-        var size = await contract.methods.getByteSize(lst[i]).call(send_opt)
-        var data = await contract.methods.getData(lst[i]).call(send_opt)
-        var name = await contract.methods.getName(lst[i]).call(send_opt)
+        var size = await filesystem.methods.getByteSize(lst[i]).call(send_opt)
+        var data = await filesystem.methods.getData(lst[i]).call(send_opt)
+        var name = await filesystem.methods.getName(lst[i]).call(send_opt)
         logger.info("file name %s", name, {content:data})
         var buf = Buffer.from(data.map(a => parseInt(a)))
         res.push({name:name, content:buf})
@@ -281,16 +282,23 @@ async function loadFilesFromChain(config, id) {
     return writeFiles(res)
 }
 
+function arrange(arr) {
+    var res = 0
+    var acc = ""
+    arr.forEach(function (b) { acc += b; if (acc.length == 64) { res.push("0x"+acc); acc = "" } })
+    return res
+}
+
 async function createFile(fname, buf) {
     var nonce = await web3.eth.getTransactionCount(base)
     var arr = []
     for (var i = 0; i < buf.length; i++) {
-        if (buf[i] > 15) arr.push("0x" + buf[i].toString(16))
-        else arr.push("0x0" + buf[i].toString(16))
+        if (buf[i] > 15) arr.push(buf[i].toString(16))
+        else arr.push("0" + buf[i].toString(16))
     }
     logger.info("Nonce %s file", nonce, {arr:arr})
-    var tx = await contract.methods.createFileWithContents(fname, nonce, arr, buf.length).send(send_opt)
-    var id = await contract.methods.calcId(nonce).call(send_opt)
+    var tx = await filesystem.methods.createFileWithContents(fname, nonce, arrange(arr), buf.length).send(send_opt)
+    var id = await filesystem.methods.calcId(nonce).call(send_opt)
     return id
 }
 
@@ -301,8 +309,8 @@ async function createIPFSFile(fname, new_name) {
     var hash = await uploadIPFS(fname)
     var info = await exec(config, ["-hash-file", fname])
     var nonce = await web3.eth.getTransactionCount(base)
-    await contract.methods.addIPFSFile(new_name, info.size, hash, info.root, nonce).send(send_opt)
-    var id = await contract.methods.calcId(nonce).call(send_opt)
+    await filesystem.methods.addIPFSFile(new_name, info.size, hash, info.root, nonce).send(send_opt)
+    var id = await filesystem.methods.calcId(nonce).call(send_opt)
     return id
 }
 
@@ -319,12 +327,12 @@ function readFile(fname) {
 exports.readFile = readFile
 
 async function loadMixedCode(fileid) {
-    var hash = await contract.methods.getIPFSCode(fileid).call(send_opt)
+    var hash = await filesystem.methods.getIPFSCode(fileid).call(send_opt)
     if (hash) {
         return getIPFSFilesPromise(hash)
     }
     else {
-        var res = await contract.methods.getCode(fileid).call(send_opt)
+        var res = await filesystem.methods.getCode(fileid).call(send_opt)
         // dropping "0x"
         var buf = Buffer.from(res.substr(2), "hex")
         return writeFile(dir + "/task." + getExtension(config.code_type), buf)
@@ -372,6 +380,7 @@ function getStorage(config, cont) {
 
 exports.getStorage = getStorage
 
+/*
 function getFile(fileid, ftype, cont) {
     logger.info("getting file %s", fileid)
     if (ftype == Storage.BLOCKCHAIN) {
@@ -413,10 +422,6 @@ function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, con
         initTask(config, wast_contents, obj.data, function () {
             ensureInputFile(config, function (proof) {
                 logger.info("ensuring file", {id:id, proof: proof})
-                /*
-                judge.calcStateHash.call(getRoots(proof.vm), getPointers(proof.vm), function (err,res) {
-                    console.log("calculated hash", err, res)
-                })*/
                 contract.methods.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location).send(send_opt, function (err,tx) {
                     logger.info("Called ensure input", err, tx)
                 })
@@ -427,6 +432,7 @@ function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, con
 }
 
 exports.getAndEnsureInputFile = getAndEnsureInputFile
+*/
 
 function getLocation(place, config, cont) {
     var args = buildArgs(["-m", "-location", place], config)
@@ -529,7 +535,6 @@ exports.upload = upload
 
 exports.web3 = web3
 exports.config = addresses
-exports.appFile = appFile
 exports.ipfs = ipfs
 exports.send_opt = send_opt
 exports.contract = contract

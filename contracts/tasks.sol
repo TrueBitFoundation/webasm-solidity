@@ -18,7 +18,7 @@ interface Callback {
     function solved(uint id, bytes32 result, bytes32 file) public;
 }
 
-interface Filesystem {
+interface FilesystemI {
   function getRoot(bytes32 id) public view returns (bytes32);
   function getNameHash(bytes32 id) public view returns (bytes32);
 }
@@ -41,11 +41,11 @@ contract Tasks {
     event Finalized(uint id);
 
     Interactive iactive;
-    Filesystem fs;
+    FilesystemI fs;
 
     function Tasks(address contr, address fs_addr) public {
         iactive = Interactive(contr);
-        fs = Filesystem(fs_addr);
+        fs = FilesystemI(fs_addr);
     }
 
     function getInteractive() public view returns (address) {
