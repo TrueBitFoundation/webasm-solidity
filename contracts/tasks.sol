@@ -1,7 +1,5 @@
 pragma solidity ^0.4.16;
 
-import "./fs.sol";
-
 interface Interactive {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
     function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
@@ -20,7 +18,12 @@ interface Callback {
     function solved(uint id, bytes32 result, bytes32 file) public;
 }
 
-contract Tasks is Filesystem {
+interface Filesystem {
+  function getRoot(bytes32 id) public view returns (bytes32);
+  function getNameHash(bytes32 id) public view returns (bytes32);
+}
+
+contract Tasks {
 
     enum CodeType {
         WAST,
@@ -38,9 +41,11 @@ contract Tasks is Filesystem {
     event Finalized(uint id);
 
     Interactive iactive;
+    Filesystem fs;
 
-    function Tasks(address contr) public {
+    function Tasks(address contr, address fs_addr) public {
         iactive = Interactive(contr);
+        fs = Filesystem(fs_addr);
     }
 
     function getInteractive() public view returns (address) {
@@ -280,12 +285,13 @@ contract Tasks is Filesystem {
     function uploadFile(uint id, uint num, bytes32 file_id, bytes32[] name_proof, bytes32[] data_proof, uint file_num) public {
         IO storage io = io_roots[id];
         RequiredFile storage file = io.uploads[num];
-        require(iactive.checkProof(getRoot(file_id), io.data, data_proof, file_num));
-        require(iactive.checkProof(hashName(getName(file_id)), io.name, name_proof, file_num));
+        require(iactive.checkProof(fs.getRoot(file_id), io.data, data_proof, file_num));
+        require(iactive.checkProof(fs.getNameHash(file_id), io.name, name_proof, file_num));
         
         file.file_id = file_id;
     }
     
+    /*
     function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
@@ -299,19 +305,24 @@ contract Tasks is Filesystem {
         io.data = roots[9];
 
         require(iactive.checkFileProof(t2.result, roots, pointers, proof, file_num));
-        require(getRoot(output) == proof[1] || getRoot(output) == proof[0]);
+        require(fs.getRoot(output) == proof[1] || fs.getRoot(output) == proof[0]);
 
         Callback(t.giver).solved(id, t2.result, t2.output_file);
         Finalized(id);
     }
+    */
     
-    // no output file
     function finalizeTask(uint id) public returns (bool) {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
+        IO storage io = io_roots[id];
         if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return false;
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
+        
+        for (uint i = 0; i < io.uploads.length; i++) {
+           require(io.uploads[i].file_id != 0);
+        }
         
         Finalized(id);
         return true;
