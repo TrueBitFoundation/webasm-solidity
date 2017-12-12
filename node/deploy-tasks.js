@@ -21,12 +21,16 @@ var abi3 = JSON.parse(fs.readFileSync(dir + "Judge.abi"))
 var code4 = "0x" + fs.readFileSync(dir + "GetCode.bin")
 var abi4 = JSON.parse(fs.readFileSync(dir + "GetCode.abi"))
 
+var code5 = "0x" + fs.readFileSync(dir + "Filesystem.bin")
+var abi5 = JSON.parse(fs.readFileSync(dir + "Filesystem.abi"))
+
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
-    var send_opt = {gas:4000000, from:accts[0]}
+    var send_opt = {gas:4700000, from:accts[0]}
     var judge = await new web3.eth.Contract(abi3).deploy({data: code3}).send(send_opt)
+    var fs = await new web3.eth.Contract(abi5).deploy({data: code5}).send(send_opt)
     var iactive = await new web3.eth.Contract(abi2).deploy({data: code2, arguments:[judge.options.address]}).send(send_opt)
-    var tasks = await new web3.eth.Contract(abi).deploy({data: code, arguments:[iactive.options.address]}).send(send_opt)
+    var tasks = await new web3.eth.Contract(abi).deploy({data: code, arguments:[iactive.options.address, fs.options.address]}).send(send_opt)
     var get_code = await new web3.eth.Contract(abi4).deploy({data: code4}).send(send_opt)
     var config = {
         judge: judge.options.address,
@@ -35,6 +39,7 @@ async function doDeploy() {
         base: send_opt.from,
         tasks: tasks.options.address,
         get_code: get_code.options.address,
+        fs: fs.options.address,
         // events_disabled: true, poll: true,
         events_disabled: false, poll: false,
         timeout: 5000,

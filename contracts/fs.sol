@@ -84,6 +84,10 @@ contract Filesystem {
       return files[id].name;
    }
    
+   function getNameHash(bytes32 id) public view returns (bytes32) {
+      return hashName(files[id].name);
+   }
+   
    function getHash(bytes32 id) public view returns (string) {
       return files[id].ipfs_hash;
    }
@@ -233,7 +237,7 @@ contract Filesystem {
         return bs;
    }
 
-   function makeMerkle(bytes arr, uint idx, uint level) internal returns (bytes32) {
+   function makeMerkle(bytes arr, uint idx, uint level) internal pure returns (bytes32) {
       if (level == 0) return idx < arr.length ? bytes32(uint(arr[idx])) : bytes32(0);
       else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**(level-1)), level-1));
    }
@@ -244,7 +248,7 @@ contract Filesystem {
    }
 
    // assume 256 bytes?
-   function hashName(string name) public returns (bytes32) {
+   function hashName(string name) public pure returns (bytes32) {
       return makeMerkle(bytes(name), 0, 8);
    }
 

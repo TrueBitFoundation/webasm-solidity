@@ -37,7 +37,7 @@ function solveTask(obj, config) {
 
         common.taskResult(config, function (res) {
             steps = res.steps
-            config.output_files = res.files
+            // config.output_files = res.files
             contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
@@ -302,11 +302,28 @@ async function checkState() {
     lst.forEach(checkChallenge)
 }
 
+function getLeaf(lst, loc) {
+    if (loc % 2 == 1) return lst[1]
+    else return lst[0]
+}
+    
 async function uploadOutputs() {
-    for (var i = 0; i < config.output_files.length; i++) {
-        var fname = config.output_files[i]
-        if (!fname.match(/upload/)) continue
-        
+    var lst = await contract.methods.getUploadNames(task_id).call(send_opt)
+    var types = await contract.methods.getUploadTypes(task_id).call(send_opt)
+    var proofs = await exec(config, ["-m", "-output-proofs"])
+    var proofs = JSON.parse(proofs)
+    for (var i = 0; i < lst.length; i++) {
+        // find proof with correct hash
+        var proof = proofs.find(el => getLeaf(el.name, el.loc) == hash)
+        // upload the file to ipfs or blockchain
+        var fname = proof.file.substr(0, proof.file.length-4)
+        var file_id
+        if (parseInt(types[i]) == 1) file_id = common.createIPFSFile(proof.file, fname)
+        else {
+            var buf = await common.readFile(proof.file)
+            file_id = common.createFile(fname, buf)
+        }
+        await contract.methods.uploadFile(task_id, i, file_id, proof.name, proof.data, proof.loc).send(send_opt)
     }
 }
     
@@ -314,17 +331,20 @@ function doFinalization(cont) {
     if (!config.upload_file) return contract.methods.finalizeTask(task_id).send(send_opt, cont)
     // upload all output files
     
-    fs.readFile(dir+"/blockchain.out", function (err, buf) {
-        if (err) logger.error(err)
-        else common.createFile("task.out", buf).then(function (id) {
-            status("Uploaded file " + id.toString(16))
-            contract.methods.getRoot(id).call(function (err,res) {
-                if (err) logger.error(err)
-                else logger.info("Output file root", {root:res})
-            })
-            common.ensureOutputFile(config, function (proof) {
-                contract.methods.finalize(task_id, id, common.getRoots(proof.vm), common.getPointers(proof.vm),
-                                          proof.loc.list, proof.loc.location).send(send_opt, cont)
+    uploadOutputs().then(function () {
+
+        fs.readFile(dir+"/blockchain.out", function (err, buf) {
+            if (err) logger.error(err)
+            else common.createFile("task.out", buf).then(function (id) {
+                status("Uploaded file " + id.toString(16))
+                contract.methods.getRoot(id).call(function (err,res) {
+                    if (err) logger.error(err)
+                    else logger.info("Output file root", {root:res})
+                })
+                common.ensureOutputFile(config, function (proof) {
+                    contract.methods.finalize(task_id, id, common.getRoots(proof.vm), common.getPointers(proof.vm),
+                                              proof.loc.list, proof.loc.location).send(send_opt, cont)
+                })
             })
         })
     })
