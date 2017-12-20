@@ -18,9 +18,6 @@ var abi2 = JSON.parse(fs.readFileSync(dir + "Interactive2.abi"))
 var code3 = "0x" + fs.readFileSync(dir + "Judge.bin")
 var abi3 = JSON.parse(fs.readFileSync(dir + "Judge.abi"))
 
-var code4 = "0x" + fs.readFileSync(dir + "GetCode.bin")
-var abi4 = JSON.parse(fs.readFileSync(dir + "GetCode.abi"))
-
 var code5 = "0x" + fs.readFileSync(dir + "Filesystem.bin")
 var abi5 = JSON.parse(fs.readFileSync(dir + "Filesystem.abi"))
 
@@ -31,14 +28,12 @@ async function doDeploy() {
     var fs = await new web3.eth.Contract(abi5).deploy({data: code5}).send(send_opt)
     var iactive = await new web3.eth.Contract(abi2).deploy({data: code2, arguments:[judge.options.address]}).send(send_opt)
     var tasks = await new web3.eth.Contract(abi).deploy({data: code, arguments:[iactive.options.address, fs.options.address]}).send(send_opt)
-    var get_code = await new web3.eth.Contract(abi4).deploy({data: code4}).send(send_opt)
     var config = {
         judge: judge.options.address,
         interactive: iactive.options.address,
         host: host,
         base: send_opt.from,
         tasks: tasks.options.address,
-        get_code: get_code.options.address,
         fs: fs.options.address,
         // events_disabled: true, poll: true,
         events_disabled: false, poll: false,
