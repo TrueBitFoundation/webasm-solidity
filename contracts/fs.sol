@@ -76,7 +76,7 @@ contract Filesystem {
    
    function setSize(bytes32 id, uint sz) public {
       File storage f = files[id];
-      while (2 ** (f.data.length-1) < sz) expand(id);
+      while (f.data[0].length < sz) expand(id);
       f.size = sz;
    }
    
@@ -185,14 +185,32 @@ contract Filesystem {
        bytes32[] memory res3 = new bytes32[](b.files.length);
        
        for (uint i = 0; i < b.files.length; i++) {
-          res1[i] = bytes32(getSize(b.files[i]));
+          res1[i] = bytes32(getByteSize(b.files[i]));
           res2[i] = hashName(getName(b.files[i]));
           res3[i] = getRoot(b.files[i]);
        }
        
        b.code_file = file;
        
-       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkle(res3, 0, 4));
+       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, 0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5));
+   }
+   
+   function debug_finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public returns (bytes32, bytes32, bytes32, bytes32, bytes32) {
+       Bundle storage b = bundles[id];
+       bytes32[] memory res1 = new bytes32[](b.files.length);
+       bytes32[] memory res2 = new bytes32[](b.files.length);
+       bytes32[] memory res3 = new bytes32[](b.files.length);
+       
+       for (uint i = 0; i < b.files.length; i++) {
+          res1[i] = bytes32(getByteSize(b.files[i]));
+          res2[i] = hashName(getName(b.files[i]));
+          res3[i] = getRoot(b.files[i]);
+       }
+       
+       b.code_file = file;
+       
+       return (init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, 0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5),
+               keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, 0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5)));
    }
    
    function makeBundle(uint num) public view returns (bytes32) {
@@ -245,6 +263,11 @@ contract Filesystem {
    function calcMerkle(bytes32[] arr, uint idx, uint level) internal returns (bytes32) {
       if (level == 0) return idx < arr.length ? arr[idx] : bytes32(0);
       else return keccak256(calcMerkle(arr, idx, level-1), calcMerkle(arr, idx+(2**(level-1)), level-1));
+   }
+
+   function calcMerkleDefault(bytes32[] arr, uint idx, uint level, bytes32 def) internal returns (bytes32) {
+      if (level == 0) return idx < arr.length ? arr[idx] : def;
+      else return keccak256(calcMerkleDefault(arr, idx, level-1, def), calcMerkleDefault(arr, idx+(2**(level-1)), level-1, def));
    }
 
    // assume 256 bytes?

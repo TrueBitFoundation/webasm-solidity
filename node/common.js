@@ -117,7 +117,7 @@ function buildArgs(args, config) {
     }
     for (i in config.files) {
         args.push("-file")
-        args.push("" + config.files[i])
+        args.push("" + config.files[config.files.length - i - 1])
     }
     if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
     else ["-wasm", config.code_file].forEach(a => args.push(a))
