@@ -8,6 +8,9 @@ var ipfsAPI = require('ipfs-api')
 
 // var appFile = require("./appFileBytes")
 
+// var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
+var wasm_path = "/home/sami/ocaml-offchain/interpreter/wasm"
+
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 var host = addresses.host || "localhost"
@@ -56,9 +59,6 @@ logger.info("Using address %s", base)
 exports.log_file = dir+'/combined.log'
 
 // appFile.configure(web3, base)
-
-var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
-// var wasm_path = "/home/sami/webasm/interpreter/wasm"
 
 logger.info('using offchain interpreter at %s', wasm_path)
 
@@ -117,7 +117,7 @@ function buildArgs(args, config) {
     }
     for (i in config.files) {
         args.push("-file")
-        args.push("" + config.files[i])
+        args.push("" + config.files[config.files.length - i - 1])
     }
     if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
     else ["-wasm", config.code_file].forEach(a => args.push(a))
@@ -250,6 +250,34 @@ function getIPFSFilesPromise(fileid) {
     return new Promise(function (cont,err) { getIPFSFiles(fileid, cont) })
 }
 
+function getIPFSToFile(fileid, fname, cont) {
+    logger.info("trying to get code file", {fileid:fileid, fname:fname})
+    ipfs.get(fileid, function (err, stream) {
+        if (err) return logger.error(err)
+        var len = fileid.length+1
+        var lst = []
+        stream.on('data', (file) => {
+            if (!file.content) return
+            var chunks = []
+            file.content.on("data", function (chunk) {
+                chunks.push(chunk);
+            })
+            file.content.on("end", function () {
+                lst.push({name:fname, content:Buffer.concat(chunks)})
+                logger.info("Got file %s", file.path)
+            })
+        })
+        stream.on('end', function () {
+            logger.info("This stream ended, got files", lst)
+            writeFiles(lst).then(() => cont())
+        })
+    })
+}
+
+function getIPFSToFilePromise(fileid, fname) {
+    return new Promise(function (cont,err) { getIPFSToFile(fileid, fname, cont) })
+}
+
 function parseData(lst, size) {
     var res = []
     lst.forEach(function (v) {
@@ -257,8 +285,10 @@ function parseData(lst, size) {
             res.push(parseInt(v.substr(i*2, 2), 16))
         }
     })
+    logger.info("parsing data", {res:res})
     res.length = size
-    return res
+    logger.info("parsing data", {res:res})
+    return Buffer.from(res)
 }
 
 async function loadFilesFromChain(config, id) {
@@ -274,8 +304,8 @@ async function loadFilesFromChain(config, id) {
         var size = await filesystem.methods.getByteSize(lst[i]).call(send_opt)
         var data = await filesystem.methods.getData(lst[i]).call(send_opt)
         var name = await filesystem.methods.getName(lst[i]).call(send_opt)
-        logger.info("file name %s", name, {content:data})
-        var buf = Buffer.from(data.map(a => parseInt(a)))
+        logger.info("file name %s", name, {content:data, size: size})
+        var buf = parseData(data, size)
         res.push({name:name, content:buf})
         config.files.push(name)
     }
@@ -286,6 +316,7 @@ function arrange(arr) {
     var res = 0
     var acc = ""
     arr.forEach(function (b) { acc += b; if (acc.length == 64) { res.push("0x"+acc); acc = "" } })
+    if (acc != "") res.push("0x"+acc)
     return res
 }
 
@@ -326,16 +357,17 @@ function readFile(fname) {
     
 exports.readFile = readFile
 
-async function loadMixedCode(fileid) {
+async function loadMixedCode(config, fileid) {
     var hash = await filesystem.methods.getIPFSCode(fileid).call(send_opt)
+    var fname = "task." + getExtension(config.code_type)
     if (hash) {
-        return getIPFSFilesPromise(hash)
+        return getIPFSToFilePromise(hash, fname)
     }
     else {
         var res = await filesystem.methods.getCode(fileid).call(send_opt)
         // dropping "0x"
         var buf = Buffer.from(res.substr(2), "hex")
-        return writeFile(dir + "/task." + getExtension(config.code_type), buf)
+        return writeFile(fname, buf)
     }
 }
 
@@ -345,7 +377,7 @@ function getStorage(config, cont) {
     logger.info("getting storage %s %s", fileid, config.storage)
     if (config.storage_type == Storage.BLOCKCHAIN) {
         var fileid = parseId(config.storage)
-        loadMixedCode(fileid).then(function (res) {
+        loadMixedCode(config, fileid).then(function (res) {
             // if (err) return logger.error("Cannot load file from blockchain",err)
             logger.info("loaded from blockchain %s", res)
             // then rest of the files

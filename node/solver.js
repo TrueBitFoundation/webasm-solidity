@@ -30,6 +30,7 @@ function solveTask(obj, config) {
             status("Initial hash was correct, now solving.")
         }
         else {
+            logger.info("Expected %s, got %s", obj.hash, inithash)
             status("Initial hash was wrong, exiting.")
             return
             // process.exit(0)
