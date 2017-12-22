@@ -313,7 +313,7 @@ async function loadFilesFromChain(config, id) {
 }
 
 function arrange(arr) {
-    var res = 0
+    var res = []
     var acc = ""
     arr.forEach(function (b) { acc += b; if (acc.length == 64) { res.push("0x"+acc); acc = "" } })
     if (acc != "") res.push("0x"+acc)
@@ -327,20 +327,23 @@ async function createFile(fname, buf) {
         if (buf[i] > 15) arr.push(buf[i].toString(16))
         else arr.push("0" + buf[i].toString(16))
     }
-    logger.info("Nonce %s file", nonce, {arr:arr})
+    logger.info("Nonce %s file", nonce, {arr:arr, buf:buf, arranged: arrange(arr)})
     var tx = await filesystem.methods.createFileWithContents(fname, nonce, arrange(arr), buf.length).send(send_opt)
     var id = await filesystem.methods.calcId(nonce).call(send_opt)
+    var lst = await filesystem.methods.getData(id).call(send_opt)
+    logger.info("Ensure upload", {data:lst})
     return id
 }
 
 exports.createFile = createFile
 
-async function createIPFSFile(fname, new_name) {
+async function createIPFSFile(config, fname, new_name) {
     new_name = new_name || fname
     var hash = await uploadIPFS(fname)
-    var info = await exec(config, ["-hash-file", fname])
+    var info = JSON.parse(await exec(config, ["-hash-file", fname]))
     var nonce = await web3.eth.getTransactionCount(base)
-    await filesystem.methods.addIPFSFile(new_name, info.size, hash, info.root, nonce).send(send_opt)
+    logger.info("Adding ipfs file", {name:new_name, size:info.size, ipfs_hash:hash.hash, data:info.root, nonce:nonce})
+    await filesystem.methods.addIPFSFile(new_name, info.size, hash.hash, info.root, nonce).send(send_opt)
     var id = await filesystem.methods.calcId(nonce).call(send_opt)
     return id
 }
@@ -348,11 +351,11 @@ async function createIPFSFile(fname, new_name) {
 exports.createIPFSFile = createIPFSFile
 
 function writeFile(fname, buf) {
-    return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (res, err) { cont() }) })
+    return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (err, res) { cont() }) })
 }
 
 function readFile(fname) {
-    return new Promise(function (cont,err) { fs.readFile(fname, function (buf, err) { cont(buf) }) })
+    return new Promise(function (cont,err) { fs.readFile(fname, function (err, buf) { cont(buf) }) })
 }
     
 exports.readFile = readFile

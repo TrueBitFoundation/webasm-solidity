@@ -39,15 +39,20 @@ function solveTask(obj, config) {
         common.taskResult(config, function (res) {
             steps = res.steps
             // config.output_files = res.files
-            contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
+            // contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
+            contract.methods.solveIO(obj.id, res.vm.code, res.vm.input_size, res.vm.input_name, res.vm.input_data).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
+                    config.solved = true
+                    uploadOutputs()
                     status("Solved task " + tr)
+                    /*
                     fs.access(dir+"/blockchain.out", fs.constants.R_OK, function (err) {
                         if (!err) {
                             config.upload_file = true
                         }
                     })
+                    */
                 }
             })
         })
@@ -307,31 +312,37 @@ function getLeaf(lst, loc) {
     if (loc % 2 == 1) return lst[1]
     else return lst[0]
 }
-    
+
 async function uploadOutputs() {
     var lst = await contract.methods.getUploadNames(task_id).call(send_opt)
     var types = await contract.methods.getUploadTypes(task_id).call(send_opt)
-    var proofs = await exec(config, ["-m", "-output-proofs"])
+    var proofs = await common.exec(config, ["-m", "-output-proofs"])
     var proofs = JSON.parse(proofs)
     for (var i = 0; i < lst.length; i++) {
         // find proof with correct hash
+        logger.info("Findind upload proof", {hash:lst[i], kind:types[i]})
+        var hash = lst[i]
         var proof = proofs.find(el => getLeaf(el.name, el.loc) == hash)
+        if (!proof) {
+            logger.error("Cannot find proof for a file")
+            continue
+        }
         // upload the file to ipfs or blockchain
         var fname = proof.file.substr(0, proof.file.length-4)
         var file_id
-        if (parseInt(types[i]) == 1) file_id = common.createIPFSFile(proof.file, fname)
+        if (parseInt(types[i]) == 1) file_id = await common.createIPFSFile(config, proof.file, fname)
         else {
-            var buf = await common.readFile(proof.file)
-            file_id = common.createFile(fname, buf)
+            var buf = await common.readFile(dir + "/" + proof.file)
+            file_id = await common.createFile(fname, buf)
         }
+        logger.info("Uploading file", {id:file_id, fname:fname})
         await contract.methods.uploadFile(task_id, i, file_id, proof.name, proof.data, proof.loc).send(send_opt)
     }
 }
     
 function doFinalization(cont) {
-    if (!config.upload_file) return contract.methods.finalizeTask(task_id).send(send_opt, cont)
-    // upload all output files
-    
+    contract.methods.finalizeTask(task_id).send(send_opt, cont)
+    /*
     uploadOutputs().then(function () {
 
         fs.readFile(dir+"/blockchain.out", function (err, buf) {
@@ -348,15 +359,16 @@ function doFinalization(cont) {
                 })
             })
         })
-    })
+    })*/
 }
-    
+
 async function forceTimeout() {
-    if (!config) return
+    if (!config || !config.solved) return
     if (common.config.poll) checkState()
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", {good:good})
-    if (good == true) doFinalization(function (err,tx) {
+    // Just for testing
+    if (good == true) contract.methods.finalizeTask(task_id).send(send_opt,function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
     })

@@ -114,8 +114,14 @@ contract Filesystem {
    function forwardData(bytes32 id, address a) public {
       File storage f = files[id];
       bytes32[] memory res = new bytes32[](f.size);
-      for (uint i = 0; i < f.size; i++) res[i] = f.data[0][i];
+      if (f.data.length == 0) return;
+      for (uint i = 0; i < f.size && i < f.data[0].length; i++) res[i] = f.data[0][i];
       Consumer(a).consume(id, res);
+   }
+   
+   function debug_forwardData(bytes32 id, address a) public returns (uint) {
+      File storage f = files[id];
+      return f.data.length;
    }
    
    function getRoot(bytes32 id) public view returns (bytes32) {

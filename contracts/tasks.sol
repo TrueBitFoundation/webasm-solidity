@@ -15,7 +15,7 @@ interface Interactive {
 }
 
 interface Callback {
-    function solved(uint id, bytes32 result, bytes32 file) public;
+    function solved(uint id, bytes32[] files) public;
 }
 
 interface FilesystemI {
@@ -175,7 +175,6 @@ contract Tasks {
         Storage[] memory arr = new Storage[](lst.length);
         for (uint i = 0; i < arr.length; i++) arr[i] = lst[i].file_storage;
         return arr;
-        
     }
 
     function taskInfo(uint unq) public view returns (address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id) {
@@ -216,6 +215,22 @@ contract Tasks {
         require(t2.solver == 0 && t2.good);
         t2.solver = msg.sender;
         t2.result = result;
+        t.state = 1;
+        t2.blocked = block.number + 10;
+        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+    }
+
+    function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public {
+        Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        IO storage io = io_roots[id];
+        require(t2.solver == 0 && t2.good);
+        
+        io.size = size;
+        io.name = name;
+        io.data = data;
+        t2.solver = msg.sender;
+        t2.result = keccak256(code, size, name, data);
         t.state = 1;
         t2.blocked = block.number + 10;
         Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
@@ -281,16 +296,18 @@ contract Tasks {
     function getChallenges(uint id) public view returns (bytes32[]) {
         return tasks2[id].challenges;
     }
-    
-    function uploadFile(uint id, uint num, bytes32 file_id, bytes32[] name_proof, bytes32[] data_proof, uint file_num) public {
+
+    function uploadFile(uint id, uint num, bytes32 file_id, bytes32[] name_proof, bytes32[] data_proof, uint file_num) public returns (bool) {
         IO storage io = io_roots[id];
         RequiredFile storage file = io.uploads[num];
+        if (!iactive.checkProof(fs.getRoot(file_id), io.data, data_proof, file_num) || !iactive.checkProof(fs.getNameHash(file_id), io.name, name_proof, file_num)) return false;
         require(iactive.checkProof(fs.getRoot(file_id), io.data, data_proof, file_num));
         require(iactive.checkProof(fs.getNameHash(file_id), io.name, name_proof, file_num));
         
         file.file_id = file_id;
+        return true;
     }
-    
+
     /*
     function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
         Task storage t = tasks[id];
@@ -320,9 +337,14 @@ contract Tasks {
         require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         
+        bytes32[] memory files = new bytes32[](io.uploads.length);
         for (uint i = 0; i < io.uploads.length; i++) {
+           if (!(io.uploads[i].file_id != 0)) return false;
            require(io.uploads[i].file_id != 0);
+           files[i] = io.uploads[i].file_id;
         }
+        
+        if (files.length > 0) Callback(t.giver).solved(id, files);
         
         Finalized(id);
         return true;
