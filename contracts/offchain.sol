@@ -1,5 +1,9 @@
 pragma solidity ^0.4.15;
 
+/**
+* @title collection of getter and setter methods for manipulating the WASM runtime and initialization
+* @author Sami Mäkelä
+*/
 contract Offchain {
 
     struct Roots {

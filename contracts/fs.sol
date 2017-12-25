@@ -6,6 +6,10 @@ interface Consumer {
 
 /* Calculate a merkle tree in solidity */
 
+/**
+* @title Calculate a merkle tree for the filesystem in solidity
+* @author Sami Mäkelä
+*/
 contract Filesystem {
    bytes32[] zero;
    struct File {

@@ -3,6 +3,24 @@ pragma solidity ^0.4.15;
 import "./common-offchain.sol";
 
 contract Interpreter is CommonOffchain {
+    /**
+    * @dev run the module in its entirety
+    *
+    * @param code the wasm code to run
+    * @param stack the stack
+    * @param mem the linear memory
+    * @param globals the gloval values
+    * @param calltable the calltbale
+    * @param calltypes the calltypes i.e.
+    * @param call_stack the call stack
+    * @param input the input size
+    * @param pc the program counter
+    * @param stack_ptr the stack pointer
+    * @param call_ptr the call pointer
+    * @param memsize the linear memory size
+    *
+    * @return return the wasm module's return value
+    */
     function run(bytes32[] code, bytes32[] stack, bytes32[] mem, bytes32[] globals, bytes32[] calltable,
                  bytes32[] calltypes, bytes32[] call_stack, bytes32[] input,
                  uint pc, uint stack_ptr, uint call_ptr, uint memsize) public returns (int64) {
@@ -25,6 +43,20 @@ contract Interpreter is CommonOffchain {
         } */
         return int64(vm_r.stack[0]);
     }
+
+    /**
+    * @dev run a single step
+    *
+    * @param limit
+    * @param code the code
+    * @param roots the roots of the wasm machine state
+    * @param pc program counter
+    * @param stack_ptr stack pointer
+    * @param call_ptr call pointer
+    * @param memsize size of the linear memory
+    *
+    * @return return the top of stack, the program counter and the stack
+    */
     function run2(uint limit, bytes32[] code,
                   uint[] roots,
                  uint pc, uint stack_ptr, uint call_ptr, uint memsize) public returns (int64, uint, bytes32) {

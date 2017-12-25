@@ -1,5 +1,9 @@
 pragma solidity ^0.4.15;
 
+/**
+* @title a handful of functions to handle loading and saving from memory
+* @author Sami Mäkelä
+*/
 contract Test {
     // I guess EVM and webasm have different endian?
     /*

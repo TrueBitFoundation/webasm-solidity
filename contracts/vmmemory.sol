@@ -1,5 +1,9 @@
 pragma solidity ^0.4.15;
 
+/**
+* @title a collection of functions for manipulating the VM memory
+* @author Sami Mäkelä
+*/
 contract VMMemory {
 
     // a and b are integer values that represent 8 bytes each

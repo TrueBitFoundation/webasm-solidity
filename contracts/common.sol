@@ -4,7 +4,18 @@ import "./offchain.sol";
 import "./onchain.sol";
 import "./alu.sol";
 
+/**
+* @title
+* @author Sami Mäkelä
+*/
 contract REPLACEME, ALU {
+    /**
+    * @dev get a pointer for the place we want to perform a read from, based on the opcode
+    *
+    * @param hint the opcode
+    *
+    * @return returns a pointer to where to read from
+    */
     function readPosition(uint hint) internal view returns (uint) {
         assert(hint > 4);
         if (hint == 5) return getReg1();
@@ -22,6 +33,13 @@ contract REPLACEME, ALU {
         else assert(false);
     }
 
+    /**
+    * @dev perform a read based on the opcode
+    *
+    * @param hint the opcode
+    *
+    * @return return the read value
+    */
     function readFrom(uint hint) internal view returns (uint) {
         if (hint == 0) return 0;
         else if (hint == 1) return getIreg();
@@ -47,6 +65,15 @@ contract REPLACEME, ALU {
         else assert(false);
     }
 
+    /**
+    * @dev make changes to a memory location
+    *
+    * @param loc where should be changed inside memory
+    * @param v the value to change the memory position to
+    * @param hint denoted v's type and packing value
+    *
+    * @return none
+    */
     function makeMemChange1(uint loc, uint v, uint hint) internal  {
         uint old = getMemory(loc);
         uint8[] memory mem = toMemory(old, 0);
@@ -56,6 +83,15 @@ contract REPLACEME, ALU {
         setMemory(loc, res);
     }
     
+    /**
+    * @dev make changes to a memory location
+    *
+    * @param loc where should the write be performed
+    * @param v the value to be written to memory
+    * @param hint denotes v's type and packing value
+    *
+    * @return none
+    */
     function makeMemChange2(uint loc, uint v, uint hint) internal {
         uint old = getMemory(loc);
         uint8[] memory mem = toMemory(0, old);
@@ -65,6 +101,14 @@ contract REPLACEME, ALU {
         setMemory(loc, res);
         
     }
+
+    /**
+    * @dev get a pointer to where we want to write to based on the opcode
+    *
+    * @param hint the opcode
+    *
+    * @return returns a pointer to where to write to
+    */
     function writePosition(uint hint) internal view returns (uint) {
         assert(hint > 0);
         if (hint == 2) return getStackPtr()-getReg1();
@@ -83,6 +127,14 @@ contract REPLACEME, ALU {
         else assert(false);
     }
     
+    /**
+    * @dev perform a write
+    *
+    * @param hint the opcode
+    * @param v the value to be written
+    *
+    * @return none
+    */
     function writeStuff(uint hint, uint v) internal {
         if (hint == 0) return;
         // Special cases for creation, other output
@@ -112,6 +164,14 @@ contract REPLACEME, ALU {
         }
     }
     
+    /**
+    * @dev makes the necessary changes to a pointer based on the addressing mode provided by hint
+    *
+    * @param hint provides a hint as to what changes to make to the input pointer
+    * @param ptr the pointer that's going to be handled
+    *
+    * @return returns the pointer after processing
+    */
     function handlePointer(uint hint, uint ptr) internal view returns (uint) {
         if (hint == 0) return ptr - getReg1();
         else if (hint == 1) return getReg1();
@@ -125,15 +185,24 @@ contract REPLACEME, ALU {
         else assert(false);
     }
     
+    /**
+    * @dev get the immediate value of an instruction
+    */
     function getImmed(bytes32 op) internal pure returns (uint256) {
         // it is the first 8 bytes
         return uint(op)/(2**(13*8));
     }
 
+    /**
+    * @dev "fetch" an instruction
+    */
     function performFetch() internal {
         setOp(getCode(getPC()));
     }
 
+    /**
+    * @dev initialize the Truebit register machine's registers
+    */
     function performInit() internal  {
         setReg1(0);
         setReg2(0);
@@ -141,25 +210,49 @@ contract REPLACEME, ALU {
         setIreg(getImmed(getOp()));
     }
     
+    /**
+    * @dev get the opcode
+    *
+    * @param n which opcode byte to read
+    *
+    * @return returns the opcode
+    */
     function getHint(uint n) internal view returns (uint) {
         return (uint(getOp())/2**(8*n))&0xff;
     }
     
+    /**
+    * @dev read the first byte of the opcode and then read the value based on the hint into REG1
+    */
     function performRead1() internal {
         setReg1(readFrom(getHint(0)));
     }
+
+    /**
+    * @dev read the second byte of the opcode and then read the value based on the hint into REG2
+    */
     function performRead2() internal {
         setReg2(readFrom(getHint(1)));
     }
+
+    /**
+    * @dev read the third byte of the opcode and then read the vlaue based on the hint into REG3
+    */
     function performRead3() internal {
         setReg3(readFrom(getHint(2)));
     }
     
+    /**
+    * @dev execute the opcode, put the result back in REG1
+    */
     function performALU() internal {
         setReg1(handleALU(getHint(3), getReg1(), getReg2(), getReg3(), getIreg()));
         debug = getHint(3);
     }
     
+    /**
+    * @dev write a value stored in REG to a location using the 4th and 5th hint bytes
+    */
     function performWrite1() internal {
         uint target = getHint(4);
         uint hint = getHint(5);
@@ -169,6 +262,10 @@ contract REPLACEME, ALU {
         if (target == 3) v = getReg3();
         writeStuff(hint, v);
     }
+
+    /**
+    * @dev write a value stored in REG to a location using the 6th and 7th hint bytes
+    */
     function performWrite2() internal {
         uint target = getHint(6);
         uint hint = getHint(7);
@@ -210,6 +307,5 @@ contract REPLACEME, ALU {
         phase = (phase+1) % 12;
     }
     
-
 }
 
