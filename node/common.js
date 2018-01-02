@@ -355,12 +355,13 @@ function writeFile(fname, buf) {
 }
 
 function readFile(fname) {
-    return new Promise(function (cont,err) { fs.readFile(fname, function (err, buf) { cont(buf) }) })
+    return new Promise(function (cont,err) { fs.readFile(fname, function (err, buf) { if (err) { logger.info("Error reading file, assuming it should be empty", {err:err}); cont(Buffer.from("")) } else cont(buf) }) })
 }
     
 exports.readFile = readFile
 
 async function loadMixedCode(config, fileid) {
+    logger.info("mixed code %s", fileid)
     var hash = await filesystem.methods.getIPFSCode(fileid).call(send_opt)
     var fname = "task." + getExtension(config.code_type)
     if (hash) {
@@ -377,7 +378,7 @@ async function loadMixedCode(config, fileid) {
 // perhaps here we should just get and write to normal files
 function getStorage(config, cont) {
     var fileid = config.storage
-    logger.info("getting storage %s %s", fileid, config.storage)
+    logger.info("getting storage %s", fileid, config.storage)
     if (config.storage_type == Storage.BLOCKCHAIN) {
         var fileid = parseId(config.storage)
         loadMixedCode(config, fileid).then(function (res) {
