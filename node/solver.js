@@ -318,6 +318,7 @@ async function uploadOutputs() {
     var types = await contract.methods.getUploadTypes(task_id).call(send_opt)
     var proofs = await common.exec(config, ["-m", "-output-proofs"])
     var proofs = JSON.parse(proofs)
+    logger.info("Uploading", {names:lst, types:types, proofs: proofs})
     for (var i = 0; i < lst.length; i++) {
         // find proof with correct hash
         logger.info("Findind upload proof", {hash:lst[i], kind:types[i]})
@@ -327,12 +328,15 @@ async function uploadOutputs() {
             logger.error("Cannot find proof for a file")
             continue
         }
+        logger.info("Found proof", proof)
         // upload the file to ipfs or blockchain
         var fname = proof.file.substr(0, proof.file.length-4)
         var file_id
         if (parseInt(types[i]) == 1) file_id = await common.createIPFSFile(config, proof.file, fname)
         else {
+            logger.info("Read file", {name:dir + "/" + proof.file})
             var buf = await common.readFile(dir + "/" + proof.file)
+            logger.info("Create file", {fname:fname, data:buf})
             file_id = await common.createFile(fname, buf)
         }
         logger.info("Uploading file", {id:file_id, fname:fname})
