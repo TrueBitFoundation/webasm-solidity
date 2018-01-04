@@ -2,7 +2,22 @@ pragma solidity ^0.4.15;
 
 import "./vmmemory.sol";
 
+/**
+* @title the ALU for the solidity interpreter.
+* @author Sami Mäkelä
+*/
 contract ALU is VMMemory {
+    /**
+    * @dev handles the ALU operations of the WASM machine i.e. the WASM instructions are implemented and run here
+    *
+    * @param hint the actual opcode
+    * @param r1 register one
+    * @param r2 register two
+    * @param r3 register three
+    * @param ireg the register holding the immediate value
+    *
+    * @return returns the result of the operation
+    */
     function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
         uint res = r1;
         if (hint == 0) return r1;
@@ -194,6 +209,13 @@ contract ALU is VMMemory {
         return res;
     }
     
+  /**
+  * @dev counts the number of set bits for a 32 bit value
+  *
+  * @param r1 the input value
+  *
+  * @return number of sit bits in r1
+  */
   function popcnt32(uint32 r1) internal pure returns (uint8) {
     uint32 temp = r1;
     temp = (temp & 0x55555555) + ((temp >> 1) & 0x55555555);
@@ -204,6 +226,13 @@ contract ALU is VMMemory {
     return uint8(temp);
   }
 
+  /**
+  * @dev counts the number of set bits for a 64 bit value
+  *
+  * @param r1 the input value
+  *
+  * @return returns the number of set bits for r1
+  */
   function popcnt64(uint64 r1) internal pure returns (uint8) {
     uint64 temp = r1;
     temp = (temp & 0x5555555555555555) + ((temp >> 1) & 0x5555555555555555);
@@ -215,6 +244,13 @@ contract ALU is VMMemory {
     return uint8(temp);
   }
 
+  /**
+  * @dev counts the number of leading zeroes for a 32-bit value using binary search
+  *
+  * @param r1 the input
+  *
+  * @return returns the number of leading zeroes for r1
+  */
   function clz32(uint32 r1) internal pure returns (uint8) {
     if (r1 == 0) return 32;
     uint32 temp_r1 = r1;
@@ -241,6 +277,13 @@ contract ALU is VMMemory {
     return n;
   }
 
+  /**
+  * @dev counts the number of leading zeroes for a 64-bit value using binary search
+  *
+  * @param r1 the input value
+  *
+  * @return returns the number of leading zeroes for the input vlaue
+  */
   function clz64(uint64 r1) internal pure returns (uint8) {
     if (r1 == 0) return 64;
     uint64 temp_r1 = r1;
@@ -271,6 +314,13 @@ contract ALU is VMMemory {
     return n;
   }
 
+  /**
+  * @dev counts the number of trailing zeroes for a 32-bit value using binary search
+  *
+  * @param r1 the input value
+  *
+  * @return returns the number of trailing zeroes for the input value
+  */
   function ctz32(uint32 r1) internal pure returns (uint8) {
     if (r1 == 0) return 32;
     uint32 temp_r1 = r1;
@@ -297,6 +347,13 @@ contract ALU is VMMemory {
     return n;
   }
 
+  /**
+  * @dev returns the number of trailing zeroes for a 64-bit input value using binary search
+  *
+  * @param r1 the input value
+  *
+  * @return returns the trailing zeroes count for the input value
+  */
   function ctz64(uint64 r1) internal pure returns (uint8) {
     if (r1 == 0) return 64;
     uint64 temp_r1 = r1;
