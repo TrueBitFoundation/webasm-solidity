@@ -150,6 +150,8 @@ async function initChallenge(id) {
     var stdout2 = await common.exec(config, ["-m", "-output"])
     var obj2 = JSON.parse(stdout2)
     var steps = obj2.steps
+    logger.info("Going to init", {id:id, r1:common.getRoots(obj1.vm), p1:common.getPointers(obj1.vm), steps:steps,
+                                r2:common.getRoots(obj2.vm), p2:common.getPointers(obj2.vm)})
     iactive.methods.initialize(id, common.getRoots(obj1.vm), common.getPointers(obj1.vm), steps,
                                 common.getRoots(obj2.vm), common.getPointers(obj2.vm)).send(send_opt, function (err,tx) {
         if (err) return logger.error(err);
@@ -170,8 +172,8 @@ if (!common.config.events_disabled) {
                 logger.error(err)
                 return
             }
-            logger.info("Got task id ", id)
             var id = parseInt(id)
+            logger.info("Got task id ", {id:id, uniq:args.uniq})
             if (task_id != id) return
             challenges[args.uniq] = {
                 prover: args.p,

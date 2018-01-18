@@ -47,7 +47,7 @@ contract Interpreter is CommonOffchain {
     /**
     * @dev run a single step
     *
-    * @param limit
+    * @param limit maximum number of steps
     * @param code the code
     * @param roots the roots of the wasm machine state
     * @param pc program counter
