@@ -6,12 +6,24 @@ contract Judge is CommonOnchain {
 
     address winner;
 
+    function judgeCustom(bytes32 start, bytes32 next, bytes32 ex_state, uint ex_size, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, bytes32[] size_proof) public {
+         setVM(roots, pointers);
+         setMachine(hashVM(), op, regs[0], regs[1], regs[2], regs[3]);
+         require(hashMachine() == start);
+         
+         proof = size_proof; setInputSize(regs[0], ex_size);
+         proof = _proof; setInputFile(regs[0], ex_state);
+         
+         m.vm = hashVM();
+         require(hashMachine() == next);
+    }
+
     function judge(bytes32[13] res, uint q,
                         bytes32[] _proof,
                         bytes32 vm_, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public returns (uint) {
         setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
-        setVM2(roots, pointers);
+        setVM(roots, pointers);
         // Special initial state
         if (q == 0) {
             m.vm = hashVM();
@@ -35,7 +47,7 @@ contract Judge is CommonOnchain {
 
     function judgeFinality(bytes32[13] res, bytes32[] _proof,
                         bytes32[10] roots, uint[4] pointers) public returns (uint) {
-        setVM2(roots, pointers);
+        setVM(roots, pointers);
         m.vm = hashVM();
         state = hashMachine();
         require(m.vm == res[0]);
@@ -47,7 +59,7 @@ contract Judge is CommonOnchain {
     }
 
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, uint loc) public returns (bool) {
-        setVM2(roots, pointers);
+        setVM(roots, pointers);
         proof = _proof;
         return state == calcIOHash(roots) && vm_r.input_data == getRoot(loc);
     }
@@ -58,7 +70,7 @@ contract Judge is CommonOnchain {
     }
 
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {
-        setVM2(roots, pointers);
+        setVM(roots, pointers);
         return hashVM();
     }
 
