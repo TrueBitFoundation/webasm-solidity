@@ -118,8 +118,9 @@ function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
     common.getStep(idx1, config, function (obj) {
         var proof = obj[common.phase_table[phase]]
-        var merkle = proof.proof || []
-        var loc = proof.location || 0
+        var merkle = proof.list || proof.list1 || []
+        var merkle2 = proof.list2 || []
+        // var loc = proof.location || 0
         var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
         if (phase == 5 || phase == 1) m = proof
         var vm 
@@ -127,9 +128,9 @@ function submitProof(id, idx1, phase) {
                                globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
                                pc:0, stack_ptr:0, call_ptr:0, memsize:0}
         else vm = proof.vm
-        logger.info("calling judge", {id:id, idx1:idx1, phase:phase, merkle: merkle, vm:m.vm, op:m.op, regs:[m.reg1, m.reg2, m.reg3, m.ireg],
+        logger.info("calling judge", {id:id, idx1:idx1, phase:phase, merkle: merkle, merkle2: merkle2, vm:m.vm, op:m.op, regs:[m.reg1, m.reg2, m.reg3, m.ireg],
                                      roots:common.getRoots(vm), pointers: common.getPointers(vm), proof:proof})
-        iactive.methods.callJudge(id, idx1, phase, merkle, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+        iactive.methods.callJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
             if (err) logger.error(err)
             else status("Judging " + res)

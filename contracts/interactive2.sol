@@ -2,10 +2,10 @@ pragma solidity ^0.4.16;
 
 interface JudgeInterface {
     function judge(bytes32[13] res, uint q,
-                        bytes32[] _proof,
+                        bytes32[] _proof, bytes32[] _proof2,
                         bytes32 vm_, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
-    function judgeFinality(bytes32[13] res, bytes32[] _proof,
+    function judgeFinality(bytes32[13] res, bytes32[] _proof, bytes32[] _proof2,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
     function judgeCustom(bytes32 state1, bytes32 state2, bytes32 ex_state, uint ex_reg, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] proof, bytes32[] size_proof) public;
 
@@ -378,7 +378,7 @@ contract Interactive2 {
     }
 
     function callJudge(bytes32 id, uint i1, uint q,
-                        bytes32[] proof,
+                        bytes32[] proof, bytes32[] proof2,
                         bytes32 vm, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
@@ -389,7 +389,7 @@ contract Interactive2 {
         uint alu_hint = (uint(op)/2**(8*3))&0xff;
         require (q != 5 || alu_hint != 0xff);
         
-        judge.judge(r.result, r.phase, proof, vm, op, regs, roots, pointers);
+        judge.judge(r.result, r.phase, proof, proof2, vm, op, regs, roots, pointers);
         WinnerSelected(id);
         r.winner = r.prover;
         blocked[r.task_id] = 0;
@@ -405,7 +405,6 @@ contract Interactive2 {
     }
 
     function callCustomJudge(bytes32 id, uint i1,
-                        
                         bytes32 op, uint[4] regs,
                         bytes32 custom_result, uint custom_size,
                         bytes32[10] roots, uint[4] pointers) public {
@@ -431,13 +430,13 @@ contract Interactive2 {
 
     // Challenger has claimed that the state is not final
     function callFinalityJudge(bytes32 id, uint i1,
-                        bytes32[] proof,
+                        bytes32[] proof, bytes32[] proof2, 
                         bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.state == State.Finality && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
         // bytes32 fetched_op = 0x0000000000000000000000000000000000000000040606060001000106000000;
-        judge.judgeFinality(r.result, proof, roots, pointers);
+        judge.judgeFinality(r.result, proof, proof2, roots, pointers);
         WinnerSelected(id);
         r.winner = r.prover;
         blocked[r.task_id] = 0;
@@ -445,13 +444,13 @@ contract Interactive2 {
     }
 
     function callErrorJudge(bytes32 id, uint i1, uint q,
-                        bytes32[] proof, uint,
+                        bytes32[] proof, bytes32[] proof2, 
                         bytes32 vm, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
         require(r.state == State.SelectedErrorPhase && r.phase == q && msg.sender == r.challenger && r.idx1 == i1 &&
                 r.next == r.prover);
-        judge.judge(r.result, r.phase, proof, vm, op, regs, roots, pointers);
+        judge.judge(r.result, r.phase, proof, proof2, vm, op, regs, roots, pointers);
         WinnerSelected(id);
         r.winner = r.challenger;
         rejected[r.task_id] = true;
