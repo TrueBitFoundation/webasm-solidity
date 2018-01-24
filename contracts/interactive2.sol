@@ -7,7 +7,7 @@ interface JudgeInterface {
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
     function judgeFinality(bytes32[13] res, bytes32[] _proof, bytes32[] _proof2,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
-    function judgeCustom(bytes32 state1, bytes32 state2, bytes32 ex_state, uint ex_reg, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] proof, bytes32[] size_proof) public;
+    function judgeCustom(bytes32 state1, bytes32 state2, bytes32 ex_state, uint ex_reg, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] proof) public;
 
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
     function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool);
@@ -18,7 +18,7 @@ interface JudgeInterface {
 
 interface CustomJudge {
     // Initializes a new custom verification game
-    function init(bytes32 state, uint state_size, uint r2, uint r3, address solver, address verifier) public returns (bytes32);
+    function init(bytes32 state, uint state_size, uint r3, address solver, address verifier) public returns (bytes32);
     
     // Last time the task was updated
     function clock(bytes32 id) public returns (uint);
@@ -386,8 +386,10 @@ contract Interactive2 {
                 r.next == r.prover);
         
         // for custom judge, use another method
+        /*
         uint alu_hint = (uint(op)/2**(8*3))&0xff;
         require (q != 5 || alu_hint != 0xff);
+        */
         
         judge.judge(r.result, r.phase, proof, proof2, vm, op, regs, roots, pointers);
         WinnerSelected(id);
@@ -396,6 +398,7 @@ contract Interactive2 {
         r.state = State.Finished;
     }
     
+    /*
     bytes32[] custom_proof;
     bytes32[] custom_size_proof;
     
@@ -403,29 +406,32 @@ contract Interactive2 {
        custom_proof = _proof;
        custom_size_proof = _size_proof;
     }
+    */
 
+    // some register should have the input size?
     function callCustomJudge(bytes32 id, uint i1,
                         bytes32 op, uint[4] regs,
-                        bytes32 custom_result, uint custom_size,
+                        bytes32 custom_result, uint custom_size, bytes32[] custom_proof,
                         bytes32[10] roots, uint[4] pointers) public {
                         
         Record storage r = records[id];
         require(r.state == State.SelectedPhase && r.phase == 5 && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
-        
-        uint alu_hint = (uint(op)/2**(8*3))&0xff;
-        require (alu_hint == 0xff);
-           r.state = State.Custom;
-           r.judge = judges[uint64(regs[3])];
-           
-           uint256 init_size = regs[0] % 2 == 0 ? uint(custom_size_proof[0]) : uint(custom_size_proof[1]);
-           bytes32 init_data = regs[0] % 2 == 0 ? custom_proof[0] : custom_proof[1];
-           
-           r.sub_task = r.judge.init(init_data, init_size, regs[1], regs[2], r.prover, r.challenger);
-           r.ex_state = custom_result;
-           r.ex_size = custom_size;
-           judge.judgeCustom(r.result[3], r.result[4], custom_result, custom_size, op, regs, roots, pointers, custom_proof, custom_size_proof);
-           return;
+
+        uint hint = (uint(op)/2**(8*4))&0xff;
+        require (hint == 0x16);
+
+        r.state = State.Custom;
+        r.judge = judges[uint64(regs[3])];
+
+        // uint256 init_size = regs[0] % 2 == 0 ? uint(custom_size_proof[0]) : uint(custom_size_proof[1]);
+        bytes32 init_data = regs[0] % 2 == 0 ? custom_proof[0] : custom_proof[1];
+
+        r.sub_task = r.judge.init(init_data, regs[1], regs[2], r.prover, r.challenger);
+        r.ex_state = custom_result;
+        r.ex_size = custom_size;
+        judge.judgeCustom(r.result[4], r.result[5], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
+        return;
     }
 
     // Challenger has claimed that the state is not final

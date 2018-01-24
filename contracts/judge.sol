@@ -12,14 +12,17 @@ contract Judge is CommonOnchain {
        require (pr.length == 0 || (pr.length != 1 && pr[0] == pr[0]&mask && pr[1] == pr[1]&mask));
     }
 
-    function judgeCustom(bytes32 start, bytes32 next, bytes32 ex_state, uint ex_size, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, bytes32[] size_proof) public {
+    function judgeCustom(bytes32 start, bytes32 next, bytes32 ex_state, uint ex_size, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] _proof) public {
          setVM(roots, pointers);
          setMachine(hashVM(), op, regs[0], regs[1], regs[2], regs[3]);
-         require(hashMachine() == start);
+         proof = _proof;
          
-         proof = size_proof; setInputSize(regs[0], ex_size);
-         checkProof(size_proof);
-         proof = _proof; setInputFile(regs[0], ex_state);
+         require(hashMachine() == start);
+         require(getRoot(regs[0]) == vm_r.input_data);
+         
+         regs[1] = ex_size;
+         // checkProof(_proof);
+         setInputFile(regs[0], ex_state);
          
          m.vm = hashVM();
          require(hashMachine() == next);
