@@ -118,8 +118,12 @@ function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
     common.getStep(idx1, config, function (obj) {
         var proof = obj[common.phase_table[phase]]
-        var merkle = proof.list || proof.list1 || []
-        var merkle2 = proof.list2 || []
+        var merkle = proof.location || []
+        var merkle2 = []
+        if (proof.merkle) {
+            merkle = proof.merkle.list || proof.merkle.list1 || []
+            merkle2 = proof.merkle.list2 || []
+        }
         // var loc = proof.location || 0
         var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
         if (phase == 5 || phase == 1) m = proof
