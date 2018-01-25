@@ -398,15 +398,7 @@ contract Interactive2 {
         r.state = State.Finished;
     }
     
-    /*
-    bytes32[] custom_proof;
-    bytes32[] custom_size_proof;
-    
-    function customFoo(bytes32[] _proof, bytes32[] _size_proof) public {
-       custom_proof = _proof;
-       custom_size_proof = _size_proof;
-    }
-    */
+    event SubGoal(bytes32 id);
 
     // some register should have the input size?
     function callCustomJudge(bytes32 id, uint i1,
@@ -415,13 +407,12 @@ contract Interactive2 {
                         bytes32[10] roots, uint[4] pointers) public {
                         
         Record storage r = records[id];
-        require(r.state == State.SelectedPhase && r.phase == 5 && msg.sender == r.prover && r.idx1 == i1 &&
+        require(r.state == State.SelectedPhase && r.phase == 6 && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
 
-        uint hint = (uint(op)/2**(8*4))&0xff;
+        uint hint = (uint(op)/2**(8*5))&0xff;
         require (hint == 0x16);
 
-        r.state = State.Custom;
         r.judge = judges[uint64(regs[3])];
 
         // uint256 init_size = regs[0] % 2 == 0 ? uint(custom_size_proof[0]) : uint(custom_size_proof[1]);
@@ -430,7 +421,11 @@ contract Interactive2 {
         r.sub_task = r.judge.init(init_data, regs[1], regs[2], r.prover, r.challenger);
         r.ex_state = custom_result;
         r.ex_size = custom_size;
-        judge.judgeCustom(r.result[4], r.result[5], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
+        judge.judgeCustom(r.result[5], r.result[6], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
+        r.state = State.Custom;
+        
+        SubGoal(id);
+        
         return;
     }
 

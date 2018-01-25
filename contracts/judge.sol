@@ -13,6 +13,7 @@ contract Judge is CommonOnchain {
     }
 
     function judgeCustom(bytes32 start, bytes32 next, bytes32 ex_state, uint ex_size, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] _proof) public {
+         
          setVM(roots, pointers);
          setMachine(hashVM(), op, regs[0], regs[1], regs[2], regs[3]);
          proof = _proof;

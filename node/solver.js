@@ -134,7 +134,14 @@ function submitProof(id, idx1, phase) {
         else vm = proof.vm
         logger.info("calling judge", {id:id, idx1:idx1, phase:phase, merkle: merkle, merkle2: merkle2, vm:m.vm, op:m.op, regs:[m.reg1, m.reg2, m.reg3, m.ireg],
                                      roots:common.getRoots(vm), pointers: common.getPointers(vm), proof:proof})
-        iactive.methods.callJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+        // Check if it is a custom instruction
+        if (phase == 6 && parseInt(op.substr(-12, 2), 16) == 16) iactive.methods.callCustomJudge(id, idx1, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+                                                                                                 proof.merkle.result_state, proof.merkle.result_size, proof.merkle.list,
+                                                                                                 common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
+            if (err) logger.error(err)
+            else status("Judging " + res)
+        })
+        else iactive.methods.callJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
             if (err) logger.error(err)
             else status("Judging " + res)
