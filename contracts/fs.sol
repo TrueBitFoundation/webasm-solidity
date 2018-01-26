@@ -33,8 +33,12 @@ contract Filesystem {
       bytes32 id = keccak256(msg.sender, nonce);
       File storage f = files[id];
       f.data = arr;
+      f.name = name;
       setByteSize(id, sz);
-      f.root = fileMerkle();
+      uint size = 1;
+      uint tmp = arr.length;
+      while (tmp > 1) { size++; tmp = tmp/2; }
+      f.root = fileMerkle(arr, 0, size);
       return id;
    }
 
@@ -46,7 +50,7 @@ contract Filesystem {
    function addIPFSFile(string name, uint size, string hash, bytes32 root, uint nonce) public returns (bytes32) {
       bytes32 id = keccak256(msg.sender, nonce);
       File storage f = files[id];
-      f.size = size;
+      f.bytesize = size;
       f.name = name;
       f.ipfs_hash = hash;
       f.root = root;
@@ -111,7 +115,7 @@ contract Filesystem {
        Bundle storage b = bundles[id];
        b.code = code;
 
-       bytes32 res1 = bytes32(getSize(file_id));
+       bytes32 res1 = bytes32(getByteSize(file_id));
        for (uint i = 0; i < 3; i++) res1 = keccak256(res1, zero[i]);
        
        bytes32 res2 = hashName(getName(file_id));
