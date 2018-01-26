@@ -245,6 +245,13 @@ if (!common.config.events_disabled) {
         logger.info("Challenger selected phase ", args)
         submitProof(args.id, parseInt(args.idx1), args.phase)
     })
+    
+    iactive.events.SubGoal(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (!myId(ev)) return
+        // has to find out the data about the custom judge
+    })
 
     iactive.events.WinnerSelected(function (err,ev) {
         if (err) return logger.error(err);
@@ -256,7 +263,7 @@ if (!common.config.events_disabled) {
             status("My solution was rejected, exiting.")
             cleanup()
         })
-            })
+    })
 
     contract.events.Finalized(function (err,ev) {
         if (err) return logger.error(err);

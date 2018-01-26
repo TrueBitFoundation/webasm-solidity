@@ -398,7 +398,7 @@ contract Interactive2 {
         r.state = State.Finished;
     }
     
-    event SubGoal(bytes32 id);
+    event SubGoal(bytes32 id, uint64 judge, bytes32 init_data, uint init_size, bytes32 ret_data, uint ret_size);
 
     // some register should have the input size?
     function callCustomJudge(bytes32 id, uint i1,
@@ -424,7 +424,7 @@ contract Interactive2 {
         judge.judgeCustom(r.result[5], r.result[6], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
         r.state = State.Custom;
         
-        SubGoal(id);
+        SubGoal(id, r.judge, init_data, regs[1], custom_result, custom_size);
         
         return;
     }
