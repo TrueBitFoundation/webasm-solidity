@@ -237,13 +237,13 @@ contract Onchain {
     function setInputData(uint loc, uint loc2, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.input_data);
-        require(getRoot2(loc2/32) == bytes32(getLeaf2(loc)));
-        uint leaf = getLeaf2(loc2/32);
-        uint idx = loc2 % 32;
+        require(getRoot2(loc2/16) == bytes32(getLeaf2(loc)));
+        uint leaf = getLeaf2(loc2/16);
+        uint idx = loc2 % 16;
         
         uint nleaf = setNthByte(leaf, idx, uint8(v));
         
-        setLeaf2(loc2/32, nleaf);
+        setLeaf2(loc2/16, nleaf);
         setLeaf(loc, getLeaf2(loc));
         vm_r.input_data = getRoot(loc);
         m.vm = hashVM();
@@ -253,16 +253,16 @@ contract Onchain {
     function getInputData(uint loc, uint loc2) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.input_data);
-        require(getRoot2(loc2/32) == bytes32(getLeaf2(loc)));
-        uint leaf = getLeaf2(loc2/32);
-        uint idx = loc2 % 32;
+        require(getRoot2(loc2/16) == bytes32(getLeaf2(loc)));
+        uint leaf = getLeaf2(loc2/16);
+        uint idx = loc2 % 16;
         return (leaf / 2**(idx*8)) & 0xff;
     }
 
     function createInputData(uint loc, uint sz) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.input_data);
-        sz = sz/32;
+        sz = sz/16;
         bytes32 zero = keccak256(bytes32(0), bytes32(0));
         while (sz > 1) {
             sz = sz/2;

@@ -35,7 +35,7 @@ contract Filesystem {
       f.data = arr;
       f.name = name;
       setByteSize(id, sz);
-      uint size = 1;
+      uint size = 0;
       uint tmp = arr.length;
       while (tmp > 1) { size++; tmp = tmp/2; }
       f.root = fileMerkle(arr, 0, size);
@@ -130,6 +130,8 @@ contract Filesystem {
 
        return id;
    }
+   
+   bytes32 empty_file = 0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563;
 
    function finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public {
        Bundle storage b = bundles[id];
@@ -145,7 +147,7 @@ contract Filesystem {
        
        b.code_file = file;
        
-       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, 0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5));
+       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file));
    }
    
    function debug_finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public returns (bytes32, bytes32, bytes32, bytes32, bytes32) {
@@ -162,8 +164,8 @@ contract Filesystem {
        
        b.code_file = file;
        
-       return (init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, 0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5),
-               keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, 0xad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5)));
+       return (init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file),
+               keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file)));
    }
    
    function makeBundle(uint num) public view returns (bytes32) {
@@ -219,7 +221,7 @@ contract Filesystem {
    }
 
    function fileMerkle(bytes32[] arr, uint idx, uint level) internal returns (bytes32) {
-      if (level == 0) return idx < arr.length ? keccak256(bytes16(arr[idx]), uint128(arr[idx])) : bytes32(0);
+      if (level == 0) return idx < arr.length ? keccak256(bytes16(arr[idx]), uint128(arr[idx])) : keccak256(bytes16(0), bytes16(0));
       else return keccak256(fileMerkle(arr, idx, level-1), fileMerkle(arr, idx+(2**(level-1)), level-1));
    }
 
