@@ -123,7 +123,7 @@ contract Filesystem {
       Consumer(a).consume(id, res);
    }
    
-   function debug_forwardData(bytes32 id, address a) public returns (uint) {
+   function debug_forwardData(bytes32 id) public view returns (uint) {
       File storage f = files[id];
       return f.data.length;
    }
