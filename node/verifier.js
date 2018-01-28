@@ -91,16 +91,20 @@ function submitErrorProof(id, idx1, phase) {
     // Now we are checking the intermediate states
     common.getStep(idx1, verifier, function (obj) {
         var proof = obj[phase_table[phase]]
-        var merkle = proof.proof || []
-        var loc = proof.location || 0
+        var merkle = proof.location || []
+        var merkle2 = []
+        if (proof.merkle) {
+            merkle = proof.merkle.list || proof.merkle.list1 || []
+            merkle2 = proof.merkle.list2 || []
+        }
         var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
         if (phase == 5 || phase == 1) m = proof
         if (typeof proof.vm != "object") vm = { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
                                globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
                                pc:0, stack_ptr:0, call_ptr:0, memsize:0}
         else vm = proof.vm
-        iactive.methods.callErrorJudge(id, idx1, phase, merkle, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                           common.getRoots(), common.getPointers()).send(send_opt, function (err, res) {
+        iactive.methods.callErrorJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+                           common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
             if (err) logger.error(err)
             else status("Judging error " + res)
         })
@@ -160,7 +164,6 @@ if (!common.config.events_disabled) {
         logger.info("Phases ", args)
         replyPhases(args.id, parseInt(args.idx1), args.arr)
     })
-
 
     iactive.events.SelectedErrorPhase(function (err,ev) {
         if (err) return logger.error(err);
