@@ -27,7 +27,7 @@ contract Match {
    }
    
    event StartGame(address a, address b);
-   
+
    function addDisagree(bytes32 v) public {
       require(current != v && agree.length != 0);
       vote[msg.sender] = current;
@@ -36,6 +36,6 @@ contract Match {
       opponents.push(Game(msg.sender, a, 0));
       StartGame(msg.sender, a);
    }
-   
+
 }
 
