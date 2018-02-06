@@ -32,7 +32,9 @@ contract Merkle {
        return res;
    }
    
-   function process2(bytes32 leaf, bytes inst, uint[] ctrl) public pure returns (bytes32) {
+   // basically the merkle root of the argument has to be calculated
+   // perhaps just require that it has to be padded?
+   function process2(bytes32 leaf, uint[] ctrl, bytes inst) public pure returns (bytes32) {
       // first is the leaf
       for (uint i = 0; i+2 < ctrl.length; i += 2) {
          leaf = keccak256(slice2(inst, ctrl[i], ctrl[i+1]),
@@ -42,12 +44,36 @@ contract Merkle {
       return leaf;
    }
    
+   function getRoot(bytes32 leaf, uint[] ctrl, bytes inst, uint sz) public pure returns (bytes32) {
+       return dataMerkle(0, sz);
+   }
+   
+   function dataMerkle(uint idx, uint level) internal pure returns (bytes32) {
+      if (level == 0) {
+          if (idx*4+32 < msg.data.length) {
+              // get the element
+              bytes32 elem;
+              uint d_idx = idx*4+32;
+              assembly {
+                  elem := calldataload(d_idx)
+              }
+              return keccak256(bytes16(elem), uint128(elem));
+          }
+          else return keccak256(bytes16(0), bytes16(0));
+      }
+      else return keccak256(dataMerkle(idx, level-1), dataMerkle(idx+(2**(level-1)), level-1));
+   }
+
    function test(bytes dta) public pure returns (bytes32) {
        return keccak256(dta);
    }
 
    function test2(bytes dta, uint n) public pure {
        slice2(dta, 0, n);
+   }
+
+   function test3() public pure returns (bytes32) {
+       return keccak256(bytes2(0x0));
    }
 
 }
