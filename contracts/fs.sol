@@ -147,7 +147,7 @@ contract Filesystem {
        
        b.code_file = file;
        
-       b.init = keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file));
+       b.init = keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleDefault(res3, 0, 10, empty_file));
    }
    
    function debug_finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public returns (bytes32, bytes32, bytes32, bytes32, bytes32) {
@@ -164,8 +164,8 @@ contract Filesystem {
        
        b.code_file = file;
        
-       return (init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file),
-               keccak256(init, calcMerkle(res1, 0, 4), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file)));
+       return (init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleDefault(res3, 0, 4, empty_file),
+               keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file)));
    }
    
    function makeBundle(uint num) public view returns (bytes32) {
