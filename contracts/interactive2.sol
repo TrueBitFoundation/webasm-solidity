@@ -19,10 +19,10 @@ interface JudgeInterface {
 interface CustomJudge {
     // Initializes a new custom verification game
     function init(bytes32 state, uint state_size, uint r3, address solver, address verifier) public returns (bytes32);
-    
+
     // Last time the task was updated
     function clock(bytes32 id) public returns (uint);
-    
+
     // Check if has resolved into correct state: merkle root of output data and output size
     function resolved(bytes32 id, bytes32 state, uint size) public returns (bool);
 }

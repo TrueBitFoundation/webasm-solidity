@@ -21,6 +21,7 @@ contract Judge is CommonOnchain {
          require(hashMachine() == start);
          require(getRoot(regs[0]) == vm_r.input_data);
          
+         // state after execution
          regs[1] = ex_size;
          // checkProof(_proof);
          setInputFile(regs[0], ex_state);
