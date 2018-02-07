@@ -104,10 +104,10 @@ contract Merkle {
        Task storage t = tasks[id];
        bytes32 zero = keccak256(bytes16(0), bytes16(0));
        bytes32 leaf = keccak256(bytes16(t.leaf), uint128(t.leaf));
-       bytes32 root = keccak256(bytes16(t.valid_root), uint128(t.valid_root));
-       return size == 64 && state == keccak256(keccak256(root, leaf), keccak256(zero, zero));
+       // bytes32 root = keccak256(bytes16(t.valid_root), uint128(t.valid_root));
+       return size == 32 && state == keccak256(keccak256(leaf, zero), keccak256(zero, zero));
     }
-    
+
     function submitProof(bytes32 id, bytes32 leaf, uint[] ctrl, bytes inst, uint sz) public {
        Task storage t = tasks[id];
        require(msg.sender == t.solver);
