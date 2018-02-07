@@ -36,7 +36,7 @@ contract Merkle {
    // perhaps just require that it has to be padded?
    function process2(bytes32 leaf, uint[] ctrl, bytes inst) public pure returns (bytes32) {
       // first is the leaf
-      for (uint i = 0; i+2 < ctrl.length; i += 2) {
+      for (uint i = 1; i+2 < ctrl.length; i += 2) {
          leaf = keccak256(slice2(inst, ctrl[i], ctrl[i+1]),
                           leaf,
                           slice2(inst, ctrl[i+1], ctrl[i+2]));
@@ -44,27 +44,19 @@ contract Merkle {
       return leaf;
    }
    
-   function getRoot(bytes32, uint[], bytes, uint sz) public pure returns (bytes32) {
-       return dataMerkle(0, sz);
-   }
-
    uint constant skip_start = 64;
    uint constant skip_end = 32;
    
-   function dataMerkle(uint idx, uint level) internal pure returns (bytes32) {
+   function dataMerkle(uint[] ctrl, uint idx, uint level) internal pure returns (bytes32) {
       if (level == 0) {
-          if (idx*32+skip_start < msg.data.length-skip_end) {
+          if (idx < ctrl.length) {
               // get the element
-              bytes32 elem;
-              uint d_idx = idx*32+skip_start;
-              assembly {
-                  elem := calldataload(d_idx)
-              }
+              bytes32 elem = bytes32(ctrl[idx]);
               return keccak256(bytes16(elem), uint128(elem));
           }
           else return keccak256(bytes16(0), bytes16(0));
       }
-      else return keccak256(dataMerkle(idx, level-1), dataMerkle(idx+(2**(level-1)), level-1));
+      else return keccak256(dataMerkle(ctrl, idx, level-1), dataMerkle(ctrl, idx+(2**(level-1)), level-1));
    }
 
    function test(bytes dta) public pure returns (bytes32) {
@@ -119,7 +111,10 @@ contract Merkle {
     function submitProof(bytes32 id, bytes32 leaf, uint[] ctrl, bytes inst, uint sz) public {
        Task storage t = tasks[id];
        require(msg.sender == t.solver);
-       bytes32 root = getRoot(leaf, ctrl, inst, sz);
+       bytes32 input = dataMerkle(ctrl, 0, sz);
+       require(input == t.initial_state);
+       bytes32 root = process2(leaf, ctrl, inst);
+       require(root == bytes32(ctrl[0]));
        require(valid[root]);
        t.valid_root = root;
        t.leaf = leaf;
