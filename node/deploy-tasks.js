@@ -25,6 +25,9 @@ async function doDeploy() {
     var iactive = await createContract("Interactive2", [judge.options.address])
     var tasks = await createContract("Tasks", [iactive.options.address, fs.options.address])
     var merkle = await createContract("Merkle")
+    iactive.setProvider(web3.currentProvider)
+    var tx = await iactive.methods.registerJudge(1, merkle.options.address).send(send_opt)
+    // console.log(tx)
     var config = {
         judge: judge.options.address,
         interactive: iactive.options.address,

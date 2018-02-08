@@ -33,7 +33,7 @@ contract Interactive2 {
 
     mapping (uint => uint) blocked;
     mapping (uint => bool) rejected;
-    
+
     enum State {
         Started,
         Running, // First and last state have been set up ... but this will mean that the verification game is running now
@@ -92,6 +92,11 @@ contract Interactive2 {
 
     mapping (bytes32 => Record) records;
     mapping (uint64 => CustomJudge) judges;
+
+    // who should be able to 
+    function registerJudge(uint64 id, address addr) public {
+        judges[id] = CustomJudge(addr);
+    }
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
