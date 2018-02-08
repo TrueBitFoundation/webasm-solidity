@@ -84,6 +84,9 @@ contract Merkle {
     mapping (bytes32 => Task) tasks;
     mapping (bytes32 => bool) valid;
 
+    // perhaps have mongodb or something to store the actual file data?
+    event AddedObligation(bytes32 id, bytes32 state, address solver);
+
     // Initializes a new custom verification game
     function init(bytes32 state, uint /* state_size */, uint /* r3 */, address solver, address /* verifier */) public returns (bytes32) {
        bytes32 id = keccak256(state, solver);
@@ -91,6 +94,7 @@ contract Merkle {
        t.initial_state = state;
        t.solver = solver;
        t.clock = block.number;
+       AddedObligation(id, state, solver);
        return id;
     }
 

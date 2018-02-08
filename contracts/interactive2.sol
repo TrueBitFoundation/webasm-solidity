@@ -469,6 +469,5 @@ contract Interactive2 {
         return judge.calcStateHash(roots, pointers);
     }
 
-
 }
 
