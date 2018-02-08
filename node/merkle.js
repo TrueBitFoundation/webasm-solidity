@@ -45,7 +45,19 @@ function readInt(str) {
    var buf = Buffer.from(str)
    var i = parseInt(buf.toString("hex"))
    console.log("Reading integer", i)
+   if (i != i) return 0 
    return i
+}
+
+function normalize(lst) {
+    var prefix_length = 0
+    return lst.map(function (o) {
+        var start = o[0]
+        var stop = o[1]
+        var res = [start-prefix_length, stop-prefix_length]
+        prefix_length += stop;
+        return res
+    })
 }
 
 function readInst(dta) {
@@ -57,15 +69,48 @@ function readInst(dta) {
   for (var idx = 32; idx < dta.length; idx += 32) {
       res.push(readInt(dta.substr(idx, 32)))
   }
-  return {leaf: id, inst:pairify(res)}
-}
-
-function makeProof(leaf, inst) {
+  return {leaf: id, inst:normalize(pairify(res)), inst_raw:res}
 }
 
 function fromHex(str) {
     var buf = Buffer.from(str, "hex")
     return buf.toString("binary")
+}
+
+function toHex(str) {
+    var buf = Buffer.from(str, "binary")
+    return buf.toString("hex")
+}
+
+var chunks = {}
+
+var a1 = fromHex("ec4101639edb093ea5f5094092f33257ad58fa5d46346fadb3df39b9bca4ff18")
+var a2 = fromHex("2121bef9f25785ef4916966349a7398d65ff76c71c6f87267c8182b5f11e490e")
+var a3 = fromHex("290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563")
+
+function repeat(n, x) {
+    var res = ""
+    for (var i = 0; i < n; i++) res += x
+    return res
+}
+
+function initChunks() {
+  chunks[a1] = "asd" + a2 + "klklk"
+  chunks[a2] = "test" + a3 + "stuff"
+  chunks[a3] = repeat(32,'\000')
+}
+
+initChunks()
+
+function makeProof(id, inst) {
+    var res = ""
+    inst.forEach(function (p) {
+        var chunk = chunks[id]
+        console.log("chunk", toHex(id), "is", toHex(chunk))
+        id = chunk.substr(p[0], 32)
+        res += chunk.substr(0, p[0]) + chunk.substr(p[0]+32)
+    })
+    return res
 }
 
 async function sendProof(id, state, solver) {
@@ -74,7 +119,9 @@ async function sendProof(id, state, solver) {
     var obj = readInst(fromHex(dta[0].data))
     var proof = makeProof(obj.leaf, obj.inst)
     // generate proof
-    merkle.methods.submitProof(id, obj.leaf, obj.inst, proof)
+    console.log(toHex(obj.leaf))
+    var tx = await merkle.methods.submitProof("0x"+id, "0x"+toHex(obj.leaf), obj.inst_raw, "0x"+toHex(proof), 5).send(send_opt)
+    console.log(tx)
 }
 
 // listen to events

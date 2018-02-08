@@ -43,7 +43,7 @@ contract Merkle {
       }
       return leaf;
    }
-   
+
    uint constant skip_start = 64;
    uint constant skip_end = 32;
    
