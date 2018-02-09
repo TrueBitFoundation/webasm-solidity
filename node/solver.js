@@ -138,8 +138,11 @@ function submitProof(id, idx1, phase) {
         if (phase == 6 && parseInt(op.substr(-12, 2), 16) == 16) iactive.methods.callCustomJudge(id, idx1, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                                                                                                  proof.merkle.result_state, proof.merkle.result_size, proof.merkle.list,
                                                                                                  common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
-            if (err) logger.error(err)
-            else status("Judging " + res)
+            if (err) return logger.error(err)
+            status("Judging " + res)
+            logger.info("Adding data file")
+            var hash = common.getLeaf(proof.merkle.list, proof.merkle.location)
+            common.storeHash(hash, proof.merkle.data)
         })
         else iactive.methods.callJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
@@ -329,6 +332,18 @@ async function checkState() {
     lst.forEach(checkChallenge)
 }
 
+async function checkCustom() {
+    var lst = await contract.methods.getChallenges(task_id).call(send_opt)
+    for (var i = 0; i < lst.length; i++) {
+        var id = lst[i]
+        var resolve_custom = await iactive.methods.resolveCustom(id).call(send_opt)
+        if (resolve_custom == true) iactive.methods.resolveCustom(id).send(send_opt,function (err,tx) {
+            if (err) return console.error(err)
+            status("Trying timeout custom judge " + tx)
+        })
+    }
+}
+
 function getLeaf(lst, loc) {
     if (loc % 2 == 1) return lst[1]
     else return lst[0]
@@ -364,32 +379,16 @@ async function uploadOutputs() {
         await contract.methods.uploadFile(task_id, i, file_id, proof.name, proof.data, proof.loc).send(send_opt)
     }
 }
-    
+
 function doFinalization(cont) {
     contract.methods.finalizeTask(task_id).send(send_opt, cont)
-    /*
-    uploadOutputs().then(function () {
 
-        fs.readFile(dir+"/blockchain.out", function (err, buf) {
-            if (err) logger.error(err)
-            else common.createFile("task.out", buf).then(function (id) {
-                status("Uploaded file " + id.toString(16))
-                contract.methods.getRoot(id).call(function (err,res) {
-                    if (err) logger.error(err)
-                    else logger.info("Output file root", {root:res})
-                })
-                common.ensureOutputFile(config, function (proof) {
-                    contract.methods.finalize(task_id, id, common.getRoots(proof.vm), common.getPointers(proof.vm),
-                                              proof.loc.list, proof.loc.location).send(send_opt, cont)
-                })
-            })
-        })
-    })*/
 }
 
 async function forceTimeout() {
     if (!config || !config.solved) return
     if (common.config.poll) checkState()
+    checkCustom()
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
     logger.info("Testing timeout", {good:good})
     // Just for testing

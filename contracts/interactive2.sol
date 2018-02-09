@@ -398,7 +398,7 @@ contract Interactive2 {
 
     function resolveCustom(bytes32 id) public returns (bool) {
         Record storage r = records[id];
-        if (!r.judge.resolved(r.sub_task, r.ex_state, r.ex_size)) return false;
+        if (r.sub_task == 0 || !r.judge.resolved(r.sub_task, r.ex_state, r.ex_size)) return false;
         WinnerSelected(id);
         r.winner = r.prover;
         blocked[r.task_id] = 0;
