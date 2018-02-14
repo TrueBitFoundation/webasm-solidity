@@ -3,11 +3,11 @@ pragma solidity ^0.4.19;
 // generic custom instruction, have like 4 arguments, one result
 contract GenericCustom {
 
-    function dataMerkle(uint[] ctrl, uint idx, uint level) internal pure returns (bytes32) {
+    function dataMerkle(bytes32[] ctrl, uint idx, uint level) internal pure returns (bytes32) {
        if (level == 0) {
            if (idx < ctrl.length) {
                // get the element
-               bytes32 elem = bytes32(ctrl[idx]);
+               bytes32 elem = ctrl[idx];
                return keccak256(bytes16(elem), uint128(elem));
            }
            else return keccak256(bytes16(0), bytes16(0));
@@ -58,7 +58,7 @@ contract GenericCustom {
        t.result = work(args);
     }
     
-    function work(bytes32[] args) returns (bytes32) public;
+    function work(bytes32[] args) public returns (bytes32);
 
 }
 
