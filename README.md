@@ -2,6 +2,12 @@
 
 # On-chain interpreter
 
+<p align="center">
+  <img src="./Dispute Resolution Layer.jpg"/>
+</p>
+
+This is meant to be used in the dispute resolution layer for the overall Truebit architecture.
+
 ## Testing on-chain interpreter
 
 You can download a Docker image and run the tests inside of a container:
