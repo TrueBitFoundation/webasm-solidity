@@ -18,4 +18,5 @@ solc --abi --optimize --overwrite --bin -o compiled interpreter.sol
 solc --abi --optimize --overwrite --bin -o compiled judge.sol
 solc --abi --optimize --overwrite --bin -o compiled testUser.sol
 solc --abi --optimize --overwrite --bin -o compiled parallel.sol
+solc --abi --optimize --overwrite --bin -o compiled merkle.sol
 

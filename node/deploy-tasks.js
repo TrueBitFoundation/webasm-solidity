@@ -9,25 +9,25 @@ web3.setProvider(new web3.providers.WebsocketProvider('ws://' + host + ':8546'))
 
 var dir = "../contracts/compiled/"
 
-var code = "0x" + fs.readFileSync(dir + "Tasks.bin")
-var abi = JSON.parse(fs.readFileSync(dir + "Tasks.abi"))
+var send_opt
 
-var code2 = "0x" + fs.readFileSync(dir + "Interactive2.bin")
-var abi2 = JSON.parse(fs.readFileSync(dir + "Interactive2.abi"))
-
-var code3 = "0x" + fs.readFileSync(dir + "Judge.bin")
-var abi3 = JSON.parse(fs.readFileSync(dir + "Judge.abi"))
-
-var code5 = "0x" + fs.readFileSync(dir + "Filesystem.bin")
-var abi5 = JSON.parse(fs.readFileSync(dir + "Filesystem.abi"))
+async function createContract(name, args) {
+    var code = "0x" + fs.readFileSync(dir + name + ".bin")
+    var abi = JSON.parse(fs.readFileSync(dir + name + ".abi"))
+    return new web3.eth.Contract(abi).deploy({data: code, arguments:args}).send(send_opt)
+}
 
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
-    var send_opt = {gas:4700000, from:accts[0]}
-    var judge = await new web3.eth.Contract(abi3).deploy({data: code3}).send(send_opt)
-    var fs = await new web3.eth.Contract(abi5).deploy({data: code5}).send(send_opt)
-    var iactive = await new web3.eth.Contract(abi2).deploy({data: code2, arguments:[judge.options.address]}).send(send_opt)
-    var tasks = await new web3.eth.Contract(abi).deploy({data: code, arguments:[iactive.options.address, fs.options.address]}).send(send_opt)
+    send_opt = {gas:4700000, from:accts[0]}
+    var judge = await createContract("Judge")
+    var fs = await createContract("Filesystem")
+    var iactive = await createContract("Interactive2", [judge.options.address])
+    var tasks = await createContract("Tasks", [iactive.options.address, fs.options.address])
+    var merkle = await createContract("Merkle")
+    iactive.setProvider(web3.currentProvider)
+    var tx = await iactive.methods.registerJudge(1, merkle.options.address).send(send_opt)
+    // console.log(tx)
     var config = {
         judge: judge.options.address,
         interactive: iactive.options.address,
@@ -35,6 +35,7 @@ async function doDeploy() {
         base: send_opt.from,
         tasks: tasks.options.address,
         fs: fs.options.address,
+        merkle: merkle.options.address,
         // events_disabled: true, poll: true,
         events_disabled: false, poll: false,
         timeout: 5000,

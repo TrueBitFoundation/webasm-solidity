@@ -19,10 +19,10 @@ interface JudgeInterface {
 interface CustomJudge {
     // Initializes a new custom verification game
     function init(bytes32 state, uint state_size, uint r3, address solver, address verifier) public returns (bytes32);
-    
+
     // Last time the task was updated
     function clock(bytes32 id) public returns (uint);
-    
+
     // Check if has resolved into correct state: merkle root of output data and output size
     function resolved(bytes32 id, bytes32 state, uint size) public returns (bool);
 }
@@ -33,7 +33,7 @@ contract Interactive2 {
 
     mapping (uint => uint) blocked;
     mapping (uint => bool) rejected;
-    
+
     enum State {
         Started,
         Running, // First and last state have been set up ... but this will mean that the verification game is running now
@@ -92,6 +92,11 @@ contract Interactive2 {
 
     mapping (bytes32 => Record) records;
     mapping (uint64 => CustomJudge) judges;
+
+    // who should be able to 
+    function registerJudge(uint64 id, address addr) public {
+        judges[id] = CustomJudge(addr);
+    }
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
@@ -398,15 +403,7 @@ contract Interactive2 {
         r.state = State.Finished;
     }
     
-    /*
-    bytes32[] custom_proof;
-    bytes32[] custom_size_proof;
-    
-    function customFoo(bytes32[] _proof, bytes32[] _size_proof) public {
-       custom_proof = _proof;
-       custom_size_proof = _size_proof;
-    }
-    */
+    event SubGoal(bytes32 id, uint64 judge, bytes32 init_data, uint init_size, bytes32 ret_data, uint ret_size);
 
     // some register should have the input size?
     function callCustomJudge(bytes32 id, uint i1,
@@ -415,13 +412,12 @@ contract Interactive2 {
                         bytes32[10] roots, uint[4] pointers) public {
                         
         Record storage r = records[id];
-        require(r.state == State.SelectedPhase && r.phase == 5 && msg.sender == r.prover && r.idx1 == i1 &&
+        require(r.state == State.SelectedPhase && r.phase == 6 && msg.sender == r.prover && r.idx1 == i1 &&
                 r.next == r.prover);
 
-        uint hint = (uint(op)/2**(8*4))&0xff;
+        uint hint = (uint(op)/2**(8*5))&0xff;
         require (hint == 0x16);
 
-        r.state = State.Custom;
         r.judge = judges[uint64(regs[3])];
 
         // uint256 init_size = regs[0] % 2 == 0 ? uint(custom_size_proof[0]) : uint(custom_size_proof[1]);
@@ -430,7 +426,11 @@ contract Interactive2 {
         r.sub_task = r.judge.init(init_data, regs[1], regs[2], r.prover, r.challenger);
         r.ex_state = custom_result;
         r.ex_size = custom_size;
-        judge.judgeCustom(r.result[4], r.result[5], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
+        judge.judgeCustom(r.result[5], r.result[6], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
+        r.state = State.Custom;
+        
+        SubGoal(id, uint64(regs[3]), init_data, regs[1], custom_result, custom_size);
+        
         return;
     }
 
@@ -473,7 +473,6 @@ contract Interactive2 {
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {
         return judge.calcStateHash(roots, pointers);
     }
-
 
 }
 

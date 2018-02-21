@@ -134,7 +134,14 @@ function submitProof(id, idx1, phase) {
         else vm = proof.vm
         logger.info("calling judge", {id:id, idx1:idx1, phase:phase, merkle: merkle, merkle2: merkle2, vm:m.vm, op:m.op, regs:[m.reg1, m.reg2, m.reg3, m.ireg],
                                      roots:common.getRoots(vm), pointers: common.getPointers(vm), proof:proof})
-        iactive.methods.callJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+        // Check if it is a custom instruction
+        if (phase == 6 && parseInt(op.substr(-12, 2), 16) == 16) iactive.methods.callCustomJudge(id, idx1, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+                                                                                                 proof.merkle.result_state, proof.merkle.result_size, proof.merkle.list,
+                                                                                                 common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
+            if (err) logger.error(err)
+            else status("Judging " + res)
+        })
+        else iactive.methods.callJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                            common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
             if (err) logger.error(err)
             else status("Judging " + res)
@@ -238,6 +245,13 @@ if (!common.config.events_disabled) {
         logger.info("Challenger selected phase ", args)
         submitProof(args.id, parseInt(args.idx1), args.phase)
     })
+    
+    iactive.events.SubGoal(function (err,ev) {
+        if (err) return logger.error(err);
+        var args = ev.returnValues
+        if (!myId(ev)) return
+        // has to find out the data about the custom judge
+    })
 
     iactive.events.WinnerSelected(function (err,ev) {
         if (err) return logger.error(err);
@@ -249,7 +263,7 @@ if (!common.config.events_disabled) {
             status("My solution was rejected, exiting.")
             cleanup()
         })
-            })
+    })
 
     contract.events.Finalized(function (err,ev) {
         if (err) return logger.error(err);
