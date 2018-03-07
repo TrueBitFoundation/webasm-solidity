@@ -1,4 +1,16 @@
 
+/***
+
+var Web3 = require('./index')
+var web3 = new Web3()
+
+var host = process.argv[2] || "localhost"
+
+web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
+web3.eth.getStorageProof("0x32bce268bc5444dfe211e90b344c4d0360ce8977b6eb133d227f536656e61f61", "0x6d023D3c72c21b997AbeCF03A8bb28fce654A426", "0x2345")
+
+****/
+
 var fs = require("fs")
 var Web3 = require('web3')
 var web3 = new Web3()
@@ -6,6 +18,7 @@ var web3 = new Web3()
 var host = process.argv[2] || "localhost"
 
 web3.setProvider(new web3.providers.WebsocketProvider('ws://' + host + ':8546'))
+// web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
 
 var dir = "../contracts/compiled/"
 
@@ -40,6 +53,7 @@ async function doDeploy() {
         events_disabled: false, poll: false,
         timeout: 5000,
         tick: true,
+        interpreter_args: [],
     }
     console.log(JSON.stringify(config))
     process.exit(0)
