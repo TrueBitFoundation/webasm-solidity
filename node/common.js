@@ -127,7 +127,7 @@ function buildArgs(args, config) {
     if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
     else ["-wasm", config.code_file].forEach(a => args.push(a))
     logger.info("Built args", {args:args})
-    return args
+    return args.concat(addresses.interpreter_args)
 }
 
 function exec(config, lst) {
