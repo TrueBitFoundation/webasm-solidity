@@ -31,6 +31,11 @@ var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "
 // connect to ipfs daemon API server
 var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
 
+const mongoose = require('mongoose')
+mongoose.connect('mongodb://localhost/truebit')
+
+const File = mongoose.model('File', { root: String, data: String })
+
 exports.make = function (dir) {
 
 var exports = {}
@@ -528,6 +533,11 @@ exports.phase_table = {
     11: "memsize",
 }
 
+exports.getLeaf = function (lst, loc) {
+    if (loc % 2 == 0) return lst[0]
+    else return lst[1]
+}
+
 function getRoots(vm) {
     return [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
                             vm.input_size, vm.input_name, vm.input_data]
@@ -566,6 +576,10 @@ exports.getPlace = function (idx) {
     return Math.floor((idx2-idx1)/2 + idx1)
 }
 
+exports.storeHash = function (root, data) {
+    var file = new File({root: root, data: data})
+    return file.save()
+}
 
 exports.upload = upload
 

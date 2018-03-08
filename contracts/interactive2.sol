@@ -366,21 +366,12 @@ contract Interactive2 {
         r.next = r.challenger;
         r.state = State.SelectedErrorPhase;
     }
-    
+
     function getWinner(bytes32 id) public view returns (address) {
         return records[id].winner;
     }
 
     event WinnerSelected(bytes32 id);
-
-    function resolveCustom(bytes32 id) public {
-        Record storage r = records[id];
-        require (r.judge.resolved(r.sub_task, r.ex_state, r.ex_size));
-        WinnerSelected(id);
-        r.winner = r.prover;
-        blocked[r.task_id] = 0;
-        r.state = State.Finished;
-    }
 
     function callJudge(bytes32 id, uint i1, uint q,
                         bytes32[] proof, bytes32[] proof2,
@@ -402,8 +393,18 @@ contract Interactive2 {
         blocked[r.task_id] = 0;
         r.state = State.Finished;
     }
-    
+
     event SubGoal(bytes32 id, uint64 judge, bytes32 init_data, uint init_size, bytes32 ret_data, uint ret_size);
+
+    function resolveCustom(bytes32 id) public returns (bool) {
+        Record storage r = records[id];
+        if (r.sub_task == 0 || !r.judge.resolved(r.sub_task, r.ex_state, r.ex_size)) return false;
+        WinnerSelected(id);
+        r.winner = r.prover;
+        blocked[r.task_id] = 0;
+        r.state = State.Finished;
+        return true;
+    }
 
     // some register should have the input size?
     function callCustomJudge(bytes32 id, uint i1,
