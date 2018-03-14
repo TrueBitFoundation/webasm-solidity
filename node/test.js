@@ -3,7 +3,8 @@ var Web3 = require('web3')
 var web3 = new Web3()
 var fs = require("fs")
 
-web3.setProvider(new web3.providers.HttpProvider('http://localhost:8545'))
+var provider = new web3.providers.HttpProvider('http://localhost:8545')
+web3.setProvider(provider)
 
 if (process.argv.length < 3) {
     console.log("Give test file as argument!")
@@ -59,10 +60,14 @@ function testPhase(contr, phase, send_opt) {
                                            pc:0, stack_ptr:0, call_ptr:0, memsize:0}
     else vm = proof.vm
     console.log(typeof proof.vm)
+/*    contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+                     [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
+                      vm.input_size, vm.input_name, vm.input_data],
+                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).call(send_opt, (err,res) => handleResult(phase,err,res)) */
     contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                      [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
                       vm.input_size, vm.input_name, vm.input_data],
-                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).call(send_opt, (err,res) => handleResult(phase,err,res))
+                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).send(send_opt)
 }
 
 async function doTest() {
@@ -71,6 +76,7 @@ async function doTest() {
     var contr = new web3.eth.Contract(abi)
     var send_opt = {from: base, gas: '4500000'}
     var contr = await contr.deploy({data: '0x' + code}).send(send_opt)
+    contr.setProvider(provider)
     console.log('Contract mined! address: ' + contr.options.address)
     for (var i = 0; i < 12; i++) testPhase(contr, i, send_opt)
 }

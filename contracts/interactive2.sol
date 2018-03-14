@@ -138,11 +138,28 @@ contract Interactive2 {
         // then last one
         require (r.end_state == judge.calcIOHash(e_roots));
         
+        // need to check that the start state is empty
+        // stack
+        require(s_roots[1] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
+        // memory
+        require(s_roots[2] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
+        // call stack
+        require(s_roots[3] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
+        // globals
+        require(s_roots[4] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
+        // call table (check if resizing works)
+        require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
+        // call types
+        require(s_roots[6] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
+        // pointers
+        require(s_pointers[0] == 0 && s_pointers[1] == 0 && s_pointers[2] == 0 && s_pointers[3] == 0);
+
         // Now we can initialize
         r.steps = _steps;
         if (r.size > r.steps - 2) r.size = r.steps-2;
         r.idx2 = r.steps-1;
         r.proof.length = r.steps;
+        /// Force empty initial state
         r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
         r.state = State.Running;
