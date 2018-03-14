@@ -39,3 +39,10 @@ contract Match {
 
 }
 
+contract Challenger {
+    mapping (address => bool) challengers;
+    
+    
+}
+
+
