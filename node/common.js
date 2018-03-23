@@ -226,6 +226,12 @@ function parseId(str) {
     return "0x" + res;
 }
 
+function debugIPFS(lst) {
+    return lst.map(function (el) {
+        return {name:el.name, size:el.content.length}
+    })
+}
+    
 function getIPFSFiles(fileid, cont) {
     ipfs.get(fileid, function (err, stream) {
         if (err) return logger.error(err)
@@ -245,7 +251,7 @@ function getIPFSFiles(fileid, cont) {
             })
         })
         stream.on('end', function () {
-            logger.info("This stream ended, got files", lst)
+            logger.info("This stream ended, got files", debugIPFS(lst))
             writeFiles(lst).then(() => cont())
         })
     })
@@ -273,7 +279,7 @@ function getIPFSToFile(fileid, fname, cont) {
             })
         })
         stream.on('end', function () {
-            logger.info("This stream ended, got files", lst)
+            logger.info("This stream ended, got files", debugIPFS(lst))
             writeFiles(lst).then(() => cont())
         })
     })
@@ -302,17 +308,18 @@ async function loadFilesFromChain(config, id) {
     logger.info("got files", {files:lst})
     for (var i = 0; i < lst.length; i++) {
         var ipfs_hash = await filesystem.methods.getHash(lst[i]).call(send_opt)
+        var name = await filesystem.methods.getName(lst[i]).call(send_opt)
+        config.files.push(name)
         if (ipfs_hash) {
-            await getIPFSFilesPromise(ipfs_hash)
+            logger.info("Loading %s from %s", name, ipfs_hash)
+            await getIPFSToFilePromise(ipfs_hash, name)
             continue
         }
         var size = await filesystem.methods.getByteSize(lst[i]).call(send_opt)
         var data = await filesystem.methods.getData(lst[i]).call(send_opt)
-        var name = await filesystem.methods.getName(lst[i]).call(send_opt)
         logger.info("file name %s", name, {content:data, size: size})
         var buf = parseData(data, size)
         res.push({name:name, content:buf})
-        config.files.push(name)
     }
     return writeFiles(res)
 }
@@ -413,7 +420,7 @@ function getStorage(config, cont) {
             })
         })
         stream.on('end', function () {
-            logger.info("This stream ended, got files", lst)
+            logger.info("This stream ended, got files", debugIPFS(lst))
             writeFiles(lst).then(() => cont())
         })
     })
