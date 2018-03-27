@@ -8,8 +8,8 @@ contract Judge is CommonOnchain {
     
     bytes32 mask = 0xffffffffffffffffffffffffffffffffffffffffffffffff;
     
-    function checkProof(bytes32[] pr) internal view {
-       require (pr.length == 0 || (pr.length != 1 && pr[0] == pr[0]&mask && pr[1] == pr[1]&mask));
+    function checkProof(bytes32[] pr, bytes32[] pr2) internal view {
+       if (pr2.length == 0 && !(phase == 7 && getHint(7) == 0x0c)) require (pr.length == 0 || (pr.length != 1 && pr[0] == pr[0]&mask && pr[1] == pr[1]&mask));
     }
 
     function judgeCustom(bytes32 start, bytes32 next, bytes32 ex_state, uint ex_size, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] _proof) public {
@@ -47,7 +47,7 @@ contract Judge is CommonOnchain {
            require(state == hashMachine());
         }
         phase = q;
-        checkProof(_proof);
+        checkProof(_proof, _proof2);
         proof = _proof;
         proof2 = _proof2;
         performPhase();
@@ -59,6 +59,34 @@ contract Judge is CommonOnchain {
         // return (q, state, debug);
     }
 
+    function debug_judge(bytes32[13] res, uint q,
+                        bytes32[] _proof, bytes32[] _proof2,
+                        bytes32 vm_, bytes32 op, uint[4] regs,
+                        bytes32[10] roots, uint[4] pointers) public returns (uint, bytes32, bytes32, uint) {
+        setMachine(vm_, op, regs[0], regs[1], regs[2], regs[3]);
+        setVM(roots, pointers);
+        // Special initial state
+        if (q == 0) {
+            m.vm = hashVM();
+            state = hashMachine();
+            // require(m.vm == res[q]);
+        }
+        else {
+           state = res[q];
+           // require(state == hashMachine());
+        }
+        phase = q;
+        checkProof(_proof, _proof2);
+        proof = _proof;
+        proof2 = _proof2;
+        performPhase();
+        // Special final state
+        if (q == 11) state = m.vm;
+        // require (state == res[q+1]);
+        winner = msg.sender;
+        return (q, state, debugb, debug);
+    }
+
     function judgeFinality(bytes32[13] res, bytes32[] _proof, bytes32[] _proof2,
                         bytes32[10] roots, uint[4] pointers) public returns (uint) {
         setVM(roots, pointers);
@@ -68,7 +96,7 @@ contract Judge is CommonOnchain {
         phase = 0;
         proof = _proof;
         proof2 = _proof2;
-        checkProof(_proof);
+        checkProof(_proof, _proof2);
         performPhase();
         require(m.op == 0x0000000000000000000000000000000000000000040006060001000106000000);
         return 1;
