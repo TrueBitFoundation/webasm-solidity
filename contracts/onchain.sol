@@ -2,7 +2,8 @@ pragma solidity ^0.4.16;
 
 contract Onchain {
 
-   uint debug;
+    uint debug;
+    bytes32 debugb;
 
     struct Roots {
         bytes32 code;
@@ -145,69 +146,90 @@ contract Onchain {
         return res;
     }
 
+    function getRoot2_16(uint loc) internal view returns (bytes32) {
+        require(proof2.length >= 2);
+        bytes32 res = keccak256(uint128(proof2[0]), uint128(proof2[1]));
+        for (uint i = 2; i < proof2.length; i++) {
+            loc = loc/2;
+            if (loc%2 == 0) res = keccak256(res, proof2[i]);
+            else res = keccak256(proof2[i], res);
+        }
+        require(loc < 2);
+        return res;
+    }
+
     function getCode(uint loc) internal view returns (bytes32) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.code);
+        require(proof2.length == 0);
         return bytes32(getLeaf(loc));
     }
 
     function getStack(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.stack);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
 
     function getCallStack(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.call_stack);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
     
     function getCallTable(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.calltable);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
 
     function getCallTypes(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.calltypes);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
 
     function getMemory(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.mem);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
 
     function getGlobal(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.globals);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
     
-    uint INPUT_FILES = 10;
+    uint constant INPUT_FILES = 11;
 
     function getInputSize(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_size && proof.length == 10);
+        require(getRoot(loc) == vm_r.input_size && proof.length == INPUT_FILES);
+        require(proof2.length == 0);
         return getLeaf(loc);
     }
     
     function getInputName(uint loc, uint loc2) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_name && proof.length == 10);
-        require(getRoot2(loc2) == bytes32(getLeaf2(loc)));
+        require(getRoot(loc) == vm_r.input_name && proof.length == INPUT_FILES);
+        require(getRoot2(loc2) == bytes32(getLeaf(loc)));
         return getLeaf2(loc2);
     }
 
     function setInputName(uint loc, uint loc2, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_name && proof.length == 10);
-        require(getRoot2(loc2) == bytes32(getLeaf2(loc)));
+        require(getRoot(loc) == vm_r.input_name && proof.length == INPUT_FILES);
+        require(getRoot2(loc2) == bytes32(getLeaf(loc)));
         setLeaf2(loc2, v);
-        setLeaf(loc, getLeaf2(loc));
+        // setLeaf(loc, getLeaf2(loc));
+        setLeaf(loc, uint(getRoot2(loc2)));
         vm_r.input_name = getRoot(loc);
         m.vm = hashVM();
         state = hashMachine();
@@ -215,38 +237,44 @@ contract Onchain {
 
     function setInputSize(uint loc, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_size && proof.length == 10);
+        require(getRoot(loc) == vm_r.input_size && proof.length == INPUT_FILES);
         setLeaf(loc, v);
         vm_r.input_size = getRoot(loc);
         m.vm = hashVM();
+        require(proof2.length == 0);
         state = hashMachine();
     }
 
     function setInputFile(uint loc, bytes32 v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_data && proof.length == 10);
+        require(getRoot(loc) == vm_r.input_data && proof.length == INPUT_FILES);
         setLeaf(loc, uint(v));
         vm_r.input_data = getRoot(loc);
         m.vm = hashVM();
         state = hashMachine();
     }
 
-    function setNthByte(uint a, uint n, uint8 bte) pure internal returns (uint) {
-       uint mask = uint(-1)*(2**(8*(32-n))) | uint(-1)/(2**(8*(n+1)));
-       return (a&mask) | (2**(8*(32-n)))*uint256(bte);
+    function setNthByte(uint a, uint n, uint8 bte) pure internal returns (bytes16) {
+       uint mask = uint(-1)*(2**(8*(15-n))) | uint(-1)/(2**(8*(15-n+1)));
+       return bytes16(uint128(bytes32((a&mask) | (2**(8*(15-n)))*uint256(bte))));
     }
 
     function setInputData(uint loc, uint loc2, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_data && proof.length == 10);
-        require(getRoot2(loc2/16) == bytes32(getLeaf2(loc)));
+        require(getRoot(loc) == vm_r.input_data && proof.length == INPUT_FILES);
+        require(getRoot2_16(loc2/16) == bytes32(getLeaf(loc)));
         uint leaf = getLeaf2(loc2/16);
         uint idx = loc2 % 16;
         
-        uint nleaf = setNthByte(leaf, idx, uint8(v));
+        debugb = bytes32(leaf);
+        debug = idx;
+        uint nleaf = uint(setNthByte(leaf, idx, uint8(v)));
+        debugb = bytes32(nleaf);
         
         setLeaf2(loc2/16, nleaf);
-        setLeaf(loc, getLeaf2(loc));
+        setLeaf(loc, uint(getRoot2_16(loc2/16)));
+        debugb = proof2[0];
+        debug = proof2.length;
         vm_r.input_data = getRoot(loc);
         m.vm = hashVM();
         state = hashMachine();
@@ -254,18 +282,20 @@ contract Onchain {
 
     function getInputData(uint loc, uint loc2) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_data && proof.length == 10);
-        require(getRoot2(loc2/16) == bytes32(getLeaf2(loc)));
+        require(getRoot(loc) == vm_r.input_data && proof.length == INPUT_FILES);
+        require(getRoot2_16(loc2/16) == bytes32(getLeaf(loc)));
         uint leaf = getLeaf2(loc2/16);
         uint idx = loc2 % 16;
-        return (leaf / 2**(idx*8)) & 0xff;
+        
+        return (leaf / 2**((15-idx)*8)) & 0xff;
     }
 
     function createInputData(uint loc, uint sz) internal {
         require(hashMachine() == state && hashVM() == m.vm);
-        require(getRoot(loc) == vm_r.input_data && proof.length == 10);
-        sz = sz/16;
-        bytes32 zero = keccak256(bytes32(0), bytes32(0));
+        require(getRoot(loc) == vm_r.input_data && proof.length == INPUT_FILES);
+        
+        sz = sz/32;
+        bytes32 zero = keccak256(bytes16(0), bytes16(0));
         while (sz > 1) {
             sz = sz/2;
             zero = keccak256(zero, zero);
@@ -279,6 +309,7 @@ contract Onchain {
     function setCallStack(uint loc, uint v) internal  {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.call_stack);
+        require(proof2.length == 0);
         setLeaf(loc, v);
         vm_r.call_stack = getRoot(loc);
         m.vm = hashVM();
@@ -288,6 +319,7 @@ contract Onchain {
     function setMemory(uint loc, uint v) internal  {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.mem);
+        require(proof2.length == 0);
         setLeaf(loc, v);
         vm_r.mem = getRoot(loc);
         m.vm = hashVM();
@@ -297,6 +329,7 @@ contract Onchain {
     function setStack(uint loc, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.stack);
+        require(proof2.length == 0);
         setLeaf(loc, v);
         vm_r.stack = getRoot(loc);
         m.vm = hashVM();
@@ -306,6 +339,7 @@ contract Onchain {
     function setGlobal(uint loc, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.globals);
+        require(proof2.length == 0);
         setLeaf(loc, v);
         vm_r.globals = getRoot(loc);
         m.vm = hashVM();
@@ -315,6 +349,7 @@ contract Onchain {
     function setCallTable(uint loc, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.calltable);
+        require(proof2.length == 0);
         setLeaf(loc, v);
         vm_r.calltable = getRoot(loc);
         m.vm = hashVM();
@@ -324,6 +359,7 @@ contract Onchain {
     function setCallType(uint loc, uint v) internal {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.calltypes);
+        require(proof2.length == 0);
         setLeaf(loc, v);
         vm_r.calltypes = getRoot(loc);
         m.vm = hashVM();
@@ -388,7 +424,6 @@ contract Onchain {
     
     function setReg1(uint v) internal  {
         m.reg1 = v;
-        debug = v;
         state = hashMachine();
     }
 
@@ -434,26 +469,38 @@ contract Onchain {
     
     function setStackSize(uint sz) internal {
         vm_r.stack = makeZero(sz);
+        m.vm = hashVM();
+        state = hashMachine();
     }
 
     function setCallStackSize(uint sz) internal {
         vm_r.call_stack = makeZero(sz);
+        m.vm = hashVM();
+        state = hashMachine();
     }
 
     function setGlobalsSize(uint sz) internal {
         vm_r.globals = makeZero(sz);
+        m.vm = hashVM();
+        state = hashMachine();
     }
 
     function setMemorySize(uint sz) internal {
         vm_r.mem = makeZero(sz);
+        m.vm = hashVM();
+        state = hashMachine();
     }
 
     function setTableSize(uint sz) internal {
         vm_r.calltable = makeZero(sz);
+        m.vm = hashVM();
+        state = hashMachine();
     }
 
     function setTableTypesSize(uint sz) internal {
         vm_r.calltypes = makeZero(sz);
+        m.vm = hashVM();
+        state = hashMachine();
     }
 
 

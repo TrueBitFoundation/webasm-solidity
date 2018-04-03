@@ -42,6 +42,12 @@ function handleResult(phase, err, res) {
         else console.log(res)
 }
 
+function hex32(str) {
+    var res = str.substr(2)
+    while (res.length < 64) res = "0"+res
+    return "0x"+res
+}
+
 function testPhase(contr, phase, send_opt) {
     var proof = test[phase_table[phase]]
     var merkle = proof.location || []
@@ -50,6 +56,9 @@ function testPhase(contr, phase, send_opt) {
         merkle = proof.merkle.list || proof.merkle.list1 || []
         merkle2 = proof.merkle.list2 || []
     }
+    merkle = merkle.map(hex32)
+    merkle2 = merkle2.map(hex32)
+    // console.log(merkle, merkle2)
     // var merkle = (proof.merkle && proof.merkle.list) || proof.location || []
     // var loc = (proof.merkle && proof.merkle.location) || 0
     var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
@@ -59,15 +68,16 @@ function testPhase(contr, phase, send_opt) {
                                            globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
                                            pc:0, stack_ptr:0, call_ptr:0, memsize:0}
     else vm = proof.vm
-    console.log(typeof proof.vm)
-/*    contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
+    // console.log(typeof proof.vm)
+    var regs = [m.reg1, m.reg2, m.reg3, m.ireg]
+    var roots = [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes, vm.input_size, vm.input_name, vm.input_data]
+    var pointers = [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
+    // contr.methods.debug_judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
+    contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
+    /* contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                      [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
                       vm.input_size, vm.input_name, vm.input_data],
-                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).call(send_opt, (err,res) => handleResult(phase,err,res)) */
-    contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                     [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
-                      vm.input_size, vm.input_name, vm.input_data],
-                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).send(send_opt)
+                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).send(send_opt) */
 }
 
 async function doTest() {
