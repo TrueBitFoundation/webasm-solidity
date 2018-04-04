@@ -492,7 +492,10 @@ contract Onchain {
     }
 
     function setTableSize(uint sz) internal {
-        vm_r.calltable = makeZero(sz);
+        bytes32 res = bytes32(uint32(-1));
+        debugb = res;
+        for (uint i = 0; i < sz; i++) res = keccak256(res, res);
+        vm_r.calltable = res;
         m.vm = hashVM();
         state = hashMachine();
     }
