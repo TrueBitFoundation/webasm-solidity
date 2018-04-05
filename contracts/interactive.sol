@@ -27,7 +27,11 @@ interface CustomJudge {
     function resolved(bytes32 id, bytes32 state, uint size) public returns (bool);
 }
 
-contract Interactive2 {
+contract Interactive {
+
+    function Interactive(address addr) public {
+        judge = JudgeInterface(addr);
+    }
 
     JudgeInterface judge;
 
@@ -45,7 +49,7 @@ contract Interactive2 {
         SelectedErrorPhase,
         SelectedPhase,
         
-        /* Special states for finality */
+        // Special states for finality
         Finality,
         Custom
     }
@@ -86,10 +90,6 @@ contract Interactive2 {
         uint ex_size;
     }
 
-    function Interactive2(address addr) public {
-        judge = JudgeInterface(addr);
-    }
-
     mapping (bytes32 => Record) records;
     mapping (uint64 => CustomJudge) judges;
 
@@ -115,14 +115,6 @@ contract Interactive2 {
         r.phase = 16;
         r.size = par;
         r.state = State.Started;
-        /*
-        r.steps = _steps;
-        if (r.size > r.steps - 2) r.size = r.steps-2;
-        r.proof.length = r.steps;
-        r.proof[0] = s;
-        r.proof[r.steps-1] = e;
-        r.idx2 = r.steps-1;
-        */
         r.state = State.Started;
         StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
@@ -177,6 +169,15 @@ contract Interactive2 {
     function getIndices(bytes32 id) public view returns (uint idx1, uint idx2) {
         Record storage r = records[id];
         return (r.idx1, r.idx2);
+    }
+    
+    function getTask(bytes32 id) public view returns (uint) {
+        Record storage r = records[id];
+        return r.task_id;
+    }
+    
+    function deleteChallenge(bytes32 id) public {
+       delete records[id];
     }
 
     event StartFinalityChallenge(address p, address c, bytes32 s, bytes32 e, uint256 step, uint to, bytes32 uniq);
@@ -268,19 +269,6 @@ contract Interactive2 {
         return records[id].proof[loc];
     }
     
-/*    function roundsTest(uint rounds, uint stuff) internal returns (uint it, uint i1, uint i2) {
-        bytes32 id = testMake();
-        Record storage r = records[id];
-        for (uint i = 0; i < rounds; i++) {
-            bytes32[] memory arr = new bytes32[](1);
-            arr[0] = bytes32(0xffff);
-            report(id, r.idx1, r.idx2, arr);
-            query(id, r.idx1, r.idx2, stuff % 2);
-            stuff = stuff/2;
-        }
-        return getIter(id);
-    } */
-
     event Queried(bytes32 id, uint idx1, uint idx2);
     event NeedErrorPhases(bytes32 id, uint idx1);
 
@@ -344,8 +332,7 @@ contract Interactive2 {
     }
 
     function getResult(bytes32 id)  public view returns (bytes32[13]) {
-        Record storage r = records[id];
-        return r.result;
+        return records[id].result;
     }
     
     event SelectedPhase(bytes32 id, uint idx1, uint phase);
@@ -399,10 +386,7 @@ contract Interactive2 {
                 r.next == r.prover);
         
         // for custom judge, use another method
-        /*
-        uint alu_hint = (uint(op)/2**(8*3))&0xff;
-        require (q != 5 || alu_hint != 0xff);
-        */
+        // uint alu_hint = (uint(op)/2**(8*3))&0xff; require (q != 5 || alu_hint != 0xff);
         
         judge.judge(r.result, r.phase, proof, proof2, vm, op, regs, roots, pointers);
         WinnerSelected(id);

@@ -38,5 +38,14 @@ contract DepositsManager {
         DepositWithdrawn(msg.sender, amount);
         return deposits[msg.sender];
     }
+    
+    function addDeposit(address a, uint d) internal {
+        deposits[a] += d;
+    }
+
+    function subDeposit(address a, uint d) internal {
+        require(deposits[a] >= d);
+        deposits[a] -= d;
+    }
 
 }

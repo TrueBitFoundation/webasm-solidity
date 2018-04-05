@@ -2,7 +2,7 @@ pragma solidity ^0.4.16;
 
 import "./DepositsManager.sol";
 
-interface Interactive {
+interface InteractiveI {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
     function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
     
@@ -14,6 +14,9 @@ interface Interactive {
     function isRejected(uint id) public returns (bool);
     // Check if a task is blocked, returns the block when it can be accepted
     function blockedTime(uint id) public returns (uint);
+    function getChallenger(bytes32 id) public returns (address);
+    function getTask(bytes32 id) public view returns (uint);
+    function deleteChallenge(bytes32 id) public;
 }
 
 interface Callback {
@@ -26,6 +29,8 @@ interface FilesystemI {
 }
 
 contract Tasks is DepositsManager {
+
+    uint constant DEPOSIT = 1 ether;
 
     enum CodeType {
         WAST,
@@ -42,11 +47,11 @@ contract Tasks is DepositsManager {
     event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
     event Finalized(uint id);
 
-    Interactive iactive;
+    InteractiveI iactive;
     FilesystemI fs;
 
     function Tasks(address contr, address fs_addr) public {
-        iactive = Interactive(contr);
+        iactive = InteractiveI(contr);
         fs = FilesystemI(fs_addr);
     }
 
@@ -202,6 +207,7 @@ contract Tasks is DepositsManager {
         return tasks2[id].solver;
     }
 
+    /*
     function solve(uint id, bytes32 result) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
@@ -211,7 +217,9 @@ contract Tasks is DepositsManager {
         t.state = 1;
         t2.blocked = block.number + 10;
         Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        subDeposit(msg.sender, DEPOSIT);
     }
+    */
 
     function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public {
         Task storage t = tasks[id];
@@ -227,6 +235,7 @@ contract Tasks is DepositsManager {
         t.state = 1;
         t2.blocked = block.number + 10;
         Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        subDeposit(msg.sender, DEPOSIT);
     }
 
     function solutionInfo(uint unq) public view returns (uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver) {
@@ -253,6 +262,7 @@ contract Tasks is DepositsManager {
         bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, 10);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
+        subDeposit(msg.sender, DEPOSIT);
     }
 
     function challengeFinality(uint id) public {
@@ -262,6 +272,7 @@ contract Tasks is DepositsManager {
         bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, 10);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
+        subDeposit(msg.sender, DEPOSIT);
     }
 
     function queryChallenge(bytes32 uniq) constant public returns (uint) {
@@ -301,7 +312,17 @@ contract Tasks is DepositsManager {
         if (files.length > 0) Callback(t.giver).solved(id, files);
         
         Finalized(id);
+        addDeposit(t2.solver, DEPOSIT);
+        
         return true;
+    }
+    
+    function claimDeposit(bytes32 cid) public {
+        uint id = iactive.getTask(cid);
+        require(iactive.isRejected(id));
+        require(iactive.getChallenger(cid) == msg.sender);
+        iactive.deleteChallenge(cid);
+        addDeposit(msg.sender, DEPOSIT);
     }
 
     uint tick_var;

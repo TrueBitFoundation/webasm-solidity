@@ -23,7 +23,7 @@ var contract_dir = "../contracts/compiled/"
 
 var send_opt = {from:base, gas: 4000000, gasPrice:"21000000000"}
 var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Tasks.abi")), addresses.tasks)
-var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Interactive2.abi")), addresses.interactive)
+var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Interactive.abi")), addresses.interactive)
 var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Judge.abi")), addresses.judge)
 var filesystem = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Filesystem.abi")), addresses.fs)
 var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "GetCode.abi")), addresses.get_code)

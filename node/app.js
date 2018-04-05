@@ -36,6 +36,9 @@ io.on("connection", function(socket) {
         socket.join("ui")
         logger.info("Got user interface")
     })
+    socket.on("make_deposit", function () {
+        common.contract.methods.makeDeposit().send({from:common.config.base, gas: 4000000, gasPrice:"21000000000", value: "10000000000000000000"})
+    })
     socket.on("new_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
         if (!fs.existsSync(path)) fs.mkdirSync(path)
@@ -283,7 +286,7 @@ iactive.events.allEvents(function (err,ev) {
 async function update() {
     var block = await common.web3.eth.getBlockNumber()
     var balance = await common.web3.eth.getBalance(common.config.base)
-    var deposit = await common.contract.getDeposit(common.config.base)
+    var deposit = await common.contract.methods.getDeposit(common.config.base).call()
     var obj = {block:block, address:common.config.base, balance: common.web3.utils.fromWei(balance, "ether"), deposit: common.web3.utils.fromWei(deposit, "ether")}
     logger.info("Info to ui", obj)
     io.emit("info", obj)
