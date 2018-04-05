@@ -1,5 +1,7 @@
 pragma solidity ^0.4.16;
 
+import "./DepositsManager.sol";
+
 interface Interactive {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
     function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
@@ -23,7 +25,7 @@ interface FilesystemI {
   function getNameHash(bytes32 id) public view returns (bytes32);
 }
 
-contract Tasks {
+contract Tasks is DepositsManager {
 
     enum CodeType {
         WAST,
@@ -156,12 +158,13 @@ contract Tasks {
         Posted(msg.sender, init, ct, cs, stor, id);
         return id;
     }
-    
+
+    // Make sure they won't be required after the task has been posted already
     function requireFile(uint id, bytes32 hash, Storage st) public {
         IO storage io = io_roots[id];
         io.uploads.push(RequiredFile(hash, st, 0));
     }
-    
+
     function getUploadNames(uint id) public view returns (bytes32[]) {
         RequiredFile[] storage lst = io_roots[id].uploads;
         bytes32[] memory arr = new bytes32[](lst.length);
@@ -181,16 +184,6 @@ contract Tasks {
         Task storage t = tasks[unq];
         return (t.giver, t.init, t.code_type, t.storage_type, t.stor, unq);
     }
-    /*
-    function setVMParameters(uint id, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public {
-        require(msg.sender == tasks[id].giver);
-        VMParameters storage param = params[id];
-        param.stack_size = stack;
-        param.memory_size = mem;
-        param.globals_size = globals;
-        param.table_size = table;
-        param.call_size = call;
-    }*/
 
     function getVMParameters(uint id) public view returns (uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) {
         VMParameters storage param = params[id];
@@ -252,24 +245,6 @@ contract Tasks {
     }
     */
 
-    // The state here should be marked the same as 
-    // This check shouldn't be needed unless there is a challenge, move it there
-    /*
-    function ensureInputFile(uint id, bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
-        Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
-        require(t2.solver == 0);
-        // check code
-        require(roots[0] == t.init);
-        require(state == iactive.calcStateHash(roots, pointers));
-        require(iactive.checkFileProof(state, roots, pointers, proof, file_num));
-        
-        require(getRoot(t.input_file) == proof[1] || getRoot(t.input_file) == proof[0]);
-        
-        t2.good = true;
-    }
-    */
-
     function challenge(uint id) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
@@ -308,27 +283,6 @@ contract Tasks {
         return true;
     }
 
-    /*
-    function finalize(uint id, bytes32 output, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint file_num) public {
-        Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
-        IO storage io = io_roots[id];
-        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
-        t.state = 3;
-        t2.output_file = bytes32(output);
-        
-        io.size = roots[7];
-        io.name = roots[8];
-        io.data = roots[9];
-
-        require(iactive.checkFileProof(t2.result, roots, pointers, proof, file_num));
-        require(fs.getRoot(output) == proof[1] || fs.getRoot(output) == proof[0]);
-
-        Callback(t.giver).solved(id, t2.result, t2.output_file);
-        Finalized(id);
-    }
-    */
-    
     function finalizeTask(uint id) public returns (bool) {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
@@ -349,9 +303,9 @@ contract Tasks {
         Finalized(id);
         return true;
     }
-    
+
     uint tick_var;
-    
+
     // For testing, mine this to create new block
     function tick() public {
         tick_var++;

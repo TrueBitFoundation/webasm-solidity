@@ -428,60 +428,6 @@ function getStorage(config, cont) {
 
 exports.getStorage = getStorage
 
-/*
-function getFile(fileid, ftype, cont) {
-    logger.info("getting file %s", fileid)
-    if (ftype == Storage.BLOCKCHAIN) {
-        get_code.methods.get(fileid).call(function (err,res) {
-            // dropping "0x"
-            if (err) return logger.error("Cannot load file from blockchain",err)
-            var buf = Buffer.from(res.substr(2), "hex")
-            cont(buf.toString("binary"))
-        })
-    }
-    else ipfs.get(fileid, function (err, stream) {
-        if (err) return logger.error("IPFS error", err)
-        var chunks = []
-        stream.on('data', (file) => {
-            file.content.on("data", function (chunk) {
-                chunks.push(chunk);
-            })
-            file.content.on("end", function () {
-                cont(Buffer.concat(chunks).toString("binary"))
-            })
-        })
-    })
-}
-
-exports.getFile = getFile
-
-function getInputFile(filehash, filenum, cont) {
-    logger.info("Getting input file %s %s", filehash, filenum.toString(16))
-    if (filenum == "0") getFile(filehash, Storage.IPFS, a => cont({data:a, name:filehash}))
-    else appFile.getFile(contract, filenum, cont)
-}
-
-exports.getInputFile = getInputFile
-
-function getAndEnsureInputFile(config, filehash, filenum, wast_contents, id, cont) {
-    logger.info("Getting input file %s %s", filehash, filenum.toString(16))
-    if (filenum == "0") getFile(filehash, Storage.IPFS, a => cont({data:a, name:filehash}))
-    else appFile.getFile(contract, filenum, function (obj) {
-        initTask(config, wast_contents, obj.data, function () {
-            ensureInputFile(config, function (proof) {
-                logger.info("ensuring file", {id:id, proof: proof})
-                contract.methods.ensureInputFile(id, proof.hash, getRoots(proof.vm), getPointers(proof.vm), proof.loc.list, proof.loc.location).send(send_opt, function (err,tx) {
-                    logger.info("Called ensure input", err, tx)
-                })
-            })
-            cont(obj)
-        })
-    })
-}
-
-exports.getAndEnsureInputFile = getAndEnsureInputFile
-*/
-
 function getLocation(place, config, cont) {
     var args = buildArgs(["-m", "-location", place], config)
     execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {

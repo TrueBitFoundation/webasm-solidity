@@ -21,14 +21,6 @@ if (process.env.NODE_ENV !== 'production') {
   }))
 }
 
-/*
-function execInPath(fname, path_name) {
-    execFile("node", [fname, path_name], (error, stdout, stderr) => {
-        if (stderr) logger.error('error %s', stderr)
-        logger.info('other output from %s %s', fname, stdout)
-    })
-}*/
-
 var solver_conf = { error: false, error_location: 0, stop_early: -1 }
 var verifier_conf = { error: false, error_location: 0, check_own: true, stop_early: -1 }
 
@@ -52,8 +44,6 @@ io.on("connection", function(socket) {
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
         var config = {taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST, storage:Storage.IPFS}
         giver.make(process.cwd()+"/"+path, config)
-        // fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wast", inputfile:"input.bin", code_type: CodeType.WAST, storage:Storage.IPFS}))
-        // execInPath("giver.js", path)
     })
     socket.on("new_wasm_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
@@ -62,8 +52,6 @@ io.on("connection", function(socket) {
         fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
         giver.make(process.cwd()+"/"+path, {taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, storage:Storage.IPFS})
-        // fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, storage:Storage.IPFS}))
-        // execInPath("giver.js", path)
     })
     socket.on("new_blockchain_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
@@ -72,8 +60,6 @@ io.on("connection", function(socket) {
         fs.writeFileSync(path + "/task.wasm", obj.task, 'binary')
         fs.writeFileSync(path + "/input.bin", JSON.stringify(obj.input))
         giver.make(process.cwd()+"/"+path, {taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, storage:Storage.BLOCKCHAIN})
-        // fs.writeFileSync(path + "/giver.json", JSON.stringify({taskfile:"task.wasm", inputfile:"input.bin", code_type: CodeType.WASM, storage:Storage.BLOCKCHAIN}))
-        // execInPath("giver.js", path)
     })
     socket.on("setup_error", function (obj) {
         logger.info("new configuration", obj)
@@ -297,7 +283,8 @@ iactive.events.allEvents(function (err,ev) {
 async function update() {
     var block = await common.web3.eth.getBlockNumber()
     var balance = await common.web3.eth.getBalance(common.config.base)
-    var obj = {block:block, address:common.config.base, balance: common.web3.utils.fromWei(balance, "ether")}
+    var deposit = await common.contract.getDeposit(common.config.base)
+    var obj = {block:block, address:common.config.base, balance: common.web3.utils.fromWei(balance, "ether"), deposit: common.web3.utils.fromWei(deposit, "ether")}
     logger.info("Info to ui", obj)
     io.emit("info", obj)
     if (common.config.poll) {

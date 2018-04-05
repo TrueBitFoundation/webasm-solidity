@@ -72,7 +72,7 @@ function testPhase(contr, phase, send_opt) {
     var regs = [m.reg1, m.reg2, m.reg3, m.ireg]
     var roots = [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes, vm.input_size, vm.input_name, vm.input_data]
     var pointers = [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
-    //contr.methods.debug_judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
+    // contr.methods.debug_judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
     contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
     /* contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
                      [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
