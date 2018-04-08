@@ -114,8 +114,11 @@
             <td>Block <span id="block">0</span></td>
             <td>Address <span id="address">0</span></td>
             <td>Balance <span id="balance">0</span></td>
+            <td>Deposit <span id="deposit">0</span></td>
         </tr>
     </table>
+
+<button onclick="makeDeposit();">Make deposit</button>
 
 <h1>Post tasks</h1>
 
@@ -242,6 +245,7 @@
         document.querySelector("#block").innerHTML = obj.block
         document.querySelector("#address").innerHTML = obj.address
         document.querySelector("#balance").innerHTML = obj.balance
+        document.querySelector("#deposit").innerHTML = obj.deposit
     })
     
     var logs = {}
@@ -261,6 +265,10 @@
 
     function showLogs(num) {
         socket.emit("logs", logs[num])
+    }
+
+    function makeDeposit() {
+        socket.emit("make_deposit", {})
     }
 
     socket.on("config", function (obj) {

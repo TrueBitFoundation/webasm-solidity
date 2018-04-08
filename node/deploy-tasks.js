@@ -35,7 +35,7 @@ async function doDeploy() {
     send_opt = {gas:4700000, from:accts[0]}
     var judge = await createContract("Judge")
     var fs = await createContract("Filesystem")
-    var iactive = await createContract("Interactive2", [judge.options.address])
+    var iactive = await createContract("Interactive", [judge.options.address])
     var tasks = await createContract("Tasks", [iactive.options.address, fs.options.address])
     var merkle = await createContract("Merkle")
     iactive.setProvider(web3.currentProvider)
