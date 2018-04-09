@@ -355,7 +355,7 @@ contract TasksResubmit is DepositsManager {
         require(iactive.isRejected(id));
         require(iactive.getChallenger(cid) == msg.sender);
         iactive.deleteChallenge(cid);
-        addDeposit(msg.sender, (DEPOSIT+DEPOSIT_PART)*t.deposit);
+        addDeposit(msg.sender, (DEPOSIT+DEPOSIT_PART*2)*t.deposit);
     }
 
     uint tick_var;
