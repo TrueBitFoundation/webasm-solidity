@@ -37,26 +37,6 @@ function verifyTask(obj, actor) {
             return
         }
         common.taskResult(actor, function (res) {
-            /* steps = res.steps
-            if (res.steps < obj.steps) {
-                logger.error("Too many steps")
-                contract.methods.challenge(obj.id).send(send_opt, function (err, tx) {
-                    if (!err) status("Too many steps, challenge initiated " + tx)
-                })
-            }
-            // Check if the posted state is a correct intermediate state
-            else if (res.steps > obj.steps) {
-                logger.error("Too few steps")
-                common.getLocation(obj.steps, actor, function (hash) {
-                    if (hash != obj.hash) contract.methods.challenge(obj.id).send(send_opt, function (err, tx) {
-                        if (!err) status("Too few steps, challenge initiated " + tx)
-                    })
-                    else contract.methods.challengeFinality(obj.id).send(send_opt, function (err, tx) {
-                        if (!err) status("Not a final state, challenge initiated " + tx)
-                    })
-                })
-            }
-            else */
             steps = res.steps
             if (res.hash != obj.hash) {
                 logger.info("Result mismatch")
@@ -294,6 +274,7 @@ async function forceTimeout() {
 var ival = setInterval(forceTimeout, common.config.timeout)
 
 function cleanup() {
+    if (challenge_id) contract.methods.claimDeposit(challenge_id).send(send_opt)
     clearInterval(ival)
 }
 
