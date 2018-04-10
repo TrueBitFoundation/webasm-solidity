@@ -288,7 +288,7 @@ async function update() {
     var balance = await common.web3.eth.getBalance(common.config.base)
     var deposit = await common.contract.methods.getDeposit(common.config.base).call()
     var obj = {block:block, address:common.config.base, balance: common.web3.utils.fromWei(balance, "ether"), deposit: common.web3.utils.fromWei(deposit, "ether")}
-    logger.info("Info to ui", obj)
+    // logger.info("Info to ui", obj)
     io.emit("info", obj)
     if (common.config.poll) {
         pollTasks()
@@ -303,7 +303,7 @@ function tick() {
 }
 
 if (common.config.tick) setInterval(tick, common.config.timeout)
-setInterval(update, 10000)
+setInterval(update, 1000)
 
 http.listen(22448, function(){
     logger.info("listening on *:22448")

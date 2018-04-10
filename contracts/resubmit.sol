@@ -15,6 +15,7 @@ interface InteractiveI {
     // Check if a task is blocked, returns the block when it can be accepted
     function blockedTime(uint id) public returns (uint);
     function getChallenger(bytes32 id) public returns (address);
+    function getProver(bytes32 id) public returns (address);
     function getTask(bytes32 id) public view returns (uint);
     function deleteChallenge(bytes32 id) public;
 }
@@ -188,9 +189,13 @@ contract TasksResubmit is DepositsManager {
         
         tasks[id] = tasks[old_id];
         tasks[id].deposit *= 2;
-        tasks2[id] = tasks2[old_id];
+        // tasks2[id] = tasks2[old_id];
+        tasks2[id].good = true;
         params[id] = params[old_id];
         io_roots[id] = io_roots[old_id];
+        
+        t = tasks[id];
+        Posted(t.giver, t.init, t.code_type, t.storage_type, t.stor, id);
         
         return id;
     }
@@ -331,7 +336,7 @@ contract TasksResubmit is DepositsManager {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         IO storage io = io_roots[id];
-        if (!(t.state == 1 && t2.blocked < block.number && t2.challenge != 0)) return false;
+        if (!(t.state == 1 && t2.blocked < block.number && t2.challenge == 0)) return false;
         t.state = 3;
         
         bytes32[] memory files = new bytes32[](io.uploads.length);
@@ -356,6 +361,16 @@ contract TasksResubmit is DepositsManager {
         require(iactive.getChallenger(cid) == msg.sender);
         iactive.deleteChallenge(cid);
         addDeposit(msg.sender, (DEPOSIT+DEPOSIT_PART*2)*t.deposit);
+    }
+
+    function claimSolverDeposit(bytes32 cid) public {
+        uint id = iactive.getTask(cid);
+        Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
+        require(iactive.getProver(cid) == msg.sender);
+        iactive.deleteChallenge(cid);
+        addDeposit(msg.sender, (DEPOSIT+DEPOSIT_PART)*t.deposit);
     }
 
     uint tick_var;

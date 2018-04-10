@@ -166,6 +166,10 @@ contract Interactive {
        return records[id].challenger;
     }
     
+    function getProver(bytes32 id) public view returns (address) {
+       return records[id].prover;
+    }
+    
     function getIndices(bytes32 id) public view returns (uint idx1, uint idx2) {
         Record storage r = records[id];
         return (r.idx1, r.idx2);
