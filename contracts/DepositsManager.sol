@@ -47,5 +47,10 @@ contract DepositsManager {
         require(deposits[a] >= d);
         deposits[a] -= d;
     }
+    
+    function transferDeposit(address a, address b, uint amount) internal {
+        addDeposit(b, amount);
+        subDeposit(a, amount);
+    }
 
 }
