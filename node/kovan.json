@@ -1,10 +1,3 @@
-{"judge":"0xeAa6B4c4CF8af192e43CBD85e23A12966E67f7Fb",
-"interactive":"0xD11bC26BbC45b51d51Cf5A8e9E974B628bF9EfDd",
-"host":"localhost",
-"base":"0x0fd6172f3f4b6169fb9166831cf14c99fb53ea0f",
-"tasks":"0xaAb5b8518Bb032c3915a040F44E999E0c47AAfF8",
-"get_code":"0xDF7f953C74627a862d8B98ccA6aF129df433f8d7",
-"events_disabled":false,
-"poll":false,
-"timeout":10000,
-"tick":false}
+{"judge":"0xe63704c5F18605Af96eAD47e1ee35978c9119A2b","interactive":"0x8feC12347F2869061845Fd21737046A5645C0895",
+"host":"localhost","base":"0x64c454631102a1ab7b76b341e7ef8931e2f8b672","tasks":"0x2f444Cf87Ab122DDcFEefE4138347C44d9ABE0ca","fs":"0xcbD4e7c8c19A9d5487D39A3d5e4E0D67a4548088",
+"merkle":"0x0290a904b449a81047bfbcB9f015fFe5C1632fd4","events_disabled":false,"poll":false,"timeout":5000,"tick":false,"interpreter_args":[]}

@@ -37,7 +37,7 @@ io.on("connection", function(socket) {
         logger.info("Got user interface")
     })
     socket.on("make_deposit", function () {
-        common.contract.methods.makeDeposit().send({from:common.config.base, gas: 4000000, gasPrice:"21000000000", value: "10000000000000000000"})
+        common.contract.methods.makeDeposit().send({from:common.config.base, gas: 400000, gasPrice:"21000000000", value: "100000000000000000"})
     })
     socket.on("new_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
