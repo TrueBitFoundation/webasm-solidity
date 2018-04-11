@@ -14,6 +14,7 @@ var wasm_path = process.cwd() + "/../../ocaml-offchain/interpreter/wasm"
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 var host = addresses.host || "localhost"
+var ipfshost = addresses.ipfshost || host
 
 var base = addresses.base
 
@@ -29,7 +30,7 @@ var filesystem = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir +
 var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "GetCode.abi")), addresses.get_code)
 
 // connect to ipfs daemon API server
-var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
+var ipfs = ipfsAPI(ipfshost, '5001', {protocol: 'http'})
 
 const mongoose = require('mongoose')
 mongoose.connect('mongodb://localhost/truebit')

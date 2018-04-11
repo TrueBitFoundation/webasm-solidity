@@ -1,3 +1,4 @@
 {"judge":"0xe63704c5F18605Af96eAD47e1ee35978c9119A2b","interactive":"0x8feC12347F2869061845Fd21737046A5645C0895",
 "host":"localhost","base":"0x64c454631102a1ab7b76b341e7ef8931e2f8b672","tasks":"0x2f444Cf87Ab122DDcFEefE4138347C44d9ABE0ca","fs":"0xcbD4e7c8c19A9d5487D39A3d5e4E0D67a4548088",
+"ipfshost": "programming-progress.com",
 "merkle":"0x0290a904b449a81047bfbcB9f015fFe5C1632fd4","events_disabled":false,"poll":false,"timeout":5000,"tick":false,"interpreter_args":[]}
