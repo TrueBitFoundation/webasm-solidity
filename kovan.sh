@@ -7,7 +7,8 @@ then
   parity --chain kovan account new --password=supersecret.txt > ~/.local/share/io.parity.ethereum/chains/kovan/myaddress
 fi
 
-service apache2 restart
+service apache2 start
+service mongodb start
 
 parity --chain kovan --unlock=`cat ~/.local/share/io.parity.ethereum/chains/kovan/myaddress` --password=supersecret.txt --ws-hosts=all --ws-origins=all &
 ipfs daemon &
