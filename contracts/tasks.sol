@@ -31,6 +31,7 @@ interface FilesystemI {
 contract Tasks is DepositsManager {
 
     uint constant DEPOSIT = 1 ether;
+    uint contant TIMEOUT = 10;
 
     enum CodeType {
         WAST,
@@ -58,7 +59,7 @@ contract Tasks is DepositsManager {
     function getInteractive() public view returns (address) {
         return address(iactive);
     }
-    
+
     struct RequiredFile {
        bytes32 name_hash;
        Storage file_storage;
@@ -219,7 +220,7 @@ contract Tasks is DepositsManager {
         t2.solver = msg.sender;
         t2.result = keccak256(code, size, name, data);
         t.state = 1;
-        t2.blocked = block.number + 10;
+        t2.blocked = block.number + TIMEOUT;
         Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
         subDeposit(msg.sender, DEPOSIT);
     }
@@ -245,7 +246,7 @@ contract Tasks is DepositsManager {
         Task2 storage t2 = tasks2[id];
         // VMParameters storage p = params[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, 10);
+        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, TIMEOUT);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
         subDeposit(msg.sender, DEPOSIT);
@@ -255,7 +256,7 @@ contract Tasks is DepositsManager {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, 10);
+        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, TIMEOUT);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
         subDeposit(msg.sender, DEPOSIT);

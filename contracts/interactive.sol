@@ -154,6 +154,7 @@ contract Interactive {
         /// Force empty initial state
         r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
+        
         r.state = State.Running;
     }
     

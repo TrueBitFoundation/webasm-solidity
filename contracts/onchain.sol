@@ -24,7 +24,7 @@ contract Onchain {
         uint call_ptr;
         uint memsize;
     }
-    
+
     struct Machine {
         bytes32 vm;
         bytes32 op;
@@ -33,15 +33,15 @@ contract Onchain {
         uint reg3;
         uint ireg;
     }
-    
+
     VM vm;
     Roots vm_r;
     Machine m;
     bytes32[] proof;
     bytes32[] proof2;
-    
+
     bytes32 state;
-    
+
     function setVM(bytes32[10] roots, uint[4] pointers) internal {
         vm_r.code = roots[0];
         vm_r.stack = roots[1];
@@ -118,7 +118,7 @@ contract Onchain {
             if (loc%2 == 0) res = keccak256(res, proof[i]);
             else res = keccak256(proof[i], res);
         }
-        require(loc < 2);
+        require(loc < 2); // This should be runtime error, access over bounds
         return res;
     }
 
