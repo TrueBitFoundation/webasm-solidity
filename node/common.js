@@ -8,8 +8,8 @@ var ipfsAPI = require('ipfs-api')
 
 // var appFile = require("./appFileBytes")
 
-// var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
-var wasm_path = "/home/sami/ocaml-offchain/interpreter/wasm"
+var wasm_path = process.cwd() + "/../../ocaml-offchain/interpreter/wasm"
+// var wasm_path = "../../ocaml-offchain/interpreter/wasm"
 
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
