@@ -1,10 +1,6 @@
-{"judge":"0x207A5d7a7B404c54941b9B31fc9B308295d04199",
-"interactive":"0xc755155Fd515ccA8047CaD8c1E6314970D7d2362",
-"host":"localhost",
-"base":"0xfefd1cbc50782efd35e4805920483ae614678ffc",
-"tasks":"0xC6A6A2ca6395e387C8EF38D14A392F16aE9746D5",
-"get_code":"0x223574f3e4ED966ff54e47c36955E8eE73B36AaB",
-"events_disabled":false,
-"poll":false,
-"timeout":10000,
-"tick":false}
+{"judge":"0x0f8f8a8c74EfcCddE96d62454bAc2b26827Ade0e",
+"interactive":"0x7CE191Fd8F1755824659107ceDFFeB2e12096945",
+"host":"ipc",
+"ipc":"/root/.ethereum/rinkeby/geth.ipc",
+"base":"0xbb4d965b13c8ed2e31d521d872786532334b201d","tasks":"0xEEA5E3E8a108Add53E2F5Bcb403c92a2071B1e7A","fs":"0xDe2292558DAcb26274252ca41FC9337D49677acd",
+"merkle":"0xfd48af2751d0B877D8631DD90C76B86429c03297","events_disabled":false,"poll":false,"timeout":5000,"tick":true,"interpreter_args":[]}

@@ -18,7 +18,12 @@ var ipfshost = addresses.ipfshost || host
 
 var base = addresses.base
 
-web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
+if (addresses.ipc) {
+    var net = require("net")
+    web3.setProvider(new web3.providers.IpcProvider(addresses.ipc, net))
+    ipfshost = addresses.ipfshost || "localhost"
+}
+else web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
 var contract_dir = "../contracts/compiled/"
 
