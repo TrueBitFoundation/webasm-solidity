@@ -49,8 +49,14 @@ contract REPLACEME, ALU {
         else if (hint == 3) res = getStackPtr();
         else if (hint == 4) res = getMemsize();
         // Add special cases for input data, input name
-        else if (hint == 0x14) res = getInputName(getReg2(), getReg1());
-        else if (hint == 0x15) res = getInputData(getReg2(), getReg1());
+        else if (hint == 0x14) {
+            if (getReg2() >= 1024 || !checkInputNameAccess(getReg2(), getReg1())) fin4l = true;
+            else res = getInputName(getReg2(), getReg1());
+        }
+        else if (hint == 0x15) {
+            if (getReg2() >= 1024 || !checkInputDataAccess(getReg2(), getReg1())) fin4l = true;
+            else res = getInputData(getReg2(), getReg1());
+        }
         else {
           uint loc = readPosition(hint);
         
