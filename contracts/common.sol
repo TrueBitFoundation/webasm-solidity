@@ -287,8 +287,11 @@ contract REPLACEME, ALU {
     * @dev execute the opcode, put the result back in REG1
     */
     function performALU() internal {
-        setReg1(handleALU(getHint(3), getReg1(), getReg2(), getReg3(), getIreg()));
-        debug = getHint(3);
+        uint res;
+        bool fin4l;
+        (res, fin4l) = handleALU(getHint(3), getReg1(), getReg2(), getReg3(), getIreg());
+        if (fin4l) setPC(FINAL_STATE);
+        else setReg1(res);
     }
     
     /**

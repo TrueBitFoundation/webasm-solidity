@@ -18,10 +18,13 @@ contract ALU is VMMemory {
     *
     * @return returns the result of the operation
     */
-    function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint) {
+    function handleALU(uint hint, uint r1, uint r2, uint r3, uint ireg) internal pure returns (uint, bool) {
         uint res = r1;
-        if (hint == 0) return r1;
-        else if (hint == 1 || hint == 6) revert(); // Trap
+        if (hint == 0) return (r1, false);
+        else if (hint == 1 || hint == 6) {
+           return (0, true);
+           // revert(); // Trap
+        }
         // Loading from memory
         else if (hint & 0xc0 == 0xc0) {
             uint8[] memory arr = toMemory(r2, r3);
@@ -206,7 +209,7 @@ contract ALU is VMMemory {
             res = res % (2**64);
         }
         
-        return res;
+        return (res, false);
     }
     
   /**
