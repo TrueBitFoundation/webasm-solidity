@@ -32,6 +32,8 @@ contract REPLACEME, ALU {
         else if (hint == 0x16) return getStackPtr()-3;
         else assert(false);
     }
+    
+    uint constant FINAL_STATE = 0xffffffffff;
 
     /**
     * @dev perform a read based on the opcode
@@ -40,29 +42,37 @@ contract REPLACEME, ALU {
     *
     * @return return the read value
     */
-    function readFrom(uint hint) internal view returns (uint) {
-        if (hint == 0) return 0;
-        else if (hint == 1) return getIreg();
-        else if (hint == 2) return getPC()+1;
-        else if (hint == 3) return getStackPtr();
-        else if (hint == 4) return getMemsize();
+    function readFrom(uint hint) internal returns (uint res, bool fin4l) {
+        if (hint == 0) res = 0;
+        else if (hint == 1) res = getIreg();
+        else if (hint == 2) res = getPC()+1;
+        else if (hint == 3) res = getStackPtr();
+        else if (hint == 4) res = getMemsize();
         // Add special cases for input data, input name
-        else if (hint == 0x14) return getInputName(getReg2(), getReg1());
-        else if (hint == 0x15) return getInputData(getReg2(), getReg1());
-        uint loc = readPosition(hint);
-        if (hint == 5) return getGlobal(loc);
-        else if (hint == 6) return getStack(loc);
-        else if (hint == 7) return getStack(loc);
-        else if (hint == 8) return getStack(loc);
-        else if (hint == 9) return getStack(loc);
-        else if (hint == 14) return getCallStack(loc);
-        else if (hint == 15) return getMemory(loc);
-        else if (hint == 16) return getCallTable(loc);
-        else if (hint == 17) return getMemory(loc);
-        else if (hint == 18) return getCallTypes(loc);
-        else if (hint == 19) return getInputSize(loc);
-        else if (hint == 0x16) return getStack(loc);
-        else assert(false);
+        else if (hint == 0x14) res = getInputName(getReg2(), getReg1());
+        else if (hint == 0x15) res = getInputData(getReg2(), getReg1());
+        else {
+          uint loc = readPosition(hint);
+        
+          if (!checkReadAccess(loc, hint)) {
+                setPC(FINAL_STATE);
+                res = 0;
+                fin4l = true;
+          }
+          else if (hint == 5) res = getGlobal(loc);
+          else if (hint == 6) res = getStack(loc);
+          else if (hint == 7) res = getStack(loc);
+          else if (hint == 8) res = getStack(loc);
+          else if (hint == 9) res = getStack(loc);
+          else if (hint == 14) res = getCallStack(loc);
+          else if (hint == 15) res = getMemory(loc);
+          else if (hint == 16) res = getCallTable(loc);
+          else if (hint == 17) res = getMemory(loc);
+          else if (hint == 18) res = getCallTypes(loc);
+          else if (hint == 19) res = getInputSize(loc);
+          else if (hint == 0x16) res = getStack(loc);
+          else assert(false);
+        }
     }
 
     /**
@@ -138,9 +148,24 @@ contract REPLACEME, ALU {
     function writeStuff(uint hint, uint v) internal {
         if (hint == 0) return;
         // Special cases for creation, other output
-        if (hint == 0x0b) setInputName(getReg1(), getReg2(), v);
-        else if (hint == 0x0c) createInputData(getReg1(), v);
-        else if (hint == 0x0d) setInputData(getReg1(), getReg2(), v);
+        uint r1;
+        if (hint == 0x0b) {
+            r1 = getReg1();
+            if (r1 >= 1024) setPC(FINAL_STATE);
+            else if (!checkInputNameAccess(r1, getReg2())) setPC(FINAL_STATE);
+            else setInputName(r1, getReg2(), v);
+        }
+        else if (hint == 0x0c) {
+            r1 = getReg1();
+            if (r1 >= 1024) setPC(FINAL_STATE);
+            else createInputData(r1, v);
+        }
+        else if (hint == 0x0d) {
+            r1 = getReg1();
+            if (r1 >= 1024) setPC(FINAL_STATE);
+            else if (!checkInputDataAccess(r1, getReg2())) setPC(FINAL_STATE);
+            else setInputData(r1, getReg2(), v);
+        }
         else if (hint == 0x10) setStackSize(v);
         else if (hint == 0x11) setCallStackSize(v);
         else if (hint == 0x12) setGlobalsSize(v);
@@ -149,7 +174,8 @@ contract REPLACEME, ALU {
         else if (hint == 0x15) setMemorySize(v);
         else {
           uint loc = writePosition(hint);
-          if (hint & 0xc0 == 0x80) makeMemChange1(loc, v, hint);
+          if (!checkWriteAccess(loc, hint)) setPC(FINAL_STATE);
+          else if (hint & 0xc0 == 0x80) makeMemChange1(loc, v, hint);
           else if (hint & 0xc0 == 0xc0) makeMemChange2(loc, v, hint);
           else if (hint == 2) setStack(loc, v);
           else if (hint == 3) setStack(loc, v);
@@ -225,21 +251,30 @@ contract REPLACEME, ALU {
     * @dev read the first byte of the opcode and then read the value based on the hint into REG1
     */
     function performRead1() internal {
-        setReg1(readFrom(getHint(0)));
+        uint res;
+        bool fin4l;
+        (res, fin4l) = readFrom(getHint(0));
+        if (!fin4l) setReg1(res);
     }
 
     /**
     * @dev read the second byte of the opcode and then read the value based on the hint into REG2
     */
     function performRead2() internal {
-        setReg2(readFrom(getHint(1)));
+        uint res;
+        bool fin4l;
+        (res, fin4l) = readFrom(getHint(1));
+        if (!fin4l) setReg2(res);
     }
 
     /**
     * @dev read the third byte of the opcode and then read the vlaue based on the hint into REG3
     */
     function performRead3() internal {
-        setReg3(readFrom(getHint(2)));
+        uint res;
+        bool fin4l;
+        (res, fin4l) = readFrom(getHint(2));
+        if (!fin4l) setReg3(res);
     }
     
     /**
@@ -291,19 +326,21 @@ contract REPLACEME, ALU {
     
     uint phase;
     
+    
     function performPhase() internal {
-        if (phase == 0) performFetch();
-        if (phase == 1) performInit();
-        if (phase == 2) performRead1();
-        if (phase == 3) performRead2();
-        if (phase == 4) performRead3();
-        if (phase == 5) performALU();
-        if (phase == 6) performWrite1();
-        if (phase == 7) performWrite2();
-        if (phase == 8) performUpdatePC();
-        if (phase == 9) performUpdateStackPtr();
-        if (phase == 10) performUpdateCallPtr();
-        if (phase == 11) performUpdateMemsize();
+        if (getPC() == FINAL_STATE) {}
+        else if (phase == 0) performFetch();
+        else if (phase == 1) performInit();
+        else if (phase == 2) performRead1();
+        else if (phase == 3) performRead2();
+        else if (phase == 4) performRead3();
+        else if (phase == 5) performALU();
+        else if (phase == 6) performWrite1();
+        else if (phase == 7) performWrite2();
+        else if (phase == 8) performUpdatePC();
+        else if (phase == 9) performUpdateStackPtr();
+        else if (phase == 10) performUpdateCallPtr();
+        else if (phase == 11) performUpdateMemsize();
         phase = (phase+1) % 12;
     }
     
