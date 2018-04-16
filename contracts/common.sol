@@ -274,7 +274,7 @@ contract REPLACEME, ALU {
     }
 
     /**
-    * @dev read the third byte of the opcode and then read the vlaue based on the hint into REG3
+    * @dev read the third byte of the opcode and then read the value based on the hint into REG3
     */
     function performRead3() internal {
         uint res;
