@@ -5,8 +5,6 @@ interface JudgeInterface {
                         bytes32[] _proof, bytes32[] _proof2,
                         bytes32 vm_, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public returns (uint);
-    function judgeFinality(bytes32[13] res, bytes32[] _proof, bytes32[] _proof2,
-                        bytes32[10] roots, uint[4] pointers) public returns (uint);
     function judgeCustom(bytes32 state1, bytes32 state2, bytes32 ex_state, uint ex_reg, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] proof) public;
 
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
@@ -42,15 +40,11 @@ contract Interactive {
         Started,
         Running, // First and last state have been set up ... but this will mean that the verification game is running now
         Finished, // Winner has been chosen
-        NeedErrorPhases,
         NeedPhases,
-        PostedErrorPhases,
         PostedPhases,
-        SelectedErrorPhase,
         SelectedPhase,
         
-        // Special states for finality
-        Finality,
+        // Special states for custom judges
         Custom
     }
 
@@ -121,6 +115,8 @@ contract Interactive {
         return uniq;
     }
     
+    uint constant FINAL_STATE = 0xffffffffff;
+    
     function initialize(bytes32 id, bytes32[10] s_roots, uint[4] s_pointers, uint _steps,
                                     bytes32[10] e_roots, uint[4] e_pointers) public {
         Record storage r = records[id];
@@ -145,13 +141,15 @@ contract Interactive {
         require(s_roots[6] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // pointers
         require(s_pointers[0] == 0 && s_pointers[1] == 0 && s_pointers[2] == 0 && s_pointers[3] == 0);
+        
+        // check final state
+        require(e_pointers[0] == FINAL_STATE);
 
         // Now we can initialize
         r.steps = _steps;
         if (r.size > r.steps - 2) r.size = r.steps-2;
         r.idx2 = r.steps-1;
         r.proof.length = r.steps;
-        /// Force empty initial state
         r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
         
@@ -183,30 +181,6 @@ contract Interactive {
     
     function deleteChallenge(bytes32 id) public {
        delete records[id];
-    }
-
-    event StartFinalityChallenge(address p, address c, bytes32 s, bytes32 e, uint256 step, uint to, bytes32 uniq);
-
-    // Solver thinks this is a final state, verifier disagrees
-    // Solver has to post a proof that the next instruction is the "EXIT" opcode
-    function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32) {
-        bytes32 uniq = keccak256(task_id, p, c, s, e, _steps, to);
-        Record storage r = records[uniq];
-        r.task_id = task_id;
-        r.prover = p;
-        r.challenger = c;
-        r.start_state = s;
-        r.end_state = e;
-        r.steps = _steps;
-        r.timeout = to;
-        r.clock = block.number;
-        r.next = r.prover;
-        r.phase = 20;
-        r.size = 0;
-        r.state = State.Finality;
-        StartFinalityChallenge(p, c, s, e, _steps, to, uniq);
-        blocked[task_id] = r.clock + r.timeout;
-        return uniq;
     }
 
     function checkTimeout(bytes32 id) internal returns (bool) {
@@ -275,7 +249,6 @@ contract Interactive {
     }
     
     event Queried(bytes32 id, uint idx1, uint idx2);
-    event NeedErrorPhases(bytes32 id, uint idx1);
 
     function query(bytes32 id, uint i1, uint i2, uint num) public {
         Record storage r = records[id];
@@ -289,18 +262,9 @@ contract Interactive {
         if (num != r.size) r.idx2 = r.idx1+iter;
         if (r.size > r.idx2-r.idx1-1) r.size = r.idx2-r.idx1-1;
         // size eventually becomes zero here
-        // check if they disagree on the last state being an error state
-        if (r.size == 0 && r.idx2 == r.steps-1 && r.proof[r.idx2] == bytes32(0)) {
-            r.next = r.challenger;
-            // Challenger will have to post the phases
-            NeedErrorPhases(id, r.idx1);
-            r.state = State.NeedErrorPhases;
-        }
-        else {
-            r.next = r.prover;
-            Queried(id, r.idx1, r.idx2);
-            if (r.size == 0) r.state = State.NeedPhases;
-        }
+        r.next = r.prover;
+        Queried(id, r.idx1, r.idx2);
+        if (r.size == 0) r.state = State.NeedPhases;
     }
 
     function getStep(bytes32 id, uint idx) public view returns (bytes32) {
@@ -320,20 +284,6 @@ contract Interactive {
         r.result = arr;
         r.next = r.challenger;
         PostedPhases(id, i1, arr);
-    }
-
-    event PostedErrorPhases(bytes32 id, uint idx1, bytes32[13] arr);
-
-    function postErrorPhases(bytes32 id, uint i1, bytes32[13] arr) public {
-        Record storage r = records[id];
-        require(r.state == State.NeedErrorPhases && msg.sender == r.challenger && r.next == r.challenger && r.idx1 == i1 &&
-                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == bytes32(0));
-        r.clock = block.number;
-        blocked[r.task_id] = r.clock + r.timeout;
-        r.result = arr;
-        r.next = r.prover;
-        PostedErrorPhases(id, i1, arr);
-        r.state = State.PostedErrorPhases;
     }
 
     function getResult(bytes32 id)  public view returns (bytes32[13]) {
@@ -362,20 +312,6 @@ contract Interactive {
         return records[id].phase;
     }
     
-    event SelectedErrorPhase(bytes32 id, uint idx1, uint phase);
-    
-    function selectErrorPhase(bytes32 id, uint i1, bytes32 st, uint q) public {
-        Record storage r = records[id];
-        require(r.state == State.PostedErrorPhases && msg.sender == r.prover && r.idx1 == i1 && r.result[q] == st &&
-                r.next == r.prover && q < 13);
-        r.clock = block.number;
-        blocked[r.task_id] = r.clock + r.timeout;
-        r.phase = q;
-        SelectedErrorPhase(id, i1, q);
-        r.next = r.challenger;
-        r.state = State.SelectedErrorPhase;
-    }
-
     function getWinner(bytes32 id) public view returns (address) {
         return records[id].winner;
     }
@@ -439,34 +375,6 @@ contract Interactive {
         SubGoal(id, uint64(regs[3]), init_data, regs[1], custom_result, custom_size);
         
         return;
-    }
-
-    // Challenger has claimed that the state is not final
-    function callFinalityJudge(bytes32 id, uint i1,
-                        bytes32[] proof, bytes32[] proof2, 
-                        bytes32[10] roots, uint[4] pointers) public {
-        Record storage r = records[id];
-        require(r.state == State.Finality && msg.sender == r.prover && r.idx1 == i1 &&
-                r.next == r.prover);
-        // bytes32 fetched_op = 0x0000000000000000000000000000000000000000040606060001000106000000;
-        judge.judgeFinality(r.result, proof, proof2, roots, pointers);
-        WinnerSelected(id);
-        r.winner = r.prover;
-        blocked[r.task_id] = 0;
-        r.state = State.Finished;
-    }
-
-    function callErrorJudge(bytes32 id, uint i1, uint q,
-                        bytes32[] proof, bytes32[] proof2, 
-                        bytes32 vm, bytes32 op, uint[4] regs,
-                        bytes32[10] roots, uint[4] pointers) public {
-        Record storage r = records[id];
-        require(r.state == State.SelectedErrorPhase && r.phase == q && msg.sender == r.challenger && r.idx1 == i1 &&
-                r.next == r.prover);
-        judge.judge(r.result, r.phase, proof, proof2, vm, op, regs, roots, pointers);
-        WinnerSelected(id);
-        r.winner = r.challenger;
-        rejected[r.task_id] = true;
     }
 
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool) {

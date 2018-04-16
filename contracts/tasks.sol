@@ -4,7 +4,6 @@ import "./DepositsManager.sol";
 
 interface InteractiveI {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
-    function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
     
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
@@ -247,16 +246,6 @@ contract Tasks is DepositsManager {
         // VMParameters storage p = params[id];
         require(t.state == 1);
         bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, TIMEOUT);
-        challenges[uniq] = id;
-        t2.challenges.push(uniq);
-        subDeposit(msg.sender, DEPOSIT);
-    }
-
-    function challengeFinality(uint id) public {
-        Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
-        require(t.state == 1);
-        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, TIMEOUT);
         challenges[uniq] = id;
         t2.challenges.push(uniq);
         subDeposit(msg.sender, DEPOSIT);

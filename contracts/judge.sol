@@ -56,7 +56,6 @@ contract Judge is CommonOnchain {
         require (state == res[q+1]);
         winner = msg.sender;
         return q;
-        // return (q, state, debug);
     }
 
     function debug_judge(bytes32[13] res, uint q,
@@ -85,21 +84,6 @@ contract Judge is CommonOnchain {
         // require (state == res[q+1]);
         winner = msg.sender;
         return (q, state, debugb, debug);
-    }
-
-    function judgeFinality(bytes32[13] res, bytes32[] _proof, bytes32[] _proof2,
-                        bytes32[10] roots, uint[4] pointers) public returns (uint) {
-        setVM(roots, pointers);
-        m.vm = hashVM();
-        state = hashMachine();
-        require(m.vm == res[0]);
-        phase = 0;
-        proof = _proof;
-        proof2 = _proof2;
-        checkProof(_proof, _proof2);
-        performPhase();
-        require(m.op == 0x0000000000000000000000000000000000000000040006060001000106000000);
-        return 1;
     }
 
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, uint loc) public returns (bool) {

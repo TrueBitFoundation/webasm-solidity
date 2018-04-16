@@ -67,30 +67,6 @@ function replyPhases(id, idx1, arr) {
     })
 }
 
-function submitErrorProof(id, idx1, phase) {
-    // Now we are checking the intermediate states
-    common.getStep(idx1, verifier, function (obj) {
-        var proof = obj[phase_table[phase]]
-        var merkle = proof.location || []
-        var merkle2 = []
-        if (proof.merkle) {
-            merkle = proof.merkle.list || proof.merkle.list1 || []
-            merkle2 = proof.merkle.list2 || []
-        }
-        var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
-        if (phase == 5 || phase == 1) m = proof
-        if (typeof proof.vm != "object") vm = { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
-                               globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
-                               pc:0, stack_ptr:0, call_ptr:0, memsize:0}
-        else vm = proof.vm
-        iactive.methods.callErrorJudge(id, idx1, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                           common.getRoots(vm), common.getPointers(vm)).send(send_opt, function (err, res) {
-            if (err) logger.error(err)
-            else status("Judging error " + res)
-        })
-    })
-}
-
 function replyReported(id, idx1, idx2, otherhash) {
     var place = Math.floor((idx2-idx1)/2 + idx1)
     logger.info("place", place, "steps", steps)
@@ -110,16 +86,6 @@ function replyReported(id, idx1, idx2, otherhash) {
     })
 }
 
-function postErrorPhases(id, idx1) {
-    // Now we are sending the intermediate states
-    getStep(idx1, verifier, function (obj) {
-        iactive.methods.postErrorPhases(id, idx1, obj.states).send(send_opt, function (err,tx) {
-            if (err) logger.error(err)
-            else status("Posted error phases " + tx)
-        })
-    })
-}
-
 if (!common.config.events_disabled) {
     iactive.events.Reported(function (err,ev) {
         if (err) return logger.error(err)
@@ -129,28 +95,12 @@ if (!common.config.events_disabled) {
         replyReported(args.id, parseInt(args.idx1), parseInt(args.idx2), args.arr[0])
     })
 
-    iactive.events.NeedErrorPhases(function (err,ev) {
-        if (err) return logger.error(err)
-        var args = ev.returnValues
-        if (challenge_id != args.id) return
-        logger.info("Query ", args)
-        postErrorPhases(args.id, parseInt(args.idx1))
-    })
-
     iactive.events.PostedPhases(function (err,ev) {
         if (err) return logger.error(err);
         var args = ev.returnValues
         if (challenge_id != args.id) return
         logger.info("Phases ", args)
         replyPhases(args.id, parseInt(args.idx1), args.arr)
-    })
-
-    iactive.events.SelectedErrorPhase(function (err,ev) {
-        if (err) return logger.error(err);
-        var args = ev.returnValues
-        if (challenge_id != args.id) return
-        logger.info("Prover selected error phase ", args)
-        submitErrorProof(args.id, parseInt(args.idx1), args.phase)
     })
 
     iactive.events.StartChallenge(function (err,ev) {
@@ -169,21 +119,6 @@ if (!common.config.events_disabled) {
             status("Got challenge id")
         })
     })
-
-    iactive.events.StartFinalityChallenge(function (err,ev) {
-        if (err) return logger.error(err)
-        var args = ev.returnValues
-        logger.info("Got finality challenge", args)
-        if (args.c.toLowerCase() != base) return
-        contract.methods.queryChallenge(args.uniq).call(function (err, id) {
-            if (err) return logger.error(err)
-            logger.info("Got task id %s", id)
-            var id = parseInt(id.toString())
-            if (task_id != id) return
-            challenge_id = args.uniq
-            status("Got challenge id")
-        })
-            })
 
     iactive.events.WinnerSelected(function (err,ev) {
         if (err) return logger.error(err)
@@ -216,32 +151,19 @@ async function checkChallenge(id) {
         logger.info("Winner %s", await iactive.methods.getWinner(id).call(send_opt))
     }
     else if (state == 3) {
-        // NeedErrorPhases
-    }
-    else if (state == 4) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Waiting for solver to post phases", idx)
     }
-    else if (state == 5) {
-        // PostedErrorPhases,
-    }
-    else if (state == 6) {
+    else if (state == 4) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         var phases = await iactive.methods.getResult(id).call(send_opt)
         logger.info("Posted phases, have to select the wrong one", idx)
         replyPhases(id, getPlace(idx), phases)
     }
-    else if (state == 7) {
-        // SelectedErrorPhase,
-    }
-    else if (state == 8) {
+    else if (state == 5) {
         var phase = await iactive.methods.getPhase(id).call(send_opt)
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Selected phase %s, waiting for solver", phase)
-    }
-    else if (state == 9) {
-        /* Special states for finality */
-        logger.info("This was a challenge for finality of the end state")
     }
 }
 

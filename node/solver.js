@@ -76,37 +76,6 @@ function replyChallenge(id, idx1, idx2) {
     })
 }
 
-function replyFinalityChallenge(id, idx1, idx2) {
-    // Now we are sending the intermediate states
-    common.getFinality(idx1, config, function (obj) {
-        iactive.methods.callFinalityJudge(id, idx1, obj.location,
-                           common.getRoots(obj.vm), common.getPointers(obj.vm)).send(send_opt, function (err, res) {
-            if (err) logger.error(err)
-            else status("Judging finality " + res)
-        })
-    })
-}
-
-function replyErrorPhases(id, idx1, arr) {
-    // Now we are checking the intermediate states
-    common.getErrorStep(idx1, config, function (obj) {
-        for (var i = 1; i < obj.states.length; i++) {
-            if (obj.states[i] != arr[i]) {
-                iactive.methods.selectErrorPhase(id, idx1, arr[i-1], i-1).send(send_opt, function (err,tx) {
-                    if (err) logger.error(err)
-                    else status("Selected wrong phase " + tx)
-                })
-                return
-            }
-        }
-        iactive.methods.selectErrorPhase(id, idx1, arr[i-1], i-1).send(send_opt, function (err,tx) {
-            if (err) logger.error(err)
-            else status("Selected wrong error phase " + tx)
-        })
-    })
-}
-
-
 function submitProof(id, idx1, phase) {
     // Now we are checking the intermediate states
     common.getStep(idx1, config, function (obj) {
@@ -195,42 +164,12 @@ if (!common.config.events_disabled) {
         })
     })
 
-    iactive.events.StartFinalityChallenge(function (err,ev) {
-        if (err) return logger.error(err);
-        var args = ev.returnValues
-        if (args.p.toLowerCase() != base) return
-        logger.info("Got finality challenge", args)
-        contract.methods.queryChallenge(args.uniq).call(function (err, id) {
-            if (err) return logger.error(err)
-            logger.info("Got task id ", id)
-            var id = parseInt(id)
-            if (task_id != id) return
-            logger.info("Challenge to us")
-            challenges[args.uniq] = {
-                prover: args.p,
-                task: id,
-                challenger: args.c,
-                init: args.s,
-                result: args.e,
-            }
-            replyFinalityChallenge(args.uniq, parseInt(args.step))
-        })
-    })
-
     iactive.events.Queried(function (err,ev) {
         if (err) return logger.error(err);
         var args = ev.returnValues
         if (!myId(ev)) return
         logger.info("Query ", args)
         replyChallenge(args.id, parseInt(args.idx1), parseInt(args.idx2))
-    })
-
-    iactive.events.PostedErrorPhases(function (err,ev) {
-        if (err) return logger.error(err);
-        var args = ev.returnValues
-        if (!myId(ev)) return
-        logger.info("Error phases ", args)
-        replyErrorPhases(args.id, parseInt(args.idx1), args.arr)
     })
 
     iactive.events.SelectedPhase(function (err,ev) {
@@ -289,31 +228,18 @@ async function checkChallenge(id) {
         logger.info("Winner %s", await iactive.methods.getWinner(id).call(send_opt))
     }
     else if (state == 3) {
-        // NeedErrorPhases
-    }
-    else if (state == 4) {
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Need phases for state", idx)
         replyChallenge(id, parseInt(idx.idx1), parseInt(idx.idx2))
     }
-    else if (state == 5) {
-        // PostedErrorPhases,
-    }
-    else if (state == 6) {
+    else if (state == 4) {
         logger.info("Posted phases, waiting for challenger", await iactive.methods.getIndices(id).call(send_opt))
     }
-    else if (state == 7) {
-        // SelectedErrorPhase,
-    }
-    else if (state == 8) {
+    else if (state == 5) {
         var phase = await iactive.methods.getPhase(id).call(send_opt)
         var idx = await iactive.methods.getIndices(id).call(send_opt)
         logger.info("Selected phase %s", phase)
         submitProof(id, getPlace(idx), phase)
-    }
-    else if (state == 9) {
-        /* Special states for finality */
-        logger.info("This was a challenge for finality of the end state")
     }
 }
 
@@ -374,7 +300,6 @@ async function uploadOutputs() {
 
 function doFinalization(cont) {
     contract.methods.finalizeTask(task_id).send(send_opt, cont)
-
 }
 
 async function forceTimeout() {
@@ -418,12 +343,6 @@ async function runSolver() {
     common.getStorage(config, function () {
         solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
     })
-    /*
-    common.getFile(config.filehash, config.code_storage, function (filestr) {
-        common.getAndEnsureInputFile(config, config.inputhash, config.inputfile, filestr, task_id, function (input) {
-            solveTask({giver: config.giver, hash: config.hash, file:filestr, filehash:config.filehash, id:task_id, input:input.data, inputhash:input.name}, config)
-        })
-    })*/
 }
 
 runSolver()

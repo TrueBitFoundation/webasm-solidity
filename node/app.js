@@ -185,13 +185,6 @@ iactive.events.Reported("latest", function (err,ev) {
     io.emit("event", {message:"Reported intermediate state", uniq:args.id, idx1:parseInt(args.idx1), idx2:parseInt(args.idx2), hash:args.arr[0]})
 })
 
-iactive.events.NeedErrorPhases("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Query ", args)
-    io.emit("event", {message: "Query for error phases", uniq:args.id, idx1:parseInt(args.idx1)})
-})
-
 iactive.events.PostedPhases("latest", function (err,ev) {
     if (err) return logger.error(err)
     var args = ev.returnValues
@@ -199,13 +192,6 @@ iactive.events.PostedPhases("latest", function (err,ev) {
     io.emit("event", {message:"Posted phases", uniq:args.id, idx1:parseInt(args.idx1), phases:args.arr})
 })
 
-
-iactive.events.SelectedErrorPhase("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Prover selected error phase", args)
-    io.emit("event", {message: "Prover selected error phase", uniq:args.id, idx1:parseInt(args.idx1), phase:parseInt(args.phase)})
-})
 
 /// solver events
 
@@ -224,32 +210,11 @@ iactive.events.StartChallenge("latest", function (err,ev) {
         })
 })
 
-iactive.events.StartFinalityChallenge("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Got finality challenge", args)
-    io.emit("event", {
-        message:"Challenging finality",
-            prover: args.p,
-            challenger: args.c,
-            uniq: args.uniq,
-            init: args.s,
-            result: args.e,
-        })
-})
-
 iactive.events.Queried("latest", function (err,ev) {
     if (err) return logger.error(err)
     var args = ev.returnValues
     logger.info("Query ", args)
     io.emit("event", {message: "Query", uniq:args.id, idx1:parseInt(args.idx1), idx2:parseInt(args.idx2)})
-})
-
-iactive.events.PostedErrorPhases("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Error phases ", args)
-    io.emit("event", {message: "Error phases", uniq:args.id, idx1:parseInt(args.idx1), phases:args.arr})
 })
 
 iactive.events.SelectedPhase("latest", function (err,ev) {
