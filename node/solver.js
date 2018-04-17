@@ -33,13 +33,9 @@ function solveTask(obj, config) {
             logger.info("Expected %s, got %s", obj.hash, inithash)
             status("Initial hash was wrong, exiting.")
             return
-            // process.exit(0)
         }
 
         common.taskResult(config, function (res) {
-            steps = res.steps
-            // config.output_files = res.files
-            // contract.methods.solve(obj.id, res.hash).send(send_opt, function (err, tr) {
             contract.methods.solveIO(obj.id, res.vm.code, res.vm.input_size, res.vm.input_name, res.vm.input_data).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
@@ -59,9 +55,7 @@ function replyChallenge(id, idx1, idx2) {
         common.getStep(idx1, config, function (obj) {
             iactive.methods.postPhases(id, idx1, obj.states).send(send_opt, function (err,tx) {
                 if (err) logger.error(err)
-                else {
-                    status("Posted phases " + tx)
-                }
+                else status("Posted phases " + tx)
             })
         })
         return
@@ -69,9 +63,7 @@ function replyChallenge(id, idx1, idx2) {
     common.getLocation(place, config, function (hash) {
         iactive.methods.report(id, idx1, idx2, [hash]).send(send_opt, function (err,tx) {
             if (err) logger.error(err)
-            else {
-                status("Replied place " + place + " for challenge " + tx)
-            }
+            else status("Replied place " + place + " for challenge " + tx)
         })
     })
 }
@@ -125,7 +117,7 @@ async function initChallenge(id) {
     var obj1 = JSON.parse(stdout1)
     var stdout2 = await common.exec(config, ["-m", "-output"])
     var obj2 = JSON.parse(stdout2)
-    var steps = obj2.steps
+    steps = obj2.steps
     logger.info("Going to init", {id:id, r1:common.getRoots(obj1.vm), p1:common.getPointers(obj1.vm), steps:steps,
                                 r2:common.getRoots(obj2.vm), p2:common.getPointers(obj2.vm)})
     iactive.methods.initialize(id, common.getRoots(obj1.vm), common.getPointers(obj1.vm), steps,

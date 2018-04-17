@@ -37,11 +37,14 @@ function verifyTask(obj, actor) {
             return
         }
         common.taskResult(actor, function (res) {
-            steps = res.steps
+            // steps = res.steps
             if (res.hash != obj.hash) {
-                logger.info("Result mismatch")
-                contract.methods.challenge(obj.id).send(send_opt, function (err, tx) {
-                    if (!err) status("Result mismatch, challenge initiated " + tx + " at task " + obj.id)
+                common.taskResultVM(actor, function (res) {
+                    logger.info("Result mismatch")
+                    steps = res.steps
+                    contract.methods.challenge(obj.id).send(send_opt, function (err, tx) {
+                        if (!err) status("Result mismatch, challenge initiated " + tx + " at task " + obj.id)
+                    })
                 })
             }
             else {

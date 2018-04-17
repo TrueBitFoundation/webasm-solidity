@@ -44,10 +44,6 @@ var module
 
 var system = 0
 
-var info = JSON.parse(fs.readFileSync("globals.json"))
-
-var DYNAMICTOP_PTR = info.env.DYNAMICTOP_PTR
-
 var HEAP32, HEAP8
 
 function _sbrk(increment) {
@@ -58,9 +54,9 @@ function _sbrk(increment) {
       var newDynamicTop = 0;
       var totalMemory = 0;
     
-    console.log(DYNAMICTOP_PTR, HEAP32[DYNAMICTOP_PTR>>2])
+    console.log(module.DYNAMICTOP_PTR, HEAP32[module.DYNAMICTOP_PTR>>2])
     
-      oldDynamicTop = HEAP32[DYNAMICTOP_PTR>>2]|0;
+      oldDynamicTop = HEAP32[module.DYNAMICTOP_PTR>>2]|0;
       newDynamicTop = oldDynamicTop + increment | 0;
 /*
       if (((increment|0) > 0 & (newDynamicTop|0) < (oldDynamicTop|0)) // Detect and fail if we would wrap around signed 32-bit int.
@@ -70,7 +66,7 @@ function _sbrk(increment) {
         return -1;
       }
 */
-      HEAP32[DYNAMICTOP_PTR>>2] = newDynamicTop;
+      HEAP32[module.DYNAMICTOP_PTR>>2] = newDynamicTop;
     /*
       totalMemory = getTotalMemory()|0;
       if ((newDynamicTop|0) > (totalMemory|0)) {
@@ -232,5 +228,7 @@ process.argv.slice(2).forEach(loadFile)
 
 loadedFiles()
 
-run(fs.readFileSync("globals.wasm"), ["/home/truebit/program.wasm"])
+console.log(process.cwd())
+
+run(fs.readFileSync("task.wasm"), ["/home/truebit/program.wasm"])
 

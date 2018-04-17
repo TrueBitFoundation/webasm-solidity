@@ -189,6 +189,23 @@ function ensureOutputFile(config, cont) {
 exports.ensureOutputFile = ensureOutputFile
 
 function taskResult(config, cont) {
+    if (config.actor.stop_early < 0 && !config.actor.error && config.code_type != CodeType.WAST) {
+        execFile("node", ["../env.js"].concat(config.files), {cwd:dir}, function (error, stdout, stderr) {
+            logger.info("solving with JIT", {stdout:stdout, stderr:stderr, dir:dir})
+            var args = buildArgs(["-m", "-input", "-input2"], config)
+            execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
+                if (error) return logger.error('stderr %s', stderr)
+                logger.info('solved task %s', stdout)
+                cont(JSON.parse(stdout))
+            })
+        })
+    }
+    else taskResultVM(config, cont)
+}
+
+exports.taskResult = taskResult
+
+function taskResultVM(config, cont) {
     if (config.actor.stop_early < 0) {
         var args = buildArgs(["-m", "-output"], config)
         execFile(wasm_path, args, {cwd:dir}, function (error, stdout, stderr) {
@@ -207,7 +224,7 @@ function taskResult(config, cont) {
     }
 }
 
-exports.taskResult = taskResult
+exports.taskResultVM = taskResultVM
 
 function uploadIPFS(fname) {
     return new Promise(function (cont,err) {
