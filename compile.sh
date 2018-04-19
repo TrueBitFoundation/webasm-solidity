@@ -20,4 +20,5 @@ solc --abi --optimize --overwrite --bin -o compiled judge.sol
 # solc --abi --optimize --overwrite --bin -o compiled parallel.sol
 solc --abi --optimize --overwrite --bin -o compiled merkle.sol
 solc --abi --optimize --overwrite --bin -o compiled stake.sol
+solc --abi --optimize --overwrite --bin -o compiled dispute.sol
 

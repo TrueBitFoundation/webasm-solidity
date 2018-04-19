@@ -43,6 +43,7 @@ contract Judge is CommonOnchain {
             require(m.vm == res[q]);
         }
         else {
+           require(hashVM() == m.vm);
            state = res[q];
            require(state == hashMachine());
         }
