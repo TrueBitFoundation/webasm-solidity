@@ -21,8 +21,8 @@ if (process.env.NODE_ENV !== 'production') {
   }))
 }
 
-var solver_conf = { error: false, error_location: 0, stop_early: -1 }
-var verifier_conf = { error: false, error_location: 0, check_own: true, stop_early: -1 }
+var solver_conf = { error: false, error_location: 0, stop_early: -1, deposit: 1 }
+var verifier_conf = { error: false, error_location: 0, check_own: true, stop_early: -1, deposit: 1 }
 
 var enabled = true
 
@@ -35,6 +35,7 @@ io.on("connection", function(socket) {
     socket.on("request-ui", function (str) {
         socket.join("ui")
         logger.info("Got user interface")
+        update()
     })
     socket.on("make_deposit", function () {
         common.contract.methods.makeDeposit().send({from:common.config.base, gas: 4000000, gasPrice:"21000000000", value: "10000000000000000000"})
@@ -91,6 +92,7 @@ var handled_solutions = {}
 function startSolver(args) {
     logger.info("posted", args)
     if (!enabled) return logger.info("System disabled, ignoring")
+    if (common.web3.utils.fromWei(args.deposit, "ether") > solver_conf.deposit) return logger.info("Deposit too large, do not verify")
     var id = args.id.toString()
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
@@ -126,6 +128,7 @@ async function pollTasks() {
 
 function startVerifier(args) {
     logger.info("solved", args)
+    if (common.web3.utils.fromWei(args.deposit, "ether") > verifier_conf.deposit) return logger.info("Deposit too large, do not verify")
     if (parseInt(args.solver) == 0) return logger.info("Task has not been solved yet")
     if (handled_solutions[args.id]) return
     handled_solutions[args.id] = true

@@ -29,7 +29,7 @@ interface FilesystemI {
 
 contract Tasks is DepositsManager {
 
-    uint constant DEPOSIT = 1 ether;
+    uint constant DEPOSIT = 0.1 ether;
     uint constant TIMEOUT = 10;
 
     enum CodeType {
@@ -43,8 +43,8 @@ contract Tasks is DepositsManager {
         BLOCKCHAIN
     }
 
-    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id);
-    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
+    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
+    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
     event Finalized(uint id);
 
     InteractiveI iactive;
@@ -135,7 +135,7 @@ contract Tasks is DepositsManager {
         t.code_type = ct;
         t.storage_type = cs;
         defaultParameters(id);
-        Posted(msg.sender, init, ct, cs, stor, id);
+        Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
@@ -160,7 +160,7 @@ contract Tasks is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        Posted(msg.sender, init, ct, cs, stor, id);
+        Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
@@ -220,7 +220,7 @@ contract Tasks is DepositsManager {
         t2.result = keccak256(code, size, name, data);
         t.state = 1;
         t2.blocked = block.number + TIMEOUT;
-        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
         subDeposit(msg.sender, DEPOSIT);
     }
 
