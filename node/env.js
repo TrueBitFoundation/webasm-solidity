@@ -202,7 +202,12 @@ async function run(binary, args) {
     console.log("initializing")
     if (e._initSystem) e._initSystem()
     if (e.__GLOBAL__I_000101) e.__GLOBAL__I_000101()
-    if (e.__GLOBAL__sub_I_iostream_cpp) e.__GLOBAL__sub_I_iostream_cpp()
+    for (name in e) {
+        if (name.substr(0, 15) == "__GLOBAL__sub_I" || name.substr(0, 22) == "___cxx_global_var_init") {
+            e[name]()
+        }
+    }
+    // if (e.__GLOBAL__sub_I_iostream_cpp) e.__GLOBAL__sub_I_iostream_cpp()
     var argv = allocArgs(m, args)
     
     console.log("calling main")
