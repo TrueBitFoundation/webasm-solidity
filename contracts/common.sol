@@ -50,11 +50,19 @@ contract REPLACEME, ALU {
         else if (hint == 4) res = getMemsize();
         // Add special cases for input data, input name
         else if (hint == 0x14) {
-            if (getReg2() >= 1024 || !checkInputNameAccess(getReg2(), getReg1())) fin4l = true;
+            if (getReg2() >= 1024) fin4l = true;
+            else if (!checkInputNameAccess(getReg2(), getReg1())) {
+                fin4l = true;
+                getInputName(getReg2(), 0);
+            }
             else res = getInputName(getReg2(), getReg1());
         }
         else if (hint == 0x15) {
-            if (getReg2() >= 1024 || !checkInputDataAccess(getReg2(), getReg1())) fin4l = true;
+            if (getReg2() >= 1024) fin4l = true;
+            else if (!checkInputDataAccess(getReg2(), getReg1())) {
+                fin4l = true;
+                getInputData(getReg2(), 0);
+            }
             else res = getInputData(getReg2(), getReg1());
         }
         else {
@@ -64,6 +72,18 @@ contract REPLACEME, ALU {
                 setPC(FINAL_STATE);
                 res = 0;
                 fin4l = true;
+                if (hint == 5) res = getGlobal(0);
+                else if (hint == 6) res = getStack(0);
+                else if (hint == 7) res = getStack(0);
+                else if (hint == 8) res = getStack(0);
+                else if (hint == 9) res = getStack(0);
+                else if (hint == 14) res = getCallStack(0);
+                else if (hint == 15) res = getMemory(0);
+                else if (hint == 16) res = getCallTable(0);
+                else if (hint == 17) res = getMemory(0);
+                else if (hint == 18) res = getCallTypes(0);
+                else if (hint == 19) res = getInputSize(0);
+                else if (hint == 0x16) res = getStack(0);
           }
           else if (hint == 5) res = getGlobal(loc);
           else if (hint == 6) res = getStack(loc);
@@ -158,7 +178,10 @@ contract REPLACEME, ALU {
         if (hint == 0x0b) {
             r1 = getReg1();
             if (r1 >= 1024) setPC(FINAL_STATE);
-            else if (!checkInputNameAccess(r1, getReg2())) setPC(FINAL_STATE);
+            else if (!checkInputNameAccess(r1, getReg2())) {
+                setPC(FINAL_STATE);
+                getInputName(r1, 0);
+            }
             else setInputName(r1, getReg2(), v);
         }
         else if (hint == 0x0c) {
@@ -169,7 +192,10 @@ contract REPLACEME, ALU {
         else if (hint == 0x0d) {
             r1 = getReg1();
             if (r1 >= 1024) setPC(FINAL_STATE);
-            else if (!checkInputDataAccess(r1, getReg2())) setPC(FINAL_STATE);
+            else if (!checkInputDataAccess(r1, getReg2())) {
+                setPC(FINAL_STATE);
+                getInputData(r1, 0);
+            }
             else setInputData(r1, getReg2(), v);
         }
         else if (hint == 0x10) setStackSize(v);
@@ -180,7 +206,20 @@ contract REPLACEME, ALU {
         else if (hint == 0x15) setMemorySize(v);
         else {
           uint loc = writePosition(hint);
-          if (!checkWriteAccess(loc, hint)) setPC(FINAL_STATE);
+          if (!checkWriteAccess(loc, hint)) {
+              setPC(FINAL_STATE);
+              if (hint & 0xc0 == 0x80) getMemory(0);
+              else if (hint & 0xc0 == 0xc0) getMemory(0);
+              else if (hint == 2) getStack(0);
+              else if (hint == 3) getStack(0);
+              else if (hint == 4) getStack(0);
+              else if (hint == 6) getCallStack(0);
+              else if (hint == 8) getGlobal(0);
+              else if (hint == 9) getStack(0);
+              else if (hint == 0x0a) getInputSize(0);
+              else if (hint == 0x0e) getCallTable(0);
+              else if (hint == 0x0f) getCallTypes(0);
+          }
           else if (hint & 0xc0 == 0x80) makeMemChange1(loc, v, hint);
           else if (hint & 0xc0 == 0xc0) makeMemChange2(loc, v, hint);
           else if (hint == 2) setStack(loc, v);

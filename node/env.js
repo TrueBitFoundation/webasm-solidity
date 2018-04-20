@@ -209,7 +209,7 @@ async function run(binary, args) {
     }
     // if (e.__GLOBAL__sub_I_iostream_cpp) e.__GLOBAL__sub_I_iostream_cpp()
     var argv = allocArgs(m, args)
-    
+
     console.log("calling main")
 
     e._main(args.length, argv)
