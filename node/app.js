@@ -92,7 +92,7 @@ var handled_solutions = {}
 function startSolver(args) {
     logger.info("posted", args)
     if (!enabled) return logger.info("System disabled, ignoring")
-    if (common.web3.utils.fromWei(args.deposit, "ether") > solver_conf.deposit) return logger.info("Deposit too large, do not verify")
+    if (common.web3.utils.fromWei(args.deposit, "ether") > solver_conf.deposit) return logger.info("Deposit too large, do not solve")
     var id = args.id.toString()
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)

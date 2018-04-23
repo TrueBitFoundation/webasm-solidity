@@ -46,8 +46,8 @@ contract TasksResubmit is DepositsManager {
         BLOCKCHAIN
     }
 
-    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id);
-    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
+    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
+    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
     event Finalized(uint id);
 
     InteractiveI iactive;
@@ -141,7 +141,7 @@ contract TasksResubmit is DepositsManager {
         t.deposit = 1;
 
         defaultParameters(id);
-        emit Posted(msg.sender, init, ct, cs, stor, id);
+        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
@@ -168,7 +168,7 @@ contract TasksResubmit is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        emit Posted(msg.sender, init, ct, cs, stor, id);
+        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
@@ -194,7 +194,7 @@ contract TasksResubmit is DepositsManager {
         io_roots[id] = io_roots[old_id];
         
         t = tasks[id];
-        emit Posted(t.giver, t.init, t.code_type, t.storage_type, t.stor, id);
+        emit Posted(t.giver, t.init, t.code_type, t.storage_type, t.stor, id, tasks[id].deposit*DEPOSIT);
         
         return id;
     }
@@ -255,7 +255,7 @@ contract TasksResubmit is DepositsManager {
         t2.result = keccak256(code, size, name, data);
         t.state = 1;
         t2.blocked = block.number + 10;
-        emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, t.deposit);
         subDeposit(msg.sender, DEPOSIT*t.deposit);
     }
 
