@@ -4,6 +4,7 @@ import "./DepositsManager.sol";
 
 interface InteractiveI {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
+    function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
     
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
@@ -14,12 +15,14 @@ interface InteractiveI {
     // Check if a task is blocked, returns the block when it can be accepted
     function blockedTime(uint id) public returns (uint);
     function getChallenger(bytes32 id) public returns (address);
+    function getProver(bytes32 id) public returns (address);
     function getTask(bytes32 id) public view returns (uint);
     function deleteChallenge(bytes32 id) public;
 }
 
 interface Callback {
     function solved(uint id, bytes32[] files) public;
+    function rejected(uint id) public;
 }
 
 interface FilesystemI {
@@ -27,10 +30,11 @@ interface FilesystemI {
   function getNameHash(bytes32 id) public view returns (bytes32);
 }
 
-contract Tasks is DepositsManager {
+contract TasksResubmit is DepositsManager {
 
     uint constant DEPOSIT = 0.1 ether;
-    uint constant TIMEOUT = 10;
+    uint constant DEPOSIT_PART = 0.01 ether;
+    uint constant LIMIT = 20;
 
     enum CodeType {
         WAST,
@@ -43,14 +47,14 @@ contract Tasks is DepositsManager {
         BLOCKCHAIN
     }
 
-    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
-    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
+    event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id);
+    event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver);
     event Finalized(uint id);
 
     InteractiveI iactive;
     FilesystemI fs;
 
-    function Tasks(address contr, address fs_addr) public {
+    function TasksResubmit(address contr, address fs_addr) public {
         iactive = InteractiveI(contr);
         fs = FilesystemI(fs_addr);
     }
@@ -58,7 +62,7 @@ contract Tasks is DepositsManager {
     function getInteractive() public view returns (address) {
         return address(iactive);
     }
-
+    
     struct RequiredFile {
        bytes32 name_hash;
        Storage file_storage;
@@ -84,13 +88,11 @@ contract Tasks is DepositsManager {
     struct Task2 {
         address solver;
         bytes32 result;
-        
-        bytes32 output_file;
-        
+
         bool good; // has the file been loaded
         uint blocked; // how long we have to wait to accept solution
-        
-        bytes32[] challenges;
+
+        bytes32 challenge;
     }
 
     struct Task {
@@ -102,6 +104,8 @@ contract Tasks is DepositsManager {
         Storage storage_type;
         
         uint state;
+        uint task_id;
+        uint deposit;
     }
 
     Task[] public tasks;
@@ -134,8 +138,11 @@ contract Tasks is DepositsManager {
         t2.good = true;
         t.code_type = ct;
         t.storage_type = cs;
+        t.task_id = id;
+        t.deposit = 1;
+
         defaultParameters(id);
-        Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        Posted(msg.sender, init, ct, cs, stor, id);
         return id;
     }
 
@@ -153,6 +160,8 @@ contract Tasks is DepositsManager {
         t2.good = true;
         t.code_type = ct;
         t.storage_type = cs;
+        t.task_id = id;
+        t.deposit = 1;
         
         VMParameters storage param = params[id];
         param.stack_size = stack;
@@ -160,7 +169,34 @@ contract Tasks is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        Posted(msg.sender, init, ct, cs, stor, id);
+        return id;
+    }
+
+    function resubmit(uint old_id) internal returns (uint) {
+        uint id = tasks.length;
+        Task storage t = tasks[old_id];
+
+        if (t.deposit > LIMIT) {
+            if (io_roots[old_id].uploads.length > 0) Callback(t.giver).rejected(t.task_id);
+            return;
+        }
+        
+        tasks.length++;
+        tasks2.length++;
+        params.length++;
+        io_roots.length++;
+        
+        tasks[id] = tasks[old_id];
+        tasks[id].deposit *= 2;
+        // tasks2[id] = tasks2[old_id];
+        tasks2[id].good = true;
+        params[id] = params[old_id];
+        io_roots[id] = io_roots[old_id];
+        
+        t = tasks[id];
+        Posted(t.giver, t.init, t.code_type, t.storage_type, t.stor, id);
+        
         return id;
     }
 
@@ -198,7 +234,7 @@ contract Tasks is DepositsManager {
         table = param.table_size;
         call = param.call_size;
     }
-    
+
     function nextTask() public view returns (uint) {
         return tasks.length;
     }
@@ -210,7 +246,7 @@ contract Tasks is DepositsManager {
     function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
-        IO storage io = io_roots[id];
+        IO storage io = io_roots[t.task_id];
         require(t2.solver == 0 && t2.good);
         
         io.size = size;
@@ -219,9 +255,9 @@ contract Tasks is DepositsManager {
         t2.solver = msg.sender;
         t2.result = keccak256(code, size, name, data);
         t.state = 1;
-        t2.blocked = block.number + TIMEOUT;
-        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
-        subDeposit(msg.sender, DEPOSIT);
+        t2.blocked = block.number + 10;
+        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        subDeposit(msg.sender, DEPOSIT*t.deposit);
     }
 
     function solutionInfo(uint unq) public view returns (uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver) {
@@ -244,11 +280,29 @@ contract Tasks is DepositsManager {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         // VMParameters storage p = params[id];
-        require(t.state == 1);
-        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, TIMEOUT);
+        require(t.state == 1 && t2.challenge == 0);
+        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, 10);
         challenges[uniq] = id;
-        t2.challenges.push(uniq);
-        subDeposit(msg.sender, DEPOSIT);
+        t2.challenge = uniq;
+        
+        subDeposit(msg.sender, DEPOSIT*t.deposit);
+        addDeposit(t.giver, DEPOSIT_PART*t.deposit); // rewarding task giver for delay
+        addDeposit(t2.solver, DEPOSIT_PART*t.deposit);
+        resubmit(id);
+    }
+
+    function challengeFinality(uint id) public {
+        Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require(t.state == 1 && t2.challenge == 0);
+        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, 10);
+        challenges[uniq] = id;
+        t2.challenge = uniq;
+        
+        subDeposit(msg.sender, DEPOSIT*t.deposit);
+        addDeposit(t.giver, DEPOSIT_PART*t.deposit); // rewarding task giver for delay
+        addDeposit(t2.solver, DEPOSIT_PART*t.deposit);
+        resubmit(id);
     }
 
     function queryChallenge(bytes32 uniq) constant public returns (uint) {
@@ -256,7 +310,15 @@ contract Tasks is DepositsManager {
     }
 
     function getChallenges(uint id) public view returns (bytes32[]) {
-        return tasks2[id].challenges;
+        bytes32 chal = tasks2[id].challenge;
+        bytes32[] memory res;
+        if (chal == 0) {
+            res = new bytes32[](0);
+            return res;
+        }
+        res = new bytes32[](1);
+        res[0] = chal;
+        return res;
     }
 
     function uploadFile(uint id, uint num, bytes32 file_id, bytes32[] name_proof, bytes32[] data_proof, uint file_num) public returns (bool) {
@@ -274,8 +336,7 @@ contract Tasks is DepositsManager {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         IO storage io = io_roots[id];
-        if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return false;
-        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
+        if (!(t.state == 1 && t2.blocked < block.number && t2.challenge == 0)) return false;
         t.state = 3;
         
         bytes32[] memory files = new bytes32[](io.uploads.length);
@@ -284,21 +345,32 @@ contract Tasks is DepositsManager {
            require(io.uploads[i].file_id != 0);
            files[i] = io.uploads[i].file_id;
         }
-        
-        if (files.length > 0) Callback(t.giver).solved(id, files);
+
+        if (files.length > 0) Callback(t.giver).solved(t.task_id, files);
         
         Finalized(id);
-        addDeposit(t2.solver, DEPOSIT);
+        addDeposit(t2.solver, DEPOSIT*t.deposit);
         
         return true;
     }
     
     function claimDeposit(bytes32 cid) public {
         uint id = iactive.getTask(cid);
+        Task storage t = tasks[id];
         require(iactive.isRejected(id));
         require(iactive.getChallenger(cid) == msg.sender);
         iactive.deleteChallenge(cid);
-        addDeposit(msg.sender, DEPOSIT);
+        addDeposit(msg.sender, (DEPOSIT+DEPOSIT_PART*2)*t.deposit);
+    }
+
+    function claimSolverDeposit(bytes32 cid) public {
+        uint id = iactive.getTask(cid);
+        Task storage t = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
+        require(iactive.getProver(cid) == msg.sender);
+        iactive.deleteChallenge(cid);
+        addDeposit(msg.sender, (DEPOSIT+DEPOSIT_PART)*t.deposit);
     }
 
     uint tick_var;
@@ -309,4 +381,6 @@ contract Tasks is DepositsManager {
     }
 
 }
+
+
 

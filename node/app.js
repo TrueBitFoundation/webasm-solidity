@@ -21,8 +21,8 @@ if (process.env.NODE_ENV !== 'production') {
   }))
 }
 
-var solver_conf = { error: false, error_location: 0, stop_early: -1 }
-var verifier_conf = { error: false, error_location: 0, check_own: true, stop_early: -1 }
+var solver_conf = { error: false, error_location: 0, stop_early: -1, deposit: 1 }
+var verifier_conf = { error: false, error_location: 0, check_own: true, stop_early: -1, deposit: 1 }
 
 var enabled = true
 
@@ -35,6 +35,7 @@ io.on("connection", function(socket) {
     socket.on("request-ui", function (str) {
         socket.join("ui")
         logger.info("Got user interface")
+        update()
     })
     socket.on("make_deposit", function () {
         common.contract.methods.makeDeposit().send({from:common.config.base, gas: 400000, gasPrice:"21000000000", value: "100000000000000000"})
@@ -91,6 +92,7 @@ var handled_solutions = {}
 function startSolver(args) {
     logger.info("posted", args)
     if (!enabled) return logger.info("System disabled, ignoring")
+    if (common.web3.utils.fromWei(args.deposit, "ether") > solver_conf.deposit) return logger.info("Deposit too large, do not verify")
     var id = args.id.toString()
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
@@ -126,6 +128,7 @@ async function pollTasks() {
 
 function startVerifier(args) {
     logger.info("solved", args)
+    if (common.web3.utils.fromWei(args.deposit, "ether") > verifier_conf.deposit) return logger.info("Deposit too large, do not verify")
     if (parseInt(args.solver) == 0) return logger.info("Task has not been solved yet")
     if (handled_solutions[args.id]) return
     handled_solutions[args.id] = true
@@ -185,13 +188,6 @@ iactive.events.Reported("latest", function (err,ev) {
     io.emit("event", {message:"Reported intermediate state", uniq:args.id, idx1:parseInt(args.idx1), idx2:parseInt(args.idx2), hash:args.arr[0]})
 })
 
-iactive.events.NeedErrorPhases("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Query ", args)
-    io.emit("event", {message: "Query for error phases", uniq:args.id, idx1:parseInt(args.idx1)})
-})
-
 iactive.events.PostedPhases("latest", function (err,ev) {
     if (err) return logger.error(err)
     var args = ev.returnValues
@@ -199,13 +195,6 @@ iactive.events.PostedPhases("latest", function (err,ev) {
     io.emit("event", {message:"Posted phases", uniq:args.id, idx1:parseInt(args.idx1), phases:args.arr})
 })
 
-
-iactive.events.SelectedErrorPhase("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Prover selected error phase", args)
-    io.emit("event", {message: "Prover selected error phase", uniq:args.id, idx1:parseInt(args.idx1), phase:parseInt(args.phase)})
-})
 
 /// solver events
 
@@ -224,32 +213,11 @@ iactive.events.StartChallenge("latest", function (err,ev) {
         })
 })
 
-iactive.events.StartFinalityChallenge("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Got finality challenge", args)
-    io.emit("event", {
-        message:"Challenging finality",
-            prover: args.p,
-            challenger: args.c,
-            uniq: args.uniq,
-            init: args.s,
-            result: args.e,
-        })
-})
-
 iactive.events.Queried("latest", function (err,ev) {
     if (err) return logger.error(err)
     var args = ev.returnValues
     logger.info("Query ", args)
     io.emit("event", {message: "Query", uniq:args.id, idx1:parseInt(args.idx1), idx2:parseInt(args.idx2)})
-})
-
-iactive.events.PostedErrorPhases("latest", function (err,ev) {
-    if (err) return logger.error(err)
-    var args = ev.returnValues
-    logger.info("Error phases ", args)
-    io.emit("event", {message: "Error phases", uniq:args.id, idx1:parseInt(args.idx1), phases:args.arr})
 })
 
 iactive.events.SelectedPhase("latest", function (err,ev) {
@@ -288,7 +256,7 @@ async function update() {
     var balance = await common.web3.eth.getBalance(common.config.base)
     var deposit = await common.contract.methods.getDeposit(common.config.base).call()
     var obj = {block:block, address:common.config.base, balance: common.web3.utils.fromWei(balance, "ether"), deposit: common.web3.utils.fromWei(deposit, "ether")}
-    logger.info("Info to ui", obj)
+    // logger.info("Info to ui", obj)
     io.emit("info", obj)
     if (common.config.poll) {
         pollTasks()
@@ -303,7 +271,7 @@ function tick() {
 }
 
 if (common.config.tick) setInterval(tick, common.config.timeout)
-setInterval(update, 10000)
+setInterval(update, 1000)
 
 http.listen(22448, function(){
     logger.info("listening on *:22448")

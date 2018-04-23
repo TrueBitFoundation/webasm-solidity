@@ -40,6 +40,22 @@ contract Offchain {
     
     uint debug;
     
+    function checkReadAccess(uint /* loc */, uint /* hint */) internal pure returns (bool) {
+        return true;
+    }
+    
+    function checkWriteAccess(uint /* loc */, uint /* hint */) internal pure returns (bool) {
+        return true;
+    }
+    
+    function checkInputDataAccess(uint /* loc */, uint /* hint */) internal pure returns (bool) {
+        return true;
+    }
+    
+    function checkInputNameAccess(uint /* loc */, uint /* hint */) internal pure returns (bool) {
+        return true;
+    }
+    
     // TODO: these should be cleared first
     function setStackSize(uint sz) internal {
         vm_r.stack.length = 0;

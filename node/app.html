@@ -119,6 +119,7 @@
     </table>
 
 <button onclick="makeDeposit();">Make deposit</button>
+<input type="checkbox" checked class="error" id="enabled">Enable system
 
 <h1>Post tasks</h1>
 
@@ -156,11 +157,11 @@
     
 <h1>Solvers</h1>
 
-<input type="checkbox" checked class="error" id="enabled">Enable system
-<p>
 <input type="checkbox" class="error" id="solver_error">Make an error at position <input type="number" id="solver_location"  class="error" value="100">
 <p>
 <input type="checkbox" class="error" id="solver_error_stop">Stop execution at position <input type="number" id="solver_stop"  class="error" value="100">
+<p>
+Maximum deposit for solver <input type="number" id="solver_deposit"  class="error" value="1" step="0.1">
 
     <div id="solvers"></div>
     
@@ -171,6 +172,8 @@
 <input type="checkbox" class="error" id="verifier_error">Make an error at position <input type="number" id="verifier_location"   class="error" value="100">
 <p>
 <input type="checkbox" class="error" id="verifier_error_stop">Stop execution at position <input type="number" id="verifier_stop"  class="error" value="100">
+<p>
+Maximum deposit for task <input type="number" id="verifier_deposit"  class="error" value="1" step="0.1">
 
     <div id="verifiers"></div>
     
@@ -294,10 +297,12 @@
         var e8 = document.querySelector("#verifier_error_stop")
         var e9 = document.querySelector("#verifier_stop")
         var e10 = document.querySelector("#enabled")
+        var e11 = document.querySelector("#solver_deposit")
+        var e12 = document.querySelector("#verifier_deposit")
         socket.emit("setup_error", {
             enabled: e10.checked,
-            solver: { error: e1.checked, error_location: e2.value, stop_early: e6.checked ? e7.value : -1 },
-            verifier: { error: e3.checked, error_location: e4.value, check_own: e5.value, stop_early: e8.checked ? e9.value : -1 },
+            solver: { error: e1.checked, error_location: e2.value, stop_early: e6.checked ? e7.value : -1, deposit: e11.value },
+            verifier: { error: e3.checked, error_location: e4.value, check_own: e5.value, stop_early: e8.checked ? e9.value : -1, deposit: e12.value },
             
         })
         console.log("changed configuration")
