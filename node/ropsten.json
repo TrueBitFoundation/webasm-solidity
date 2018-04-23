@@ -1,0 +1,4 @@
+{"judge":"0x47E9151F0dCad80275Aa8F744Aef27ef375933B1","interactive":"0x85136fbED8fb01155aF1EB8D9F39fA01B83c414d",
+"host":"ipc","base":"0x2668b80b80eab5ed3cbe2add3a90325f8a1bf4fb","tasks":"0x4b446F680A745Ce1e8b85c65bF2b325C0Ed409f5",
+"fs":"0xbFaA7B614D277C2B4A08F9E214806aF69d6CCc61","merkle":"0xf167d3bAB04c577eC9F2d139c5134924392a8761",
+"events_disabled":false,"poll":false,"timeout":5000,"tick":false,"interpreter_args":[],"ipc":"/home/sami/.ethereum/testnet/geth.ipc"}
