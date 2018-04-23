@@ -1,7 +1,7 @@
 pragma solidity ^0.4.16;
 
 interface Consumer {
-   function consume(bytes32 id, bytes32[] dta) public;
+   function consume(bytes32 id, bytes32[] dta) external;
 }
 
 /* Calculate a merkle tree in solidity */

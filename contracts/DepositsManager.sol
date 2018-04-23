@@ -22,7 +22,7 @@ contract DepositsManager {
     // @return – the user's updated deposit amount.
     function makeDeposit() public payable returns (uint) {
         deposits[msg.sender] += msg.value;
-        DepositMade(msg.sender, msg.value);
+        emit DepositMade(msg.sender, msg.value);
         return deposits[msg.sender];
     }
 
@@ -35,7 +35,7 @@ contract DepositsManager {
         deposits[msg.sender] -= amount;
         msg.sender.transfer(amount);
 
-        DepositWithdrawn(msg.sender, amount);
+        emit DepositWithdrawn(msg.sender, amount);
         return deposits[msg.sender];
     }
     

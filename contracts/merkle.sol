@@ -94,7 +94,7 @@ contract Merkle {
        t.initial_state = state;
        t.solver = solver;
        t.clock = block.number;
-       AddedObligation(id, state, solver);
+       emit AddedObligation(id, state, solver);
        return id;
     }
 

@@ -3,37 +3,36 @@ pragma solidity ^0.4.16;
 import "./DepositsManager.sol";
 
 interface InteractiveI {
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
-    function makeFinality(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 _steps, uint to) public returns (bytes32);
+    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) external returns (bytes32);
     
-    function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
-    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
-    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool);
+    function calcStateHash(bytes32[10] roots, uint[4] pointers) external returns (bytes32);
+    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) external returns (bool);
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) external returns (bool);
     
     // Check if a task has been rejected
-    function isRejected(uint id) public returns (bool);
+    function isRejected(uint id) external returns (bool);
     // Check if a task is blocked, returns the block when it can be accepted
-    function blockedTime(uint id) public returns (uint);
-    function getChallenger(bytes32 id) public returns (address);
-    function getProver(bytes32 id) public returns (address);
-    function getTask(bytes32 id) public view returns (uint);
-    function deleteChallenge(bytes32 id) public;
+    function blockedTime(uint id) external returns (uint);
+    function getChallenger(bytes32 id) external returns (address);
+    function getTask(bytes32 id) external view returns (uint);
+    function deleteChallenge(bytes32 id) external;
+    function getProver(bytes32 id) external returns (address);
 }
 
 interface Callback {
-    function solved(uint id, bytes32[] files) public;
-    function rejected(uint id) public;
+    function solved(uint id, bytes32[] files) external;
+    function rejected(uint id) external;
 }
 
 interface FilesystemI {
-  function getRoot(bytes32 id) public view returns (bytes32);
-  function getNameHash(bytes32 id) public view returns (bytes32);
+  function getRoot(bytes32 id) external view returns (bytes32);
+  function getNameHash(bytes32 id) external view returns (bytes32);
 }
 
 contract TasksResubmit is DepositsManager {
 
-    uint constant DEPOSIT = 0.1 ether;
-    uint constant DEPOSIT_PART = 0.01 ether;
+    uint constant DEPOSIT = 0.01 ether;
+    uint constant DEPOSIT_PART = 0.001 ether;
     uint constant LIMIT = 20;
 
     enum CodeType {
@@ -142,7 +141,7 @@ contract TasksResubmit is DepositsManager {
         t.deposit = 1;
 
         defaultParameters(id);
-        Posted(msg.sender, init, ct, cs, stor, id);
+        emit Posted(msg.sender, init, ct, cs, stor, id);
         return id;
     }
 
@@ -169,7 +168,7 @@ contract TasksResubmit is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        Posted(msg.sender, init, ct, cs, stor, id);
+        emit Posted(msg.sender, init, ct, cs, stor, id);
         return id;
     }
 
@@ -195,7 +194,7 @@ contract TasksResubmit is DepositsManager {
         io_roots[id] = io_roots[old_id];
         
         t = tasks[id];
-        Posted(t.giver, t.init, t.code_type, t.storage_type, t.stor, id);
+        emit Posted(t.giver, t.init, t.code_type, t.storage_type, t.stor, id);
         
         return id;
     }
@@ -256,7 +255,7 @@ contract TasksResubmit is DepositsManager {
         t2.result = keccak256(code, size, name, data);
         t.state = 1;
         t2.blocked = block.number + 10;
-        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
         subDeposit(msg.sender, DEPOSIT*t.deposit);
     }
 
@@ -282,20 +281,6 @@ contract TasksResubmit is DepositsManager {
         // VMParameters storage p = params[id];
         require(t.state == 1 && t2.challenge == 0);
         bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, 10);
-        challenges[uniq] = id;
-        t2.challenge = uniq;
-        
-        subDeposit(msg.sender, DEPOSIT*t.deposit);
-        addDeposit(t.giver, DEPOSIT_PART*t.deposit); // rewarding task giver for delay
-        addDeposit(t2.solver, DEPOSIT_PART*t.deposit);
-        resubmit(id);
-    }
-
-    function challengeFinality(uint id) public {
-        Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
-        require(t.state == 1 && t2.challenge == 0);
-        bytes32 uniq = iactive.makeFinality(id, t2.solver, msg.sender, t.init, t2.result, /* t2.steps */ 100, 10);
         challenges[uniq] = id;
         t2.challenge = uniq;
         
@@ -348,7 +333,7 @@ contract TasksResubmit is DepositsManager {
 
         if (files.length > 0) Callback(t.giver).solved(t.task_id, files);
         
-        Finalized(id);
+        emit Finalized(id);
         addDeposit(t2.solver, DEPOSIT*t.deposit);
         
         return true;
