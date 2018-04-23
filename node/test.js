@@ -50,6 +50,9 @@ function hex32(str) {
 
 function testPhase(contr, phase, send_opt) {
     var proof = test[phase_table[phase]]
+    if (phase == 5 || phase == 1) {
+        proof = {machine: proof, vm: test[phase_table[phase-1]].vm}
+    }
     var merkle = proof.location || []
     var merkle2 = []
     if (proof.merkle) {
@@ -62,8 +65,8 @@ function testPhase(contr, phase, send_opt) {
     // var merkle = (proof.merkle && proof.merkle.list) || proof.location || []
     // var loc = (proof.merkle && proof.merkle.location) || 0
     var m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
-    if (phase == 5 || phase == 1) m = proof
-    var vm 
+    // if (phase == 5 || phase == 1) m = proof
+    var vm
     if (typeof proof.vm != "object") vm = { code: "0x00", stack:"0x00", call_stack:"0x00", calltable:"0x00",
                                            globals : "0x00", memory:"0x00", calltypes:"0x00", input_size:"0x00", input_name:"0x00", input_data:"0x00",
                                            pc:0, stack_ptr:0, call_ptr:0, memsize:0}

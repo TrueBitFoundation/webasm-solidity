@@ -24,7 +24,7 @@ contract Onchain {
         uint call_ptr;
         uint memsize;
     }
-    
+
     struct Machine {
         bytes32 vm;
         bytes32 op;
@@ -32,16 +32,17 @@ contract Onchain {
         uint reg2;
         uint reg3;
         uint ireg;
+        bool exit;
     }
-    
+
     VM vm;
     Roots vm_r;
     Machine m;
     bytes32[] proof;
     bytes32[] proof2;
-    
+
     bytes32 state;
-    
+
     function setVM(bytes32[10] roots, uint[4] pointers) internal {
         vm_r.code = roots[0];
         vm_r.stack = roots[1];
@@ -110,6 +111,30 @@ contract Onchain {
         else proof[1] = bytes32(v);
     }
 
+    function checkWriteAccess(uint loc, uint /* hint */) internal view returns (bool) {
+        require(proof.length >= 2);
+        for (uint i = 2; i < proof.length; i++) {
+            loc = loc/2;
+        }
+        return loc < 2;
+    }
+    
+    function checkInputDataAccess(uint /* loc2 */, uint loc) internal view returns (bool) {
+        require(proof2.length >= 2);
+        for (uint i = 2; i < proof2.length; i++) {
+            loc = loc/2;
+        }
+        return loc < 2;
+    }
+
+    function checkReadAccess(uint loc, uint hint) internal view returns (bool) {
+        return checkWriteAccess(loc, hint);
+    }
+
+    function checkInputNameAccess(uint loc2, uint loc) internal view returns (bool) {
+        return checkInputDataAccess(loc2, loc);
+    }
+
     function getRoot(uint loc) internal view returns (bytes32) {
         require(proof.length >= 2);
         bytes32 res = keccak256(proof[0], proof[1]);
@@ -118,7 +143,7 @@ contract Onchain {
             if (loc%2 == 0) res = keccak256(res, proof[i]);
             else res = keccak256(proof[i], res);
         }
-        require(loc < 2);
+        require(loc < 2); // This should be runtime error, access over bounds
         return res;
     }
 
@@ -178,7 +203,7 @@ contract Onchain {
         require(proof2.length == 0);
         return getLeaf(loc);
     }
-    
+
     function getCallTable(uint loc) internal view returns (uint) {
         require(hashMachine() == state && hashVM() == m.vm);
         require(getRoot(loc) == vm_r.calltable);
