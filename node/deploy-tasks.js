@@ -41,7 +41,7 @@ async function createContract(name, args) {
 
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
-    send_opt = {gas:4700000, from:accts[0]}
+    send_opt = {gas:4700000, from:accts[0], gasPrice:"21000000000"}
     var judge = await createContract("Judge")
     var fs = await createContract("Filesystem")
     var iactive = await createContract("Interactive", [judge.options.address])
@@ -60,7 +60,7 @@ async function doDeploy() {
         resubmit: resubmit.options.address,
         fs: fs.options.address,
         merkle: merkle.options.address,
-        // events_disabled: true, poll: true,
+        ipfshost: "programming-progress.com",
         events_disabled: false, poll: false,
         timeout: 5000,
         tick: true,

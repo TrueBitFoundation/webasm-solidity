@@ -147,7 +147,6 @@ function startVerifier(args) {
         storage: args.stor,
         code_type: parseInt(args.ct),
         storage_type: parseInt(args.cs),
-        // steps: args.steps.toString(),
         actor: verifier_conf,
     }
     io.emit("event", obj)
