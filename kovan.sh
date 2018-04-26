@@ -1,15 +1,16 @@
 #!/bin/sh
 
 echo plort > supersecret.txt
-mkdir -p /root/.local/share/io.parity.ethereum/chains/kovan/
-if [ ! -f /root/.local/share/io.parity.ethereum/chains/kovan/myaddress ]
+mkdir -p ~/.local/share/io.parity.ethereum/chains/kovan/
+if [ ! -f ~/.local/share/io.parity.ethereum/chains/kovan/myaddress ]
 then
-  parity --chain kovan account new --password=supersecret.txt > /root/.local/share/io.parity.ethereum/chains/kovan/myaddress
+  parity --chain kovan account new --password=supersecret.txt > ~/.local/share/io.parity.ethereum/chains/kovan/myaddress
 fi
 
-service apache2 restart
+service apache2 start
+service mongodb start
 
-parity --chain kovan --unlock=`cat /root/.local/share/io.parity.ethereum/chains/kovan/myaddress` --password=supersecret.txt --ws-hosts=all --ws-origins=all &
+parity --chain kovan --unlock=`cat ~/.local/share/io.parity.ethereum/chains/kovan/myaddress` --password=supersecret.txt --ws-hosts=all --ws-origins=all &
 ipfs daemon &
 sleep 10
 

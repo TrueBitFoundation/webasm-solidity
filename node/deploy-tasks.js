@@ -17,7 +17,16 @@ var web3 = new Web3()
 
 var host = process.argv[2] || "localhost"
 
-web3.setProvider(new web3.providers.WebsocketProvider('ws://' + host + ':8546'))
+var provider
+
+if (host == "ipc") {
+    var net = require('net')
+    provider = new web3.providers.IpcProvider(process.argv[3], net)
+}
+else provider = new web3.providers.WebsocketProvider('ws://' + host + ':8546')
+
+web3.setProvider(provider)
+
 // web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
 
 var dir = "../contracts/compiled/"
@@ -32,7 +41,7 @@ async function createContract(name, args) {
 
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
-    send_opt = {gas:4700000, from:accts[0]}
+    send_opt = {gas:4700000, from:accts[0], gasPrice:"21000000000"}
     var judge = await createContract("Judge")
     var fs = await createContract("Filesystem")
     var iactive = await createContract("Interactive", [judge.options.address])
@@ -51,12 +60,13 @@ async function doDeploy() {
         resubmit: resubmit.options.address,
         fs: fs.options.address,
         merkle: merkle.options.address,
-        // events_disabled: true, poll: true,
+        ipfshost: "programming-progress.com",
         events_disabled: false, poll: false,
         timeout: 5000,
         tick: true,
         interpreter_args: [],
     }
+    if (host == "ipc") config.ipc = process.argv[3]
     console.log(JSON.stringify(config))
     process.exit(0)
 }

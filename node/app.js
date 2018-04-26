@@ -38,7 +38,7 @@ io.on("connection", function(socket) {
         update()
     })
     socket.on("make_deposit", function () {
-        common.contract.methods.makeDeposit().send({from:common.config.base, gas: 4000000, gasPrice:"21000000000", value: "10000000000000000000"})
+        common.contract.methods.makeDeposit().send({from:common.config.base, gas: 400000, gasPrice:"21000000000", value: "100000000000000000"})
     })
     socket.on("new_task", function (obj) {
         var path = "tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
@@ -92,7 +92,7 @@ var handled_solutions = {}
 function startSolver(args) {
     logger.info("posted", args)
     if (!enabled) return logger.info("System disabled, ignoring")
-    if (common.web3.utils.fromWei(args.deposit, "ether") > solver_conf.deposit) return logger.info("Deposit too large, do not verify")
+    if (common.web3.utils.fromWei(args.deposit, "ether") > solver_conf.deposit) return logger.info("Deposit too large, do not solve")
     var id = args.id.toString()
     var path = "tmp.solver_" + id
     if (!fs.existsSync(path)) fs.mkdirSync(path)
@@ -147,7 +147,6 @@ function startVerifier(args) {
         storage: args.stor,
         code_type: parseInt(args.ct),
         storage_type: parseInt(args.cs),
-        // steps: args.steps.toString(),
         actor: verifier_conf,
     }
     io.emit("event", obj)
