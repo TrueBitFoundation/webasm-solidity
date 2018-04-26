@@ -45,7 +45,7 @@ function giveTask(obj) {
             })
     })
     else ipfs.files.add([{content:task, path:"bundle/"+obj.code_file}, {content:input, path:"bundle/"+obj.input_file}], function (err, res) {
-            if (err) return logger.error("IPFS error", err)
+            if (err) return logger.error("IPFS error", {msg:err, res:res})
             logger.info("IPFS", res)
             // store into filesystem
             obj.files = [obj.inputfile]

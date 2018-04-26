@@ -1,0 +1,8 @@
+{"judge":"0x5E70d988e0C2d2D7f57e86A149075f4e57A4D3aE","interactive":"0x84bF6da564039BaEAed4E9FE70cA54D8460791d9",
+"host":"localhost",
+"ipfshost":"programming-progress.com",
+"base":"0x64c454631102a1ab7b76b341e7ef8931e2f8b672",
+"tasks-orig":"0x34Cc972ec28459d7BBEadCA78F92E479A57DCAe2",
+"tasks":"0x4BEF98E1EC6923B8be924601A663743bbAda68DF","fs":"0x7e7141bc92Fbf10fb7d51077f6FE6C60531B4A24","merkle":"0x54856D6aF1c126bbcFd2675B4c3836b90Aabee9C","events_disabled":false,"poll":false,
+"timeout":5000,"tick":false,"interpreter_args":[]}
+

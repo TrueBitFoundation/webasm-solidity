@@ -4,6 +4,7 @@ echo plort > supersecret.txt
 if [ ! -f myaddress ]
 then
   geth --rinkeby account new --password supersecret.txt
+  touch myaddress
 fi
 
 service apache2 restart

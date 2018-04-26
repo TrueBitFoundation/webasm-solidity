@@ -3,33 +3,35 @@ pragma solidity ^0.4.16;
 import "./DepositsManager.sol";
 
 interface InteractiveI {
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32);
+    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) external returns (bytes32);
     
-    function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
-    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
-    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool);
+    function calcStateHash(bytes32[10] roots, uint[4] pointers) external returns (bytes32);
+    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) external returns (bool);
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) external returns (bool);
     
     // Check if a task has been rejected
-    function isRejected(uint id) public returns (bool);
+    function isRejected(uint id) external returns (bool);
     // Check if a task is blocked, returns the block when it can be accepted
-    function blockedTime(uint id) public returns (uint);
-    function getChallenger(bytes32 id) public returns (address);
-    function getTask(bytes32 id) public view returns (uint);
-    function deleteChallenge(bytes32 id) public;
+    function blockedTime(uint id) external returns (uint);
+    function getChallenger(bytes32 id) external returns (address);
+    function getTask(bytes32 id) external view returns (uint);
+    function deleteChallenge(bytes32 id) external;
+    function getProver(bytes32 id) external returns (address);
 }
 
 interface Callback {
-    function solved(uint id, bytes32[] files) public;
+    function solved(uint id, bytes32[] files) external;
+    function rejected(uint id) external;
 }
 
 interface FilesystemI {
-  function getRoot(bytes32 id) public view returns (bytes32);
-  function getNameHash(bytes32 id) public view returns (bytes32);
+  function getRoot(bytes32 id) external view returns (bytes32);
+  function getNameHash(bytes32 id) external view returns (bytes32);
 }
 
 contract Tasks is DepositsManager {
 
-    uint constant DEPOSIT = 0.1 ether;
+    uint constant DEPOSIT = 0.01 ether;
     uint constant TIMEOUT = 10;
 
     enum CodeType {
@@ -135,7 +137,7 @@ contract Tasks is DepositsManager {
         t.code_type = ct;
         t.storage_type = cs;
         defaultParameters(id);
-        Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
@@ -160,7 +162,7 @@ contract Tasks is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
@@ -220,7 +222,7 @@ contract Tasks is DepositsManager {
         t2.result = keccak256(code, size, name, data);
         t.state = 1;
         t2.blocked = block.number + TIMEOUT;
-        Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
+        emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
         subDeposit(msg.sender, DEPOSIT);
     }
 
@@ -287,7 +289,7 @@ contract Tasks is DepositsManager {
         
         if (files.length > 0) Callback(t.giver).solved(id, files);
         
-        Finalized(id);
+        emit Finalized(id);
         addDeposit(t2.solver, DEPOSIT);
         
         return true;

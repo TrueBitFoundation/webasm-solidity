@@ -1,10 +1,5 @@
-{"judge":"0x207A5d7a7B404c54941b9B31fc9B308295d04199",
-"interactive":"0xc755155Fd515ccA8047CaD8c1E6314970D7d2362",
-"host":"localhost",
-"base":"0xfefd1cbc50782efd35e4805920483ae614678ffc",
-"tasks":"0xC6A6A2ca6395e387C8EF38D14A392F16aE9746D5",
-"get_code":"0x223574f3e4ED966ff54e47c36955E8eE73B36AaB",
-"events_disabled":false,
-"poll":false,
-"timeout":10000,
-"tick":false}
+{"judge":"0xF009104554f88a5A3EB1F3B39f082be07711290a","interactive":"0x72Ad4baE1e2BDeE3B7B9096AF035ED01301E185a","host":"ipc",
+"base":"0xbb4d965b13c8ed2e31d521d872786532334b201d","tasks":"0xD7931D5C490453b28C169C495844D246C110E4f7",
+"resubmit":"0x7d79c303E3711D4A731C24D26BeBe693a4CEEbAB","fs":"0x799d27D02A8Bab2206Db3fE99D12706dE0D38862",
+"merkle":"0xa2EAB5C3bE590F3f0aaDb3b43DADEAcF8cA0823d","ipfshost":"programming-progress.com",
+"events_disabled":false,"poll":false,"timeout":5000,"tick":true,"interpreter_args":[],"ipc":"/var/ethereum/rinkeby/geth.ipc"}

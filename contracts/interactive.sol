@@ -4,25 +4,25 @@ interface JudgeInterface {
     function judge(bytes32[13] res, uint q,
                         bytes32[] _proof, bytes32[] _proof2,
                         bytes32 vm_, bytes32 op, uint[4] regs,
-                        bytes32[10] roots, uint[4] pointers) public returns (uint);
-    function judgeCustom(bytes32 state1, bytes32 state2, bytes32 ex_state, uint ex_reg, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] proof) public;
+                        bytes32[10] roots, uint[4] pointers) external returns (uint);
+    function judgeCustom(bytes32 state1, bytes32 state2, bytes32 ex_state, uint ex_reg, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers, bytes32[] proof) external;
 
-    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) public returns (bool);
-    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) public returns (bool);
+    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) external returns (bool);
+    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) external returns (bool);
 
-    function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32);
-    function calcIOHash(bytes32[10] roots) public returns (bytes32);
+    function calcStateHash(bytes32[10] roots, uint[4] pointers) external returns (bytes32);
+    function calcIOHash(bytes32[10] roots) external returns (bytes32);
 }
 
 interface CustomJudge {
     // Initializes a new custom verification game
-    function init(bytes32 state, uint state_size, uint r3, address solver, address verifier) public returns (bytes32);
+    function init(bytes32 state, uint state_size, uint r3, address solver, address verifier) external returns (bytes32);
 
     // Last time the task was updated
-    function clock(bytes32 id) public returns (uint);
+    function clock(bytes32 id) external returns (uint);
 
     // Check if has resolved into correct state: merkle root of output data and output size
-    function resolved(bytes32 id, bytes32 state, uint size) public returns (bool);
+    function resolved(bytes32 id, bytes32 state, uint size) external returns (bool);
 }
 
 contract Interactive {
@@ -110,7 +110,7 @@ contract Interactive {
         r.size = par;
         r.state = State.Started;
         r.state = State.Started;
-        StartChallenge(p, c, s, e, r.size, to, uniq);
+        emit StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
         return uniq;
     }
@@ -201,7 +201,7 @@ contract Interactive {
             r.winner = r.prover;
             blocked[r.task_id] = 0;
         }
-        WinnerSelected(id);
+        emit WinnerSelected(id);
         r.state = State.Finished;
         return true;
     }
@@ -240,7 +240,7 @@ contract Interactive {
             r.proof[r.idx1+iter*(i+1)] = arr[i];
         }
         r.next = r.challenger;
-        Reported(id, i1, i2, arr);
+        emit Reported(id, i1, i2, arr);
         return true;
     }
     
@@ -263,7 +263,7 @@ contract Interactive {
         if (r.size > r.idx2-r.idx1-1) r.size = r.idx2-r.idx1-1;
         // size eventually becomes zero here
         r.next = r.prover;
-        Queried(id, r.idx1, r.idx2);
+        emit Queried(id, r.idx1, r.idx2);
         if (r.size == 0) r.state = State.NeedPhases;
     }
 
@@ -283,7 +283,7 @@ contract Interactive {
         blocked[r.task_id] = r.clock + r.timeout;
         r.result = arr;
         r.next = r.challenger;
-        PostedPhases(id, i1, arr);
+        emit PostedPhases(id, i1, arr);
     }
 
     function getResult(bytes32 id)  public view returns (bytes32[13]) {
@@ -299,7 +299,7 @@ contract Interactive {
         r.clock = block.number;
         blocked[r.task_id] = r.clock + r.timeout;
         r.phase = q;
-        SelectedPhase(id, i1, q);
+        emit SelectedPhase(id, i1, q);
         r.next = r.prover;
         r.state = State.SelectedPhase;
     }
@@ -330,7 +330,7 @@ contract Interactive {
         // uint alu_hint = (uint(op)/2**(8*3))&0xff; require (q != 5 || alu_hint != 0xff);
         
         judge.judge(r.result, r.phase, proof, proof2, vm, op, regs, roots, pointers);
-        WinnerSelected(id);
+        emit WinnerSelected(id);
         r.winner = r.prover;
         blocked[r.task_id] = 0;
         r.state = State.Finished;
@@ -341,7 +341,7 @@ contract Interactive {
     function resolveCustom(bytes32 id) public returns (bool) {
         Record storage r = records[id];
         if (r.sub_task == 0 || !r.judge.resolved(r.sub_task, r.ex_state, r.ex_size)) return false;
-        WinnerSelected(id);
+        emit WinnerSelected(id);
         r.winner = r.prover;
         blocked[r.task_id] = 0;
         r.state = State.Finished;
@@ -372,7 +372,7 @@ contract Interactive {
         judge.judgeCustom(r.result[5], r.result[6], custom_result, custom_size, op, regs, roots, pointers, custom_proof);
         r.state = State.Custom;
         
-        SubGoal(id, uint64(regs[3]), init_data, regs[1], custom_result, custom_size);
+        emit SubGoal(id, uint64(regs[3]), init_data, regs[1], custom_result, custom_size);
         
         return;
     }

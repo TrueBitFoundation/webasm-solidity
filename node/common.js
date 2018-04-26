@@ -8,20 +8,26 @@ var ipfsAPI = require('ipfs-api')
 
 // var appFile = require("./appFileBytes")
 
-// var wasm_path = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
-var wasm_path = "/home/sami/ocaml-offchain/interpreter/wasm"
+var wasm_path = process.cwd() + "/../../ocaml-offchain/interpreter/wasm"
+// var wasm_path = "../../ocaml-offchain/interpreter/wasm"
 
 var addresses = JSON.parse(fs.readFileSync("config.json"))
 
 var host = addresses.host || "localhost"
+var ipfshost = addresses.ipfshost || host
 
 var base = addresses.base
 
-web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
+if (addresses.ipc) {
+    var net = require("net")
+    web3.setProvider(new web3.providers.IpcProvider(addresses.ipc, net))
+    ipfshost = addresses.ipfshost || "localhost"
+}
+else web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
 var contract_dir = "../contracts/compiled/"
 
-var send_opt = {from:base, gas: 4000000, gasPrice:"21000000000"}
+var send_opt = {from:base, gas: 4000000, gasPrice:addresses.gasPrice || "21000000000"}
 var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Tasks.abi")), addresses.tasks)
 var iactive = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Interactive.abi")), addresses.interactive)
 var judge = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Judge.abi")), addresses.judge)
@@ -29,7 +35,7 @@ var filesystem = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir +
 var get_code = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "GetCode.abi")), addresses.get_code)
 
 // connect to ipfs daemon API server
-var ipfs = ipfsAPI(host, '5001', {protocol: 'http'})
+var ipfs = ipfsAPI(ipfshost, '5001', {protocol: 'http'})
 
 const mongoose = require('mongoose')
 mongoose.connect('mongodb://localhost/truebit')
