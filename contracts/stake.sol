@@ -115,7 +115,7 @@ contract Stake is DepositsManager {
         t.checked[msg.sender] = true;
         return t.check.length - 1;
     }
-    
+
     function claimJackpot(uint tnum, uint idx, bytes32 solution) public {
         Task storage t = tasks[tnum];
         require(t.check[idx] == msg.sender);
@@ -133,7 +133,6 @@ contract Stake is DepositsManager {
         if (taskSolveRandom(tnum, solution, victim) < JACKPOT_LIMIT) {
            addDeposit(msg.sender, JACKPOT);
         }
-        addDeposit(msg.sender, DEPOSIT);
     }
 
 }
