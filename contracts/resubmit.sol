@@ -1,23 +1,7 @@
 pragma solidity ^0.4.16;
 
 import "./DepositsManager.sol";
-
-interface InteractiveI {
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) external returns (bytes32);
-    
-    function calcStateHash(bytes32[10] roots, uint[4] pointers) external returns (bytes32);
-    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) external returns (bool);
-    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) external returns (bool);
-    
-    // Check if a task has been rejected
-    function isRejected(uint id) external returns (bool);
-    // Check if a task is blocked, returns the block when it can be accepted
-    function blockedTime(uint id) external returns (uint);
-    function getChallenger(bytes32 id) external returns (address);
-    function getTask(bytes32 id) external view returns (uint);
-    function deleteChallenge(bytes32 id) external;
-    function getProver(bytes32 id) external returns (address);
-}
+import "./interactive.sol";
 
 interface Callback {
     function solved(uint id, bytes32[] files) external;
@@ -50,11 +34,11 @@ contract TasksResubmit is DepositsManager {
     event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
     event Finalized(uint id);
 
-    InteractiveI iactive;
+    Interactive iactive;
     FilesystemI fs;
 
-    function TasksResubmit(address contr, address fs_addr) public {
-        iactive = InteractiveI(contr);
+    constructor(address contr, address fs_addr) public {
+        iactive = Interactive(contr);
         fs = FilesystemI(fs_addr);
     }
 

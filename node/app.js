@@ -263,7 +263,9 @@ async function update() {
     }
 }
 
-function tick() {
+async function tick() {
+    // var res = await contract.methods.tick().call(common.send_opt)
+    // logger.info("result", {good:res})
     contract.methods.tick().send(common.send_opt, function (err, res) {
         if (!err) logger.info("tick %s", res)
     })

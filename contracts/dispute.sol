@@ -307,7 +307,7 @@ contract InteractiveDispute is IDisputeResolver {
             r.proof[r.idx1+iter*(i+1)] = arr[i];
         }
         r.verifier_turn = true;
-        Reported(id, i1, i2, arr);
+        emit Reported(id, i1, i2, arr);
     }
 
     function query(bytes32 id, uint i1, uint i2, uint num) public {
@@ -321,7 +321,7 @@ contract InteractiveDispute is IDisputeResolver {
         if (num != r.size) r.idx2 = r.idx1+iter;
         if (r.size > r.idx2-r.idx1-1) r.size = r.idx2-r.idx1-1;
         r.verifier_turn = false;
-        Queried(id, r.idx1, r.idx2);
+        emit Queried(id, r.idx1, r.idx2);
         // Size eventually becomes zero here
         // Then call step resolver
         if (r.size == 0) r.dispute_id = IDisputeResolver(r.res).newGame(r.solver, r.verifier, keccak256(r.proof[r.idx1], r.proof[r.idx1+1]));

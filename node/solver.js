@@ -35,7 +35,9 @@ function solveTask(obj, config) {
             return
         }
 
-        common.taskResult(config, function (res) {
+        common.taskResult(config, async function (res) {
+            var good = await contract.methods.solveIO(obj.id, res.vm.code, res.vm.input_size, res.vm.input_name, res.vm.input_data).call(send_opt)
+            logger.info("is it good?", {good:good})
             contract.methods.solveIO(obj.id, res.vm.code, res.vm.input_size, res.vm.input_name, res.vm.input_data).send(send_opt, function (err, tr) {
                 if (err) logger.error(err)
                 else {
@@ -61,6 +63,7 @@ function replyChallenge(id, idx1, idx2) {
         return
     }
     common.getLocation(place, config, function (hash) {
+        logger.info("Report", {id:id, idx1: idx1, idx2:idx2, hash:hash})
         iactive.methods.report(id, idx1, idx2, [hash]).send(send_opt, function (err,tx) {
             if (err) logger.error(err)
             else status("Replied place " + place + " for challenge " + tx)
@@ -120,6 +123,10 @@ async function initChallenge(id) {
     steps = obj2.steps
     logger.info("Going to init", {id:id, r1:common.getRoots(obj1.vm), p1:common.getPointers(obj1.vm), steps:steps,
                                 r2:common.getRoots(obj2.vm), p2:common.getPointers(obj2.vm)})
+    // guess 1: ioroots are broken
+    var res = iactive.methods.initialize(id, common.getRoots(obj1.vm), common.getPointers(obj1.vm), steps,
+                                common.getRoots(obj2.vm), common.getPointers(obj2.vm)).call(send_opt)
+    logger.info("initialize?",{good:res})
     iactive.methods.initialize(id, common.getRoots(obj1.vm), common.getPointers(obj1.vm), steps,
                                 common.getRoots(obj2.vm), common.getPointers(obj2.vm)).send(send_opt, function (err,tx) {
         if (err) return logger.error(err);
@@ -298,8 +305,10 @@ async function forceTimeout() {
     if (!config || !config.solved) return
     if (common.config.poll) checkState()
     checkCustom()
+    var addr = await contract.methods.getInteractive().call(send_opt)
+    var rej = await iactive.methods.isRejected(0).call(send_opt)
     var good = await contract.methods.finalizeTask(task_id).call(send_opt)
-    logger.info("Testing timeout", {good:good})
+    logger.info("Testing timeout", {good:good, iactive:addr, rejected: rej})
     // Just for testing
     if (good == true) contract.methods.finalizeTask(task_id).send(send_opt,function (err,tx) {
         if (err) return console.error(err)

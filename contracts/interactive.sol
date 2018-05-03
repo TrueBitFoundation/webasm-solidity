@@ -27,7 +27,7 @@ interface CustomJudge {
 
 contract Interactive {
 
-    function Interactive(address addr) public {
+    constructor(address addr) public {
         judge = JudgeInterface(addr);
     }
 
@@ -118,12 +118,14 @@ contract Interactive {
     uint constant FINAL_STATE = 0xffffffffff;
     
     function initialize(bytes32 id, bytes32[10] s_roots, uint[4] s_pointers, uint _steps,
-                                    bytes32[10] e_roots, uint[4] e_pointers) public {
+                                    bytes32[10] e_roots, uint[4] e_pointers) public returns (bool) {
         Record storage r = records[id];
         require(msg.sender == r.next && r.state == State.Started);
         // check first state here
+        if (r.start_state != judge.calcIOHash(s_roots)) return false;
         require (r.start_state == judge.calcIOHash(s_roots));
         // then last one
+        if (r.end_state != judge.calcIOHash(e_roots)) return false;
         require (r.end_state == judge.calcIOHash(e_roots));
         
         // need to check that the start state is empty
@@ -136,7 +138,8 @@ contract Interactive {
         // globals
         require(s_roots[4] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // call table (check if resizing works)
-        require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
+        require(s_roots[5] == 0x7bf9aa8e0ce11d87877e8b7a304e8e7105531771dbff77d1b00366ecb1549624);
+        // require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
         // call types
         require(s_roots[6] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // pointers
@@ -154,6 +157,7 @@ contract Interactive {
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
         
         r.state = State.Running;
+        return true;
     }
     
     function getDescription(bytes32 id) public view returns (bytes32 init, uint steps, bytes32 last) {

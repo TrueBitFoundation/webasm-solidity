@@ -1,7 +1,10 @@
 pragma solidity ^0.4.16;
 
 import "./DepositsManager.sol";
+import "./interactive.sol";
+import "./fs.sol";
 
+/*
 interface InteractiveI {
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) external returns (bytes32);
     
@@ -18,16 +21,19 @@ interface InteractiveI {
     function deleteChallenge(bytes32 id) external;
     function getProver(bytes32 id) external returns (address);
 }
+*/
 
 interface Callback {
     function solved(uint id, bytes32[] files) external;
     function rejected(uint id) external;
 }
 
+/*
 interface FilesystemI {
   function getRoot(bytes32 id) external view returns (bytes32);
   function getNameHash(bytes32 id) external view returns (bytes32);
 }
+*/
 
 contract Tasks is DepositsManager {
 
@@ -49,12 +55,12 @@ contract Tasks is DepositsManager {
     event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
     event Finalized(uint id);
 
-    InteractiveI iactive;
-    FilesystemI fs;
+    Interactive iactive;
+    Filesystem fs;
 
-    function Tasks(address contr, address fs_addr) public {
-        iactive = InteractiveI(contr);
-        fs = FilesystemI(fs_addr);
+    constructor(address contr, address fs_addr) public {
+        iactive = Interactive(contr);
+        fs = Filesystem(fs_addr);
     }
 
     function getInteractive() public view returns (address) {
@@ -209,7 +215,7 @@ contract Tasks is DepositsManager {
         return tasks2[id].solver;
     }
 
-    function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public {
+    function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public returns (bool) {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         IO storage io = io_roots[id];
@@ -224,6 +230,7 @@ contract Tasks is DepositsManager {
         t2.blocked = block.number + TIMEOUT;
         emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
         subDeposit(msg.sender, DEPOSIT);
+        return true;
     }
 
     function solutionInfo(uint unq) public view returns (uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver) {
@@ -276,14 +283,16 @@ contract Tasks is DepositsManager {
         Task storage t = tasks[id];
         Task2 storage t2 = tasks2[id];
         IO storage io = io_roots[id];
-        if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return false;
-        require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
+        if (t.state != 1 || t2.blocked >= block.number || iactive.isRejected(id) || iactive.blockedTime(id) >= block.number) return false;
+        // if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return false;
+        
+        // require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
         t.state = 3;
         
         bytes32[] memory files = new bytes32[](io.uploads.length);
         for (uint i = 0; i < io.uploads.length; i++) {
-           if (!(io.uploads[i].file_id != 0)) return false;
-           require(io.uploads[i].file_id != 0);
+           if (io.uploads[i].file_id == 0) return false;
+           // require(io.uploads[i].file_id != 0);
            files[i] = io.uploads[i].file_id;
         }
         
@@ -306,7 +315,7 @@ contract Tasks is DepositsManager {
     uint tick_var;
 
     // For testing, mine this to create new block
-    function tick() public {
+    function tick() public  {
         tick_var++;
     }
 

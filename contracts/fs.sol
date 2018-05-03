@@ -21,7 +21,8 @@ contract Filesystem {
      bytes32 root;
    }
    mapping (bytes32 => File) files;
-   function Filesystem() public {
+
+   constructor() public {
       zero.length = 20;
       zero[0] = bytes32(0);
       for (uint i = 1; i < zero.length; i++) {
@@ -130,7 +131,7 @@ contract Filesystem {
 
        return id;
    }
-   
+
    bytes32 empty_file = 0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563;
 
    function finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public {
@@ -149,7 +150,7 @@ contract Filesystem {
        
        b.init = keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleDefault(res3, 0, 10, empty_file));
    }
-   
+
    function debug_finalizeBundleIPFS(bytes32 id, string file, bytes32 init) public returns (bytes32, bytes32, bytes32, bytes32, bytes32) {
        Bundle storage b = bundles[id];
        bytes32[] memory res1 = new bytes32[](b.files.length);
@@ -167,7 +168,7 @@ contract Filesystem {
        return (init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleDefault(res3, 0, 4, empty_file),
                keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 4), calcMerkleDefault(res3, 0, 4, empty_file)));
    }
-   
+
    function makeBundle(uint num) public view returns (bytes32) {
        bytes32 id = keccak256(msg.sender, num);
        return id;

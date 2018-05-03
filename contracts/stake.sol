@@ -67,19 +67,19 @@ contract Stake is DepositsManager {
 
     function taskInitRandom(uint tnum, address solver) internal view returns (uint) {
         Task storage t = tasks[tnum];
-        bytes32 thash = keccak256(solver, t.init, block.blockhash(t.bnum));
+        bytes32 thash = keccak256(solver, t.init, blockhash(t.bnum));
         return uint(thash);
     }
 
     function taskSolveRandom(uint tnum, bytes32 solution, address solver) internal view returns (uint) {
         Task storage t = tasks[tnum];
-        bytes32 thash = keccak256(solver, solution, block.blockhash(t.bnum2));
+        bytes32 thash = keccak256(solver, solution, blockhash(t.bnum2));
         return uint(thash)/t.multiplier/specialMultiplier(tnum, solver);
     }
     
     function specialMultiplier(uint tnum, address solver) internal view returns (uint) {
         Task storage t = tasks[tnum];
-        bytes32 thash = keccak256(solver, t.init, block.blockhash(t.bnum));
+        bytes32 thash = keccak256(solver, t.init, blockhash(t.bnum));
         return (uint(thash) % 20) + 1;
     }
 
