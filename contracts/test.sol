@@ -1,11 +1,16 @@
-pragma solidity ^0.4.17;
+pragma solidity ^0.4.23;
+
+contract A {
+    function foo() external returns (uint) {
+        return 123;
+    }
+}
 
 contract Test {
-    bytes32[] blah;
-    function test2() public returns (bytes32) {
-        for (uint i = 0; i < 1000; i++) blah.push(123);
-        return bytes32(123);
-   }
+    constructor() public {
+       A a = new A();
+       a.foo();
+    }
    
 }
 

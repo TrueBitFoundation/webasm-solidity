@@ -123,12 +123,12 @@ contract PhaseDispute is IDisputeResolver {
         return id;
     }
 
-    function status(bytes32 dispute_id) public view returns (Status) {
-        Task storage t = tasks[dispute_id];
+    function status(bytes32 id) public view returns (Status) {
+        Task storage t = tasks[id];
         if (t.spec == 0) return Status.NONE;
         IDisputeResolver res = IDisputeResolver(t.res);
-        if (t.res != 0 && res.status(dispute_id) == Status.SOLVER_WINS || t.phases.length > 0 && t.bnum + TIMEOUT < block.number && t.dispute_id == 0) return Status.SOLVER_WINS;
-        if (t.bnum + TIMEOUT < block.number || t.res != 0 && res.status(dispute_id) == Status.VERIFIER_WINS) return Status.VERIFIER_WINS;
+        if (t.res != 0 && res.status(t.dispute_id) == Status.SOLVER_WINS || t.phases.length > 0 && t.bnum + TIMEOUT < block.number && t.dispute_id == 0) return Status.SOLVER_WINS;
+        if (t.bnum + TIMEOUT < block.number || t.res != 0 && res.status(t.dispute_id) == Status.VERIFIER_WINS) return Status.VERIFIER_WINS;
         return Status.UNRESOLVED;
     }
 
@@ -240,3 +240,91 @@ contract StepDispute is CommonOnchain, TransitionDispute {
     
 }
 
+contract InteractiveDispute is IDisputeResolver {
+
+    uint constant TIMEOUT = 10;
+
+    struct Task {
+        address solver;
+        address verifier;
+        uint bnum;
+        bool verifier_turn;
+        bytes32 spec;
+        bytes32[] proof;
+        address res;
+        bytes32 dispute_id;
+        uint256 idx1;
+        uint256 idx2;
+        uint size; // size == k-1 in k-ary search
+    }
+
+    mapping (bytes32 => Task) tasks;
+    
+    function newGame(address s, address v, bytes32 spec) public returns (bytes32) {
+        require(spec != 0);
+        bytes32 id = keccak256(s, v, spec);
+        Task storage t = tasks[id];
+        t.solver = s;
+        t.verifier = v;
+        t.spec = spec;
+        t.bnum = block.number;
+        return id;
+    }
+    
+    function init(bytes32 dispute_id, address res, bytes32 first, bytes32 last, uint steps, uint size) public {
+        Task storage t = tasks[dispute_id];
+        require(t.spec == keccak256(res, first, last, steps, size));
+        t.proof.length = steps;
+        t.proof[0] = first;
+        t.proof[t.proof.length-1] = last;
+        if (t.size > steps - 2) t.size = steps-2;
+        t.idx2 = steps-1;
+        t.bnum = block.number;
+        t.res = res;
+    }
+    
+    function status(bytes32 id) public view returns (Status) {
+        Task storage t = tasks[id];
+        if (t.spec == 0) return Status.NONE;
+        IDisputeResolver res = IDisputeResolver(t.res);
+        if (t.res != 0 && res.status(t.dispute_id) == Status.SOLVER_WINS)  return Status.SOLVER_WINS;
+        if (t.res != 0 && res.status(t.dispute_id) == Status.VERIFIER_WINS)  return Status.VERIFIER_WINS;
+        if (t.bnum + TIMEOUT < block.number && t.verifier_turn) return Status.SOLVER_WINS;
+        if (!t.verifier_turn && t.dispute_id == 0 && t.bnum + TIMEOUT < block.number) return Status.VERIFIER_WINS;
+        return Status.UNRESOLVED;
+    }
+    
+    event Reported(bytes32 id, uint idx1, uint idx2, bytes32[] arr);
+    event Queried(bytes32 id, uint idx1, uint idx2);
+
+    function report(bytes32 id, uint i1, uint i2, bytes32[] arr) public {
+        Task storage r = tasks[id];
+        require(!r.verifier_turn && msg.sender == r.solver);
+        require (arr.length == r.size && i1 == r.idx1 && i2 == r.idx2);
+        r.bnum = block.number;
+        uint iter = (r.idx2-r.idx1)/(r.size+1);
+        for (uint i = 0; i < arr.length; i++) {
+            r.proof[r.idx1+iter*(i+1)] = arr[i];
+        }
+        r.verifier_turn = true;
+        emit Reported(id, i1, i2, arr);
+    }
+
+    function query(bytes32 id, uint i1, uint i2, uint num) public {
+        Task storage r = tasks[id];
+        require(r.verifier_turn && msg.sender == r.verifier);
+        require(num <= r.size && i1 == r.idx1 && i2 == r.idx2);
+        r.bnum = block.number;
+        uint iter = (r.idx2-r.idx1)/(r.size+1);
+        r.idx1 = r.idx1+iter*num;
+        // If last segment was selected, do not change last index
+        if (num != r.size) r.idx2 = r.idx1+iter;
+        if (r.size > r.idx2-r.idx1-1) r.size = r.idx2-r.idx1-1;
+        r.verifier_turn = false;
+        emit Queried(id, r.idx1, r.idx2);
+        // Size eventually becomes zero here
+        // Then call step resolver
+        if (r.size == 0) r.dispute_id = IDisputeResolver(r.res).newGame(r.solver, r.verifier, keccak256(r.proof[r.idx1], r.proof[r.idx1+1]));
+    }
+
+}

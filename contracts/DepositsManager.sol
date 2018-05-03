@@ -8,9 +8,9 @@ contract DepositsManager {
     event DepositWithdrawn(address who, uint amount);
 
     // @dev – the constructor
-    function DepositsManager() public {
+    constructor() public {
     }
-    
+
     // @dev – returns an account's deposit
     // @param who – the account's address.
     // @return – the account's deposit.

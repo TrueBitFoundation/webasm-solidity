@@ -51,7 +51,7 @@ function hex32(str) {
 function testPhase(contr, phase, send_opt) {
     var proof = test[phase_table[phase]]
     if (phase == 5 || phase == 1) {
-        proof = {machine: proof, vm: test[phase_table[phase-1]].vm}
+        if (!proof.machine) proof = {machine: proof, vm: test[phase_table[phase-1]].vm}
     }
     var merkle = proof.location || []
     var merkle2 = []
@@ -77,10 +77,6 @@ function testPhase(contr, phase, send_opt) {
     var pointers = [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]
     // contr.methods.debug_judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
     contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, regs, roots, pointers).call(send_opt, (err,res) => handleResult(phase,err,res))
-    /* contr.methods.judge(test.states, phase, merkle, merkle2, m.vm, m.op, [m.reg1, m.reg2, m.reg3, m.ireg],
-                     [vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes,
-                      vm.input_size, vm.input_name, vm.input_data],
-                     [vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize]).send(send_opt) */
 }
 
 async function doTest() {
