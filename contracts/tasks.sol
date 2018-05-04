@@ -38,7 +38,7 @@ interface FilesystemI {
 contract Tasks is DepositsManager {
 
     uint constant DEPOSIT = 0.01 ether;
-    uint constant TIMEOUT = 10;
+    uint constant TIMEOUT = 100;
 
     enum CodeType {
         WAST,
