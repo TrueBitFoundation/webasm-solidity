@@ -9,7 +9,7 @@ if (config.ipc) {
     var net = require("net")
     web3.setProvider(new web3.providers.IpcProvider(config.ipc, net))
 }
-else web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
+else web3.setProvider(new web3.providers.WebsocketProvider('http://' + config.host + ':8546'))
 
 async function main() {
     var accts = await web3.eth.getAccounts()
