@@ -11,8 +11,8 @@ if (process.argv.length < 3) {
     process.exit(0)
 }
 
-var code = fs.readFileSync("../contracts/compiled/Judge.bin")
-var abi = JSON.parse(fs.readFileSync("../contracts/compiled/Judge.abi"))
+var code = fs.readFileSync(__dirname + "/../contracts/compiled/Judge.bin")
+var abi = JSON.parse(fs.readFileSync(__dirname + "/../contracts/compiled/Judge.abi"))
 var test = JSON.parse(fs.readFileSync(process.argv[2]))
 
 // console.log(test.states)

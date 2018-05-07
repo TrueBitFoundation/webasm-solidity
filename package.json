@@ -10,6 +10,7 @@
     "winston": "^3.0.0-rc1"
   },
   "scripts": {
-    "compile" : "./scripts/compile.sh"
+    "compile" : "./scripts/compile.sh",
+    "test" : "./scripts/runtests.sh"
   }
 }
