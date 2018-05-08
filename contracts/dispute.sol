@@ -328,3 +328,62 @@ contract InteractiveDispute is IDisputeResolver {
     }
 
 }
+
+contract BasicDispute is IDisputeResolver {
+
+    uint constant TIMEOUT = 10;
+
+    struct Task {
+        address solver;
+        address verifier;
+        uint bnum;
+        bytes32 spec;
+    }
+
+    mapping (bytes32 => Task) tasks;
+    
+    function newGame(address s, address v, bytes32 spec) public returns (bytes32) {
+        require(spec != 0);
+        bytes32 id = keccak256(s, v, spec);
+        Task storage t = tasks[id];
+        t.solver = s;
+        t.verifier = v;
+        t.spec = spec;
+        t.bnum = block.number;
+        return id;
+    }
+}
+
+contract AndDispute is BasicDispute {
+    IDisputeResolver a;
+    IDisputeResolver b;
+    
+    mapping (bytes32 => bytes32) dispute_a;
+    mapping (bytes32 => bytes32) dispute_b;
+    
+    constructor (address aa, address ab) public {
+        a = IDisputeResolver(aa);
+        b = IDisputeResolver(ab);
+    }
+
+    function init(bytes32 id, bytes32 da, bytes32 db) public {
+        Task storage t = tasks[id];
+        require(t.spec == keccak256(da, db));
+        dispute_a[id] = a.newGame(t.solver, t.verifier, da);
+        dispute_b[id] = b.newGame(t.solver, t.verifier, db);
+    }
+    
+    function status(bytes32 id) public view returns (Status) {
+        Task storage t = tasks[id];
+        if (t.spec == 0) return Status.NONE;
+        Status sa = a.status(dispute_a[id]);
+        Status sb = b.status(dispute_b[id]);
+        if (sa == Status.VERIFIER_WINS) return Status.VERIFIER_WINS;
+        if (sb == Status.VERIFIER_WINS) return Status.VERIFIER_WINS;
+        if (sa == Status.SOLVER_WINS && sb == Status.SOLVER_WINS) return Status.SOLVER_WINS;
+        return Status.UNRESOLVED;
+    }
+
+}
+
+
