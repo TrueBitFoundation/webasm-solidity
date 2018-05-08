@@ -520,7 +520,29 @@ contract UploadManager {
         for (uint i = 0; i < io.reqs.length; i++) require(io.reqs[i].file_id != 0);
     }
 
+    function good(bytes32 id, uint when) public view returns (bool) {
+        Spec storage io = uploads[id];
+        return io.filled < when;
+    }
+
 }
 
+interface CheckTime {
+    function good(bytes32 id, uint when) external view returns (bool);
+}
 
+contract TimedDispute is BasicDispute {
+    CheckTime a;
+    
+    constructor(address aa) public {
+        a = CheckTime(aa);
+    }
+    
+    function status(bytes32 id) public view returns (Status) {
+        Task storage t = tasks[id];
+        if (a.good(t.spec, t.when)) return Status.SOLVER_WINS;
+        else return Status.VERIFIER_WINS;
+    }
+
+}
 
