@@ -37,16 +37,30 @@ and then exit Parity. Now it should have created the development account.
 
 Then you need to compile the smart contracts. You will need `solc` already installed on your machine.
 
+You will also need to download and install `ocaml-offchain` next to the webasm-solidity (ex: `../webasm-solidity`)
+
 ```
 chmod 755 ./scripts/compile.sh
 npm run compile
 ```
 
-Then you can test the on chain wasm interpreter smart contract with precompiled wasm code
+Then deploy the smart contracts to the blockchain with:
+
+```
+npm run deploy
+```
+
+Now you can run the task lifecycle test
+
+```
+npm run test test/task-lifecycle.js
+```
+
+To test the solidity wasm interpreter run this
 
 ```
 chmod 755 ./scripts/runtests.sh
-npm run test
+
 ```
 
 If the test doesn't output an error, it should have passed. If the proof was wrong, then it will complain about invalid EVM opcode (this is how reverting the state is currently handled in the EVM).
