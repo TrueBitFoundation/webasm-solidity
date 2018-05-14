@@ -111,6 +111,12 @@ module.exports = {
 	    vm.call_ptr,
 	    vm.memsize
 	]
+    },
+
+    getLocation: async(stepNumber, taskConfig, interpreterArgs, path) => {
+	let stdout = await exec(taskConfig, ["-m", "-location", stepNumber], interpreterArgs, path)
+
+	return JSON.parse(stdout)
     }
 
 }

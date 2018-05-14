@@ -328,6 +328,9 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
 	solverResult = await merkleComputer.executeWasmTask(taskConfig2, interpreterArgs2, randomPath2)
 
+	lowStep = 0
+	highStep = solverResult.steps - 1
+
 	await interactiveContract.methods.initialize(
 	    gameID,
 	    merkleComputer.getRoots(initWasmData.vm),
@@ -336,6 +339,32 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	    merkleComputer.getRoots(solverResult.vm),
 	    merkleComputer.getPointers(solverResult.vm)
 	).send({from: solver, gas: 1000000})
+    })
+
+    it("should post response for initial midpoint", async () => {
+	let stepNumber = Math.floor((highStep - lowStep) / 2 + lowStep)
+	
+	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
+
+	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
+
+	let taskConfig = {
+	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
+	    input_file: "",
+	    actor: solverConf,
+	    files: [],
+	    vm_parameters: vmParameters,
+	    code_type: parseInt(taskInfo.ct)
+	}
+
+	let interpreterArgs2 = []
+
+	let randomPath2 = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+
+	let stateHash = await merkleComputer.getLocation(stepNumber, taskConfig, interpreterArgs2, randomPath2)
+
+	await interactiveContract.methods.report(gameID, lowStep, highStep, [stateHash]).send({from: solver})
     })
 
     
