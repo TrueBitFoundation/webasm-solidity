@@ -109,7 +109,6 @@ contract Interactive {
         r.phase = 16;
         r.size = par;
         r.state = State.Started;
-        r.state = State.Started;
         emit StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
         return uniq;
@@ -139,7 +138,7 @@ contract Interactive {
         require(s_roots[4] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // call table (check if resizing works)
         require(s_roots[5] == 0x7bf9aa8e0ce11d87877e8b7a304e8e7105531771dbff77d1b00366ecb1549624);
-        // require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
+        //require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
         // call types
         require(s_roots[6] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // pointers
@@ -155,7 +154,6 @@ contract Interactive {
         r.proof.length = r.steps;
         r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
-        
         r.state = State.Running;
         return true;
     }

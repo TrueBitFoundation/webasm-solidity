@@ -81,12 +81,36 @@ module.exports = {
     
     initializeWasmTask: async (taskConfig, interpreterArgs, path) => {
 	let stdout = await exec(taskConfig, ["-m", "-input"], interpreterArgs, path)
-	return JSON.parse(stdout).hash
+	return JSON.parse(stdout)
     },
 
     executeWasmTask: async(taskConfig, interpreterArgs, path) => {
 	let stdout = await exec(taskConfig, ["-m", "-output"], interpreterArgs, path)
 	return JSON.parse(stdout)
+    },
+
+    getRoots: (vm) => {
+	return [
+	    vm.code,
+	    vm.stack,
+	    vm.memory,
+	    vm.call_stack,
+	    vm.globals,
+	    vm.calltable,
+	    vm.calltypes,
+	    vm.input_size,
+	    vm.input_name,
+	    vm.input_data
+	]
+    },
+
+    getPointers: (vm) => {
+	return [
+	    vm.pc,
+	    vm.stack_ptr,
+	    vm.call_ptr,
+	    vm.memsize
+	]
     }
 
 }
