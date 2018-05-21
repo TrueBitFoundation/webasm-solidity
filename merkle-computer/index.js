@@ -81,17 +81,24 @@ module.exports = {
 
     init: (config, path) => {
 	return {
-	    initializeWasmTask: async (interpreterArgs) => {
+	    initializeWasmTask: async (interpreterArgs = []) => {
 		let stdout = await exec(config, ["-m", "-input"], interpreterArgs, path)
 		return JSON.parse(stdout)
 	    },
 
-	    executeWasmTask: async(interpreterArgs) => {
+	    executeWasmTask: async(interpreterArgs = []) => {
 		let stdout = await exec(config, ["-m", "-output"], interpreterArgs, path)
 		return JSON.parse(stdout)
 	    },
-	    getLocation: async(stepNumber, interpreterArgs) => {
+	    
+	    getLocation: async(stepNumber, interpreterArgs = []) => {
 		let stdout = await exec(config, ["-m", "-location", stepNumber], interpreterArgs, path)
+
+		return JSON.parse(stdout)
+	    },
+
+	    getStep: async(stepNumber, interpreterArgs = []) => {
+		let stdout = await exec(config, ["-m", "-step", stepNumber], interpreterArgs, path)
 
 		return JSON.parse(stdout)
 	    }

@@ -277,8 +277,8 @@ contract Interactive {
 
     function postPhases(bytes32 id, uint i1, bytes32[13] arr) public {
         Record storage r = records[id];
-        require(r.state == State.NeedPhases && msg.sender == r.prover && r.next == r.prover && r.idx1 == i1 &&
-                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[12] && arr[12] != bytes32(0));
+        require(r.state == State.NeedPhases && msg.sender == r.prover && r.next == r.prover && r.idx1 == i1);
+        require(r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[12] && arr[12] != bytes32(0));
         r.clock = block.number;
         r.state = State.PostedPhases;
         blocked[r.task_id] = r.clock + r.timeout;

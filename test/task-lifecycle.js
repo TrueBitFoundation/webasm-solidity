@@ -371,6 +371,99 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
 	let num = reportedStateHash == stateHash ? 1 : 0
 
-	let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier}) 
+	let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier})
+
+	let result = txReceipt.events.Queried.returnValues
+
+	assert.equal(result.id, gameID)
+	assert.equal(result.idx1, stepNumber)
+
+	lowStep = result.idx1
+	highStep = result.idx2
+    })
+
+    it("should post response to query", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+	
+	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	let interpreterArgs = []
+
+	let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
+
+	await interactiveContract.methods.report(gameID, indices.idx1, indices.idx2, [stateHash]).send({from: solver})
+    })
+
+    for(i = 0; i < 7; i++) {
+	it("should submit query", async () => {
+	    let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	    let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	    let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
+	    
+	    let interpreterArgs = []
+
+	    let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
+
+	    let num = reportedStateHash == stateHash ? 1 : 0
+
+	    let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier})	
+	})
+
+	it("should post response to query", async () => {
+	    let indices = await interactiveContract.methods.getIndices(gameID).call()
+	    
+	    let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	    let interpreterArgs = []
+
+	    let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
+
+	    await interactiveContract.methods.report(gameID, indices.idx1, indices.idx2, [stateHash]).send({from: solver})
+	})
+
+    }
+
+    it("should submit query", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
+	
+	let interpreterArgs = []
+
+	let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
+
+	let num = reportedStateHash == stateHash ? 1 : 0
+
+	let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier})	
+    })
+    
+
+    it("lowStep + 1 should equal highstep", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let lowStep = parseInt(indices.idx1)
+	let highStep = parseInt(indices.idx2)
+	assert(lowStep + 1 == highStep)
+    })
+
+    it("should post phases", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let lowStep = parseInt(indices.idx1)
+
+	console.log(await interactiveContract.methods.getStateAt(gameID, lowStep).call())
+	console.log(await interactiveContract.methods.getStateAt(gameID, lowStep+1).call())
+
+	let interpreterArgs = []
+	
+	let stepResults = await solverVM.getStep(lowStep, interpreterArgs)
+
+	console.log(stepResults.states)
+
+	//await interactiveContract.methods.postPhases(gameID, lowStep, stepResults.states).send({from: solver, gas: 400000})
     })
 })
