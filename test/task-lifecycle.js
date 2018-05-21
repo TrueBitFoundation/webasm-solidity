@@ -455,15 +455,16 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
 	let lowStep = parseInt(indices.idx1)
 
-	console.log(await interactiveContract.methods.getStateAt(gameID, lowStep).call())
-	console.log(await interactiveContract.methods.getStateAt(gameID, lowStep+1).call())
+	let lowStepState = await interactiveContract.methods.getStateAt(gameID, lowStep).call()
+	let highStepState = await interactiveContract.methods.getStateAt(gameID, lowStep+1).call()
 
 	let interpreterArgs = []
 	
-	let stepResults = await solverVM.getStep(lowStep, interpreterArgs)
+	let states = (await solverVM.getStep(lowStep, interpreterArgs)).states
 
-	console.log(stepResults.states)
+	assert.equal(lowStepState, states[0])
+	assert.equal(highStepState, states[12])
 
-	//await interactiveContract.methods.postPhases(gameID, lowStep, stepResults.states).send({from: solver, gas: 400000})
+	await interactiveContract.methods.postPhases(gameID, lowStep, states).send({from: solver, gas: 400000})
     })
 })
