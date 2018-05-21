@@ -78,17 +78,28 @@ module.exports = {
 	
 	return contract.options.address
     },
+
+    init: (config, path) => {
+	return {
+	    initializeWasmTask: async (interpreterArgs) => {
+		let stdout = await exec(config, ["-m", "-input"], interpreterArgs, path)
+		return JSON.parse(stdout)
+	    },
+
+	    executeWasmTask: async(interpreterArgs) => {
+		let stdout = await exec(config, ["-m", "-output"], interpreterArgs, path)
+		return JSON.parse(stdout)
+	    },
+	    getLocation: async(stepNumber, interpreterArgs) => {
+		let stdout = await exec(config, ["-m", "-location", stepNumber], interpreterArgs, path)
+
+		return JSON.parse(stdout)
+	    }
+	    
+	}
+
+    },
     
-    initializeWasmTask: async (taskConfig, interpreterArgs, path) => {
-	let stdout = await exec(taskConfig, ["-m", "-input"], interpreterArgs, path)
-	return JSON.parse(stdout)
-    },
-
-    executeWasmTask: async(taskConfig, interpreterArgs, path) => {
-	let stdout = await exec(taskConfig, ["-m", "-output"], interpreterArgs, path)
-	return JSON.parse(stdout)
-    },
-
     getRoots: (vm) => {
 	return [
 	    vm.code,
@@ -112,11 +123,4 @@ module.exports = {
 	    vm.memsize
 	]
     },
-
-    getLocation: async(stepNumber, taskConfig, interpreterArgs, path) => {
-	let stdout = await exec(taskConfig, ["-m", "-location", stepNumber], interpreterArgs, path)
-
-	return JSON.parse(stdout)
-    }
-
 }

@@ -254,8 +254,7 @@ contract Interactive {
 
     function query(bytes32 id, uint i1, uint i2, uint num) public {
         Record storage r = records[id];
-        require(r.state == State.Running && num <= r.size && i1 == r.idx1 && i2 == r.idx2 &&
-                msg.sender == r.challenger && r.challenger == r.next);
+        require(r.state == State.Running && num <= r.size && i1 == r.idx1 && i2 == r.idx2 && msg.sender == r.challenger && r.challenger == r.next);
         r.clock = block.number;
         blocked[r.task_id] = r.clock + r.timeout;
         uint iter = (r.idx2-r.idx1)/(r.size+1);

@@ -19,6 +19,10 @@ function writeFile(fname, buf) {
     return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (err, res) { cont() }) })
 }
 
+function midpoint(lowStep, highStep) {
+    return Math.floor((highStep - lowStep) / 2 + lowStep)
+}
+
 before(async () => {
     accounts = await web3.eth.getAccounts()
     taskGiver = accounts[0]
@@ -59,18 +63,20 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 
     it("should initialize wasm task", async () => {
 
-	let taskConfig = {
+	let config = {
 	    code_file: __dirname + "/../data/factorial.wast",
 	    input_file: "",
 	    actor: {},
 	    files: []
 	}
 
+	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	taskGiverVM = merkleComputer.init(config, randomPath)
+
 	let interpreterArgs = []
 	
-	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-	initStateHash = (await merkleComputer.initializeWasmTask(taskConfig, interpreterArgs, randomPath)).hash
-	
+	initStateHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
     })
 
     it("should submit a task", async () => {
@@ -116,7 +122,7 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 
 	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
-	let taskConfig = {
+	let config = {
 	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
 	    input_file: "",
 	    actor: solverConf,
@@ -125,10 +131,13 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 	    code_type: parseInt(taskInfo.ct)
 	}
 
+	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	solverVM = merkleComputer.init(config, randomPath)
+
 	let interpreterArgs = []
 
-	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-	solverResult = await merkleComputer.executeWasmTask(taskConfig, interpreterArgs, randomPath)
+	solverResult = await solverVM.executeWasmTask(interpreterArgs)
     })
 
     it("should submit solution", async () => {
@@ -191,17 +200,20 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
     it("should initialize wasm task", async () => {
 
-	let taskConfig = {
+	let config = {
 	    code_file: __dirname + "/../data/factorial.wast",
 	    input_file: "",
 	    actor: {},
 	    files: []
 	}
-
-	let interpreterArgs = []
 	
 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-	initStateHash = (await merkleComputer.initializeWasmTask(taskConfig, interpreterArgs, randomPath)).hash
+	
+	let interpreterArgs = []
+
+	taskGiverVM = merkleComputer.init(config, randomPath)
+	
+	initStateHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
 	
     })
 
@@ -248,7 +260,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	
 	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
-	let taskConfig = {
+	let config = {
 	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
 	    input_file: "",
 	    actor: solverConf,
@@ -257,10 +269,13 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	    code_type: parseInt(taskInfo.ct)
 	}
 
+	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	solverVM = merkleComputer.init(config, randomPath)
+
 	let interpreterArgs = []
 
-	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-	solverResult = await merkleComputer.executeWasmTask(taskConfig, interpreterArgs, randomPath)
+	solverResult = await solverVM.executeWasmTask(interpreterArgs)
 
     })
 
@@ -297,36 +312,11 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
     it("should initialize the verification game", async () => {
 
-	let taskConfig = {
-	    code_file: __dirname + "/../data/factorial.wast",
-	    input_file: "",
-	    actor: {},
-	    files: []
-	}
-
 	let interpreterArgs = []
 	
-	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-	initWasmData = await merkleComputer.initializeWasmTask(taskConfig, interpreterArgs, randomPath)
+	initWasmData = await taskGiverVM.initializeWasmTask(interpreterArgs)
 
-	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
-
-	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
-
-	let taskConfig2 = {
-	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
-	    input_file: "",
-	    actor: solverConf,
-	    files: [],
-	    vm_parameters: vmParameters,
-	    code_type: parseInt(taskInfo.ct)
-	}
-
-	let interpreterArgs2 = []
-
-	let randomPath2 = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-
-	solverResult = await merkleComputer.executeWasmTask(taskConfig2, interpreterArgs2, randomPath2)
+	solverResult = await solverVM.executeWasmTask(interpreterArgs)
 
 	lowStep = 0
 	highStep = solverResult.steps - 1
@@ -342,13 +332,21 @@ describe("Test task lifecycle through wasm game with challenge", async function(
     })
 
     it("should post response for initial midpoint", async () => {
-	let stepNumber = Math.floor((highStep - lowStep) / 2 + lowStep)
-	
+	let stepNumber = midpoint(lowStep, highStep)
+
+	let interpreterArgs = []
+
+	let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
+
+	await interactiveContract.methods.report(gameID, lowStep, highStep, [stateHash]).send({from: solver})
+    })
+
+    it("should query step", async () => {
 	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
 	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
-	let taskConfig = {
+	let config = {
 	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
 	    input_file: "",
 	    actor: solverConf,
@@ -357,15 +355,22 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	    code_type: parseInt(taskInfo.ct)
 	}
 
-	let interpreterArgs2 = []
+	let randomPath = process.cwd() + "/tmp.verifier_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
 
-	let randomPath2 = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+	verifierVM = merkleComputer.init(config, randomPath)
 
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
 
-	let stateHash = await merkleComputer.getLocation(stepNumber, taskConfig, interpreterArgs2, randomPath2)
+	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
 
-	await interactiveContract.methods.report(gameID, lowStep, highStep, [stateHash]).send({from: solver})
+	let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
+	
+	let interpreterArgs = []
+
+	let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
+
+	let num = reportedStateHash == stateHash ? 1 : 0
+
+	let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier}) 
     })
-
-    
 })
