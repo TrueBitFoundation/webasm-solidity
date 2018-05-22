@@ -1,5 +1,6 @@
 const execFile = require('child_process').execFile
-const winston = require("winston")
+const winston = require('winston')
+const fs = require('fs')
 
 const wasmInterpreterPath = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
 
@@ -130,4 +131,27 @@ module.exports = {
 	    vm.memsize
 	]
     },
+
+    fileSystem: (ipfs) => {
+	return {
+	    upload: async (filename) => {
+		return new Promise((resolve, reject) => {
+		    fs.readFile(filename, (err, buf) => {
+			if (err) {
+			    reject(err)
+			} else {
+			    ipfs.files.add([{content: buf, path: filename}], (err, res) => {
+				if(err) {
+				    reject(err)
+				} else {
+				    resolve(res[0])
+				}
+			    })
+			}
+		    })
+		})
+	    }
+	}
+    }
+
 }

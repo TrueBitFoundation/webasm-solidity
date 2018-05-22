@@ -319,13 +319,13 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	solverResult = await solverVM.executeWasmTask(interpreterArgs)
 
 	lowStep = 0
-	highStep = solverResult.steps - 1
+	highStep = solverResult.steps
 
 	await interactiveContract.methods.initialize(
 	    gameID,
 	    merkleComputer.getRoots(initWasmData.vm),
 	    merkleComputer.getPointers(initWasmData.vm),
-	    solverResult.steps,
+	    solverResult.steps + 1,
 	    merkleComputer.getRoots(solverResult.vm),
 	    merkleComputer.getPointers(solverResult.vm)
 	).send({from: solver, gas: 1000000})
@@ -378,8 +378,6 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	assert.equal(result.id, gameID)
 	assert.equal(result.idx1, stepNumber)
 
-	lowStep = result.idx1
-	highStep = result.idx2
     })
 
     it("should post response to query", async () => {
