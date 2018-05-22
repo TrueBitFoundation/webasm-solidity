@@ -18,6 +18,22 @@ const StorageType = {
     BLOCKCHAIN: 1,
 }
 
+const phaseTable = {
+    0: "fetch",
+    1: "init",
+    2: "reg1",
+    3: "reg2",
+    4: "reg3",
+    5: "alu",
+    6: "write1",
+    7: "write2",
+    8: "pc",
+    9: "stack_ptr",
+    10: "call_ptr",
+    11: "memsize",
+}
+
+
 function buildArgs(args, config) {
     if (config.actor.error) {
 	args.push("-insert-error")
@@ -62,6 +78,7 @@ module.exports = {
 
     CodeType: CodeType,
     StorageType: StorageType,
+    phaseTable: phaseTable,
 
     uploadOnchain: async (data, web3, options) => {
 	let sz = data.length.toString(16)

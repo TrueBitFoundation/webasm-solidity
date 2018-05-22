@@ -463,6 +463,70 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	assert.equal(lowStepState, states[0])
 	assert.equal(highStepState, states[12])
 
-	await interactiveContract.methods.postPhases(gameID, lowStep, states).send({from: solver, gas: 400000})
+	let txReceipt = await interactiveContract.methods.postPhases(gameID, lowStep, states).send({from: solver, gas: 400000})
+
+	phases = txReceipt.events.PostedPhases.returnValues.arr
+    })
+
+    it("should select phase", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let lowStep = parseInt(indices.idx1)
+
+	let interpreterArgs = []
+
+	//Not needed for the test, but is needed for implementation
+	//let states = (await verifierVM.getStep(lowStep, interpreterArgs)).states
+
+	let txReceipt = await interactiveContract.methods.selectPhase(gameID, lowStep, phases[1], 1).send({from: verifier})
+
+	phase = parseInt(txReceipt.events.SelectedPhase.returnValues.phase)
+	
+    })
+
+    it("should call judge", async () => {
+    	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+    	let lowStep = parseInt(indices.idx1)
+
+    	let interpreterArgs = []
+
+    	let stepResults = await solverVM.getStep(lowStep, interpreterArgs)
+
+    	let phaseStep = merkleComputer.phaseTable[phase]
+
+    	let proof = stepResults[merkleComputer.phaseTable[phase]]
+
+    	let merkle = proof.location || []
+
+    	let merkle2 = []
+
+        if (proof.merkle) {
+            merkle = proof.merkle.list || proof.merkle.list1 || []
+            merkle2 = proof.merkle.list2 || []
+        }
+
+    	let m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
+
+    	let vm = proof.vm
+	
+    	await interactiveContract.methods.callJudge(
+    	    gameID,
+    	    lowStep,
+    	    phase,
+    	    merkle,
+    	    merkle2,
+    	    m.vm,
+    	    m.op,
+    	    [m.reg1, m.reg2, m.reg3, m.ireg],
+    	    merkleComputer.getRoots(vm),
+    	    merkleComputer.getPointers(vm)
+    	).send({from: solver, gas: 400000})
+    })
+
+    it("should finalize task", async () => {
+	await mineBlocks(web3, 105)
+	
+	assert(await tasksContract.methods.finalizeTask(taskID).call())
     })
 })

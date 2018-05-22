@@ -324,9 +324,7 @@ contract Interactive {
                         bytes32 vm, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
-        require(r.state == State.SelectedPhase && r.phase == q && msg.sender == r.prover && r.idx1 == i1 &&
-                r.next == r.prover);
-        
+        require(r.state == State.SelectedPhase && r.phase == q && msg.sender == r.prover && r.idx1 == i1 && r.next == r.prover);
         // for custom judge, use another method
         // uint alu_hint = (uint(op)/2**(8*3))&0xff; require (q != 5 || alu_hint != 0xff);
         
@@ -391,4 +389,3 @@ contract Interactive {
     }
 
 }
-
