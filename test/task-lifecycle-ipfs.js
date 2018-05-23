@@ -9,8 +9,10 @@ const interactiveAbi = JSON.parse(fs.readFileSync(__dirname + "/../contracts/com
 
 const config = JSON.parse(fs.readFileSync(__dirname + "/../config.json"))
 
+console.log(config)
+
 const host = config.host || "localhost"
-const ipfsHost = config.ipfshost || host
+const ipfsHost = host
 
 const ipfs = require('ipfs-api')(ipfsHost, '5001', {protocol: 'http'})
 
@@ -22,7 +24,7 @@ const mineBlocks = require('./helper/mineBlocks')
 
 const solverConf = { error: false, error_location: 0, stop_early: -1, deposit: 1 }
 
-const codeFilePath = __dirname + "/../data/factorial.wast"
+const codeFilePath = "/../data/factorial.wast"
 
 function writeFile(fname, buf) {
     return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (err, res) { cont() }) })
@@ -66,6 +68,14 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     })
 
     it("should upload wast code to ipfs", async () => {
-	await fileSystem.upload(codeFilePath)
+	let result = await new Promise(async (resolve, reject) => {
+	    fs.readFile(__dirname + codeFilePath, async (err, data) => {
+		if(err) {
+		    reject(err)
+		} else {
+		    resolve(await fileSystem.upload(data, "/data/factorial.wast"))
+		}
+	    })
+	})
     })
 })
