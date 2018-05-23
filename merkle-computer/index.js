@@ -152,8 +152,32 @@ module.exports = {
 	return {
 	    upload: async (content, path) => {
 		return ipfs.files.add([{content: content, path: path}])
+	    },
+
+	    download: async (fileID, filename) => {
+		return new Promise((resolve, reject) => {
+		    ipfs.get(fileID, (err, stream) => {
+			let output
+			if(err) {
+			    reject(err)
+			} else {
+			    stream.on('data', (file) => {
+				if (!file.content) return
+				let chunks = []
+				file.content.on('data', (chunk) => {
+				    chunks.push(chunk)
+				})
+				file.content.on('end', () => {
+				    output = {name: filename, content: Buffer.concat(chunks)}
+				})
+			    })
+			    stream.on('end', () => {
+				resolve(output)
+			    })
+			}
+		    })
+		})
 	    }
 	}
     }
-
 }

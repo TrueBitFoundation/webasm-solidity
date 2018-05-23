@@ -9,8 +9,6 @@ const interactiveAbi = JSON.parse(fs.readFileSync(__dirname + "/../contracts/com
 
 const config = JSON.parse(fs.readFileSync(__dirname + "/../config.json"))
 
-console.log(config)
-
 const host = config.host || "localhost"
 const ipfsHost = host
 
@@ -77,5 +75,9 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 		}
 	    })
 	})
+
+	console.log(await fileSystem.download(result[0].hash, "factorial.wast"))
     })
+
+    
 })
