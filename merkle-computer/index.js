@@ -75,10 +75,6 @@ function exec(config, lst, interpreterArgs, path) {
 
 module.exports = {
 
-    CodeType: CodeType,
-    StorageType: StorageType,
-    phaseTable: phaseTable,
-
     uploadOnchain: async (data, web3, options) => {
 	let sz = data.length.toString(16)
 	if (sz.length == 1) sz = "000" + sz
@@ -95,6 +91,10 @@ module.exports = {
 	
 	return contract.options.address
     },
+    
+    CodeType: CodeType,
+    StorageType: StorageType,
+    phaseTable: phaseTable,
 
     init: (config, path) => {
 	return {
