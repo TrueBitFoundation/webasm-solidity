@@ -269,7 +269,7 @@ function getLeaf(lst, loc) {
 async function uploadOutputs() {
     var lst = await contract.methods.getUploadNames(task_id).call(send_opt)
     var types = await contract.methods.getUploadTypes(task_id).call(send_opt)
-    var proofs = await common.exec(config, ["-m", "-output-proofs"])
+    var proofs = await common.exec(config, ["-m", "-input-proofs", "-input2"])
     var proofs = JSON.parse(proofs)
     logger.info("Uploading", {names:lst, types:types, proofs: proofs})
     for (var i = 0; i < lst.length; i++) {
@@ -341,7 +341,10 @@ async function runSolver() {
         status("Already solved, nothing to do.")
         return logger.error("Already solved", {solver:solver})
     }
-    common.getStorage(config, function () {
+    common.getStorage(config, async function () {
+        if (config.metering && config.code_type == common.CodeType.WASM) {
+            await common.insertMetering("task.wasm")
+        }
         solveTask({giver: config.giver, hash: config.init, id:task_id}, config)
     })
 }

@@ -7,6 +7,7 @@
     "socket.io": "2.0.3",
     "socket.io-client": "^2.0.4",
     "web3": "1.0.0-beta.28",
-    "winston": "^3.0.0-rc1"
+    "winston": "^3.0.0-rc1",
+    "wasm-metering": "^0.2.1"
   }
 }

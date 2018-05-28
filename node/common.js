@@ -132,8 +132,9 @@ function buildArgs(args, config) {
     }
     if (config.code_type == CodeType.WAST) ["-case", "0", config.code_file].forEach(a => args.push(a))
     else ["-wasm", config.code_file].forEach(a => args.push(a))
-    logger.info("Built args", {args:args})
-    return args.concat(addresses.interpreter_args)
+    logger.info("Built args", {args:args, cmd:wasm_path + " " + args.join(" ")})
+    if (addresses.interpreter_args) return args.concat(addresses.interpreter_args)
+    else return args
 }
 
 function exec(config, lst) {
@@ -210,6 +211,17 @@ function taskResult(config, cont) {
 }
 
 exports.taskResult = taskResult
+
+exports.insertMetering = function (fname) {
+     var dta = fs.readFileSync(dir + "/" + fname)
+     const metering = require('wasm-metering')
+     const meteredWasm = metering.meterWASM(dta, {
+            moduleStr: "env",
+            fieldStr: "usegas",
+            meterType: 'i64',
+     })
+     fs.writeFileSync(dir + "/" + fname, meteredWasm)
+}
 
 function taskResultVM(config, cont) {
     if (config.actor.stop_early < 0) {
