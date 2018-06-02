@@ -1,16 +1,4 @@
 
-/***
-
-var Web3 = require('./index')
-var web3 = new Web3()
-
-var host = process.argv[2] || "localhost"
-
-web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
-web3.eth.getStorageProof("0x32bce268bc5444dfe211e90b344c4d0360ce8977b6eb133d227f536656e61f61", "0x6d023D3c72c21b997AbeCF03A8bb28fce654A426", "0x2345")
-
-****/
-
 var fs = require("fs")
 var Web3 = require('web3')
 var web3 = new Web3()
@@ -23,7 +11,7 @@ if (host == "ipc") {
     var net = require('net')
     provider = new web3.providers.IpcProvider(process.argv[3], net)
 }
-else provider = new web3.providers.HttpProvider('http://' + host + ':8545')
+else provider = new web3.providers.WebsocketProvider('ws://' + host + ':8546')
 
 web3.setProvider(provider)
 
@@ -42,7 +30,7 @@ async function createContract(name, args) {
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
     send_opt = {gas:4700000, from:accts[0], gasPrice:"21000000000"}
-    var test = await createContract("Test")
+    // var test = await createContract("Test")
     var judge = await createContract("Judge")
     var fs = await createContract("Filesystem")
     var iactive = await createContract("Interactive", [judge.options.address])
