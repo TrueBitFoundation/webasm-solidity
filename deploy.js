@@ -100,7 +100,7 @@ async function doDeploy() {
         tick: true,
         interpreter_args: [],
     }
-    await exports(fs, iactive, tasks)
+    await exports(fs, tasks, iactive)
     if (host == "ipc") config.ipc = process.argv[3]
     console.log(JSON.stringify(config))
     process.exit(0)
