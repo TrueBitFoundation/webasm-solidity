@@ -1,4 +1,3 @@
-
 var fs = require("fs")
 var Web3 = require('web3')
 var web3 = new Web3()
@@ -11,13 +10,13 @@ if (host == "ipc") {
     var net = require('net')
     provider = new web3.providers.IpcProvider(process.argv[3], net)
 }
-else provider = new web3.providers.WebsocketProvider('ws://' + host + ':8546')
+else provider = new web3.providers.HttpProvider('http://' + host + ':8545')
 
 web3.setProvider(provider)
 
 // web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
 
-var dir = "../contracts/compiled/"
+var dir = __dirname + "/contracts/compiled/"
 
 var send_opt
 
@@ -30,8 +29,10 @@ async function createContract(name, args) {
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
     send_opt = {gas:4700000, from:accts[0], gasPrice:"21000000000"}
-    // var test = await createContract("Test")
+    var test = await createContract("Test")
+    console.log(1)
     var judge = await createContract("Judge")
+    console.log(1)
     var fs = await createContract("Filesystem")
     var iactive = await createContract("Interactive", [judge.options.address])
     var tasks = await createContract("Tasks", [iactive.options.address, fs.options.address])
@@ -61,4 +62,3 @@ async function doDeploy() {
 }
 
 doDeploy()
-

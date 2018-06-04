@@ -14,3 +14,8 @@ vm
 *.bin
 tmp.*
 *.log
+
+node_modules
+
+*/#*
+*/.#*
