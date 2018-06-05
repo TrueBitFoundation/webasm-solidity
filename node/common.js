@@ -6,12 +6,9 @@ var web3 = new Web3()
 var execFile = require('child_process').execFile
 var ipfsAPI = require('ipfs-api')
 
-// var appFile = require("./appFileBytes")
-
-var wasm_path = process.cwd() + "/../../ocaml-offchain/interpreter/wasm"
-// var wasm_path = "../../ocaml-offchain/interpreter/wasm"
-
 var addresses = JSON.parse(fs.readFileSync("config.json"))
+
+var wasm_path = addresses.wasm || process.cwd() + "/../../ocaml-offchain/interpreter/wasm"
 
 var host = addresses.host || "localhost"
 var ipfshost = addresses.ipfshost || host
@@ -25,7 +22,7 @@ if (addresses.ipc) {
 }
 else web3.setProvider(new web3.providers.WebsocketProvider('http://' + host + ':8546'))
 
-var contract_dir = "../contracts/compiled/"
+var contract_dir = addresses.contract_dir || "../contracts/compiled/"
 
 var send_opt = {from:base, gas: 4000000, gasPrice:addresses.gasPrice || "21000000000"}
 var contract = new web3.eth.Contract(JSON.parse(fs.readFileSync(contract_dir + "Tasks.abi")), addresses.tasks)
