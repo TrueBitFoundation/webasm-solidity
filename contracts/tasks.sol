@@ -38,7 +38,7 @@ interface FilesystemI {
 contract Tasks is DepositsManager {
 
     uint constant DEPOSIT = 0.01 ether;
-    uint constant TIMEOUT = 100;
+    uint constant TIMEOUT = 5;
 
     enum CodeType {
         WAST,
@@ -52,6 +52,7 @@ contract Tasks is DepositsManager {
     }
 
     event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
+    event RePosted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
     event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
     event Finalized(uint id);
 
@@ -304,12 +305,20 @@ contract Tasks is DepositsManager {
         return true;
     }
     
-    function claimDeposit(bytes32 cid) public {
+    function claimDeposit(bytes32 cid) public returns (address) {
         uint id = iactive.getTask(cid);
         require(iactive.isRejected(id));
-        require(iactive.getChallenger(cid) == msg.sender);
+        address challenger = iactive.getChallenger(cid);
+        require(challenger != 0);
+        addDeposit(challenger, DEPOSIT);
         iactive.deleteChallenge(cid);
-        addDeposit(msg.sender, DEPOSIT);
+        Task2 storage t2 = tasks2[id];
+        Task storage t1 = tasks[id];
+        t2.solver = 0;
+        t2.good = true;
+        t1.state = 0;
+        emit RePosted(t1.giver, t1.init, t1.code_type, t1.storage_type, t1.stor, id, DEPOSIT);
+        return challenger;
     }
 
     uint tick_var;

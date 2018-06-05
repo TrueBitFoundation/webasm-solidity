@@ -182,7 +182,9 @@ contract Interactive {
     }
     
     function deleteChallenge(bytes32 id) public {
-       delete records[id];
+        Record storage r = records[id];
+        rejected[r.task_id] = false;
+        delete records[id];
     }
 
     function checkTimeout(bytes32 id) internal returns (bool) {
