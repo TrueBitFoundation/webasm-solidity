@@ -136,16 +136,25 @@ contract Tasks is DepositsManager {
         params.length++;
         io_roots.length++;
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
+        // Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
         t.stor = stor;
-        t2.good = true;
+        // t2.good = true;
         t.code_type = ct;
         t.storage_type = cs;
         defaultParameters(id);
-        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        // emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        commit(id);
         return id;
+    }
+
+    function commit(uint id) public {
+        Task storage t1 = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require (msg.sender == t1.giver);
+        t2.good = true;
+        emit Posted(t1.giver, t1.init, t1.code_type, t1.storage_type, t1.stor, id, DEPOSIT);
     }
 
     function addWithParameters(bytes32 init, CodeType ct, Storage cs, string stor, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public returns (uint) {
@@ -155,11 +164,11 @@ contract Tasks is DepositsManager {
         params.length++;
         io_roots.length++;
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
+//        Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
         t.stor = stor;
-        t2.good = true;
+        // t2.good = true;
         t.code_type = ct;
         t.storage_type = cs;
         
@@ -169,12 +178,15 @@ contract Tasks is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        // emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
     // Make sure they won't be required after the task has been posted already
     function requireFile(uint id, bytes32 hash, Storage st) public {
+        Task storage t1 = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require (!t2.good && msg.sender == t1.giver);
         IO storage io = io_roots[id];
         io.uploads.push(RequiredFile(hash, st, 0));
     }
