@@ -1,6 +1,1 @@
-{"judge":"0x41130be5070275c6A3A6274DA33ad7Ca424AeE7c","interactive":"0x7E26d09257bE77Afa4D3Af2F9CEf2c0e31d913Ab","host":"localhost",
-"base":"0x64c454631102a1ab7b76b341e7ef8931e2f8b672",
-"tasks-orig":"0x45Fd1a9801084D6dD6F925faf898eF8e6adC2FF3",
-"tasks":"0x167832530Da9edB460C78FF774b6E207BCa9a649",
-"ipfshost":"programming-progress.com",
-"fs":"0x4f118F398c9314d17F51F7601cC78337BbaeE830","merkle":"0x37A3Ae4604281720575159c64071f84EE547619f","events_disabled":false,"poll":false,"timeout":5000,"tick":false,"interpreter_args":[]}
+{"judge":"0xcB1801CD4D3Dd3eB75712A9A4d8E665A7c3056e1","interactive":"0x9957aA52D92dae993Fe4af127c339E32b8372F2a","host":"localhost","base":"0x64c454631102a1ab7b76b341e7ef8931e2f8b672","tasks":"0xFEf12Bca63562161e6b1F12f32F9fdA2b072FEB4","resubmit":"0x9Df5d87FcE87206C42Ed8C82e41225F0E610eE29","fs":"0xE25deB654027B39b8D413EDa6441f40A99Af6b54","merkle":"0xD8b62c6DD7ceF97Bf54046DCc389E80E90fc71a8","ipfshost":"programming-progress.com","events_disabled":false,"poll":false,"timeout":5000,"tick":true,"interpreter_args":[]}

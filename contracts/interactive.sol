@@ -109,7 +109,6 @@ contract Interactive {
         r.phase = 16;
         r.size = par;
         r.state = State.Started;
-        r.state = State.Started;
         emit StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
         return uniq;
@@ -139,7 +138,7 @@ contract Interactive {
         require(s_roots[4] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // call table (check if resizing works)
         require(s_roots[5] == 0x7bf9aa8e0ce11d87877e8b7a304e8e7105531771dbff77d1b00366ecb1549624);
-        // require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
+        //require(s_roots[5] == 0xc024f071f70ef04cc1aaa7cb371bd1c4f7df06b0edb57b81adbcc9cdb1dfc910);
         // call types
         require(s_roots[6] == 0xb4c11951957c6f8f642c4af61cd6b24640fec6dc7fc607ee8206a99e92410d30);
         // pointers
@@ -155,7 +154,6 @@ contract Interactive {
         r.proof.length = r.steps;
         r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
-        
         r.state = State.Running;
         return true;
     }
@@ -256,8 +254,7 @@ contract Interactive {
 
     function query(bytes32 id, uint i1, uint i2, uint num) public {
         Record storage r = records[id];
-        require(r.state == State.Running && num <= r.size && i1 == r.idx1 && i2 == r.idx2 &&
-                msg.sender == r.challenger && r.challenger == r.next);
+        require(r.state == State.Running && num <= r.size && i1 == r.idx1 && i2 == r.idx2 && msg.sender == r.challenger && r.challenger == r.next);
         r.clock = block.number;
         blocked[r.task_id] = r.clock + r.timeout;
         uint iter = (r.idx2-r.idx1)/(r.size+1);
@@ -280,8 +277,8 @@ contract Interactive {
 
     function postPhases(bytes32 id, uint i1, bytes32[13] arr) public {
         Record storage r = records[id];
-        require(r.state == State.NeedPhases && msg.sender == r.prover && r.next == r.prover && r.idx1 == i1 &&
-                r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[12] && arr[12] != bytes32(0));
+        require(r.state == State.NeedPhases && msg.sender == r.prover && r.next == r.prover && r.idx1 == i1);
+        require(r.proof[r.idx1] == arr[0] && r.proof[r.idx1+1] == arr[12] && arr[12] != bytes32(0));
         r.clock = block.number;
         r.state = State.PostedPhases;
         blocked[r.task_id] = r.clock + r.timeout;
@@ -327,9 +324,7 @@ contract Interactive {
                         bytes32 vm, bytes32 op, uint[4] regs,
                         bytes32[10] roots, uint[4] pointers) public {
         Record storage r = records[id];
-        require(r.state == State.SelectedPhase && r.phase == q && msg.sender == r.prover && r.idx1 == i1 &&
-                r.next == r.prover);
-        
+        require(r.state == State.SelectedPhase && r.phase == q && msg.sender == r.prover && r.idx1 == i1 && r.next == r.prover);
         // for custom judge, use another method
         // uint alu_hint = (uint(op)/2**(8*3))&0xff; require (q != 5 || alu_hint != 0xff);
         
@@ -394,4 +389,3 @@ contract Interactive {
     }
 
 }
-

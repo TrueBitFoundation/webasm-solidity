@@ -6,55 +6,23 @@
   <img src="./Dispute Resolution Layer.jpg"/>
 </p>
 
-This is meant to be used in the dispute resolution layer for the overall Truebit architecture.
+This project contains the code for the WASM onchain dispute resolution.
 
-## Testing on-chain interpreter
+## Usage
 
-You can download a Docker image and run the tests inside of a container:
-
-```
-docker run --name wasm-solidity-test -ti hswick/wasm-solidity:latest
-cd webasm-solidity
-sh runtests.sh
-```
-
-Or if you want to build the dependencies yourself:
-
-Install the test server. Testrpc seems to require a recent version of Node.js:
-```
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-sudo apt-get install -y nodejs
-sudo npm install -g ethereumjs-testrpc
-```
-
-Install Solidity compiler from https://github.com/ethereum/solidity/releases
-
-Compiling `instruction.sol` to EVM bytecodes:
-```
-sh compile.sh
-```
-
-Starting up the test server:
-```
-testrpc -d test
-```
-
-Change the line
-```
-var test = JSON.parse(fs.readFileSync("load.json"))
-```
-to test another proof.
-
-Comment and uncomment the lines in the end of `test.js` to select which phase is tested.
-
-Running the test:
+Install necessary dependencies:
 ```
 npm install
-node test.js
 ```
-If the test doesn't output an error, it should have passed. If the proof was wrong, then it will complain about invalid EVM opcode (this is how reverting the state is currently handled in the EVM).
 
-## Simple test node
+Ensure you have a development blockchain you can use. For example:
+```
+npm install -g ganache-cli
+
+ganache-cli
+```
+
+Or you can use `parity`:
 
 Install Parity, then run it with
 ```
@@ -67,7 +35,40 @@ parity --chain dev --unlock=0x00a329c0648769a73afac7f9381e08fb43dbea72
 ```
 and then exit Parity. Now it should have created the development account.
 
-Currently the test node uses ipfs. It can be installed with
+Then you need to compile the smart contracts. You will need `solc` already installed on your machine.
+
+You will also need to download and install `ocaml-offchain` next to the webasm-solidity (ex: `../webasm-solidity`)
+
+```
+chmod 755 ./scripts/compile.sh
+npm run compile
+```
+
+Then deploy the smart contracts to the blockchain with:
+
+```
+npm run deploy
+```
+
+Now you can run the task lifecycle test
+
+```
+npm run test test/task-lifecycle.js
+```
+
+To test the solidity wasm interpreter run this
+
+```
+chmod 755 ./scripts/runtests.sh
+
+```
+
+If the test doesn't output an error, it should have passed. If the proof was wrong, then it will complain about invalid EVM opcode (this is how reverting the state is currently handled in the EVM).
+
+## Example Application
+
+If you want to see the code in the context of an example application follow these instructions. This application uses ipfs so you'll have to make sure you install it. In a separate directory follow these installation instructions:
+
 ```
 wget https://dist.ipfs.io/go-ipfs/v0.4.10/go-ipfs_v0.4.10_linux-amd64.tar.gz
 tar xf go-ipfs_v0.4.10_linux-amd64.tar.gz
@@ -83,7 +84,7 @@ ipfs daemon
 
 Run the test node:
 ```
-npm install
+cd node/
 node deploy-tasks.js > config.json
 node app.js
 ```

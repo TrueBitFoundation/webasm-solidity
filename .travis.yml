@@ -24,11 +24,11 @@ matrix:
 
 install: 
   - travis_retry sudo apt-get update -y
-  - npm install -g ethereumjs-testrpc -y
+  - npm install -g ganache-cli -y
   - cd node && npm install && cd ..
 
 script: 
-  - chmod +x ./compile.sh
-  - ./compile.sh
-  - chmod +x ./runtests.sh
-  - ./runtests.sh
+  - chmod +x ./scripts/compile.sh
+  - npm run compile
+  - chmod +x ./scripts/travis_test.sh
+  - ./scripts/travis_test.sh
