@@ -3,6 +3,7 @@ pragma solidity ^0.4.15;
 import "./common-onchain.sol";
 import "./IDisputeResolver.sol";
 
+// dispute for one computation step, divide into phases 
 contract WasmDispute is CommonOnchain, IDisputeResolver {
 
     uint constant TIMEOUT = 10;
@@ -152,6 +153,7 @@ contract PhaseDispute is IDisputeResolver {
 
 }
 
+// abstract dispute for handling a computation step
 contract TransitionDispute is IDisputeResolver {
 
     uint constant TIMEOUT = 10;
@@ -195,6 +197,7 @@ contract TransitionDispute is IDisputeResolver {
 
 }
 
+// handling a single phase. The idea is that by composing this with PhaseDispute, we get the same results as WasmDispute
 contract StepDispute is CommonOnchain, TransitionDispute {
 
     bytes32 mask = 0xffffffffffffffffffffffffffffffffffffffffffffffff;
@@ -242,6 +245,7 @@ contract StepDispute is CommonOnchain, TransitionDispute {
     
 }
 
+// implements the interactive search
 contract InteractiveDispute is IDisputeResolver {
 
     uint constant TIMEOUT = 10;
@@ -333,6 +337,7 @@ contract InteractiveDispute is IDisputeResolver {
 
 }
 
+// helper class
 contract BasicDispute is IDisputeResolver {
 
     uint constant TIMEOUT = 10;
@@ -360,6 +365,7 @@ contract BasicDispute is IDisputeResolver {
     }
 }
 
+// combination of two disputes
 contract AndDispute is BasicDispute {
     IDisputeResolver a;
     IDisputeResolver b;
@@ -392,6 +398,7 @@ contract AndDispute is BasicDispute {
 
 }
 
+// Combine multiple similar disputes. Solver must be able to win every subdispute to win this
 contract MultipleDispute is BasicDispute {
     IDisputeResolver a;
 
@@ -427,6 +434,8 @@ contract MultipleDispute is BasicDispute {
     }
 
 }
+
+// Handling uploading files using dispute resolution layer needs time stamps
 
 import "./fs.sol";
 

@@ -20,3 +20,5 @@ solc --abi --optimize --overwrite --bin -o compiled merkle.sol
 solc --abi --optimize --overwrite --bin -o compiled stake.sol
 solc --abi --optimize --overwrite --bin -o compiled dispute.sol
 
+solc --abi --optimize --overwrite --bin -o compiled ipfs.sol
+

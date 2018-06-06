@@ -235,6 +235,22 @@ contract Filesystem {
    function hashName(string name) public pure returns (bytes32) {
       return makeMerkle(bytes(name), 0, 8);
    }
+   
+    // more efficient way to store data onchain in chunks
+    mapping (bytes32 => uint) chunks;
+   
+    function addChunk(bytes32[] arr, uint sz) public {
+        require(arr.length == 2**sz && arr.length > 1);
+        bytes32 hash = fileMerkle(arr, 0, sz);
+        chunks[hash] = sz;
+    }
+    
+    function combineChunks(bytes32[] arr, uint part_sz, uint sz) public {
+        require(arr.length == 2**sz && arr.length > 1);
+        bytes32 hash = calcMerkle(arr, 0, sz);
+        for (uint i = 0; i < arr.length; i++) require(chunks[arr[i]] == part_sz);
+        chunks[hash] = sz+part_sz;
+    }
 
 }
 
