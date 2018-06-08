@@ -82,6 +82,19 @@ contract Filesystem {
       File storage f = files[id];
       return f.data;
    }
+   
+   function getByteData(bytes32 id) public view returns (bytes) {
+      File storage f = files[id];
+      bytes memory res = new bytes(f.bytesize);
+      for (uint i = 0; i < f.data.length; i++) {
+          bytes32 w = f.data[i];
+          for (uint j = 0; j < 32; j++) {
+              byte b = byte(uint(w) >> (8*j));
+              if (i*32 + j < res.length) res[i*32 + j] = b;
+          }
+      }
+      return res;
+   }
 
    function forwardData(bytes32 id, address a) public {
       File storage f = files[id];
@@ -254,3 +267,27 @@ contract Filesystem {
 
 }
 
+contract FSUtils {
+
+   function idToString(bytes32 id) internal pure returns (string) {
+      bytes memory res = new bytes(64);
+      for (uint i = 0; i < 64; i++) res[i] = bytes1(((uint(id) / (2**(4*i))) & 0xf) + 65);
+      return string(res);
+   }
+
+   function makeMerkle(bytes arr, uint idx, uint level) internal pure returns (bytes32) {
+      if (level == 0) return idx < arr.length ? bytes32(uint(arr[idx])) : bytes32(0);
+      else return keccak256(makeMerkle(arr, idx, level-1), makeMerkle(arr, idx+(2**(level-1)), level-1));
+   }
+
+   function calcMerkle(bytes32[] arr, uint idx, uint level) internal returns (bytes32) {
+      if (level == 0) return idx < arr.length ? arr[idx] : bytes32(0);
+      else return keccak256(calcMerkle(arr, idx, level-1), calcMerkle(arr, idx+(2**(level-1)), level-1));
+   }
+
+   // assume 256 bytes?
+   function hashName(string name) internal pure returns (bytes32) {
+      return makeMerkle(bytes(name), 0, 8);
+   }
+
+}

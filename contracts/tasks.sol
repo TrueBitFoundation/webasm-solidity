@@ -4,36 +4,10 @@ import "./DepositsManager.sol";
 import "./interactive.sol";
 import "./fs.sol";
 
-/*
-interface InteractiveI {
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) external returns (bytes32);
-    
-    function calcStateHash(bytes32[10] roots, uint[4] pointers) external returns (bytes32);
-    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) external returns (bool);
-    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) external returns (bool);
-    
-    // Check if a task has been rejected
-    function isRejected(uint id) external returns (bool);
-    // Check if a task is blocked, returns the block when it can be accepted
-    function blockedTime(uint id) external returns (uint);
-    function getChallenger(bytes32 id) external returns (address);
-    function getTask(bytes32 id) external view returns (uint);
-    function deleteChallenge(bytes32 id) external;
-    function getProver(bytes32 id) external returns (address);
-}
-*/
-
 interface Callback {
     function solved(uint id, bytes32[] files) external;
     function rejected(uint id) external;
 }
-
-/*
-interface FilesystemI {
-  function getRoot(bytes32 id) external view returns (bytes32);
-  function getNameHash(bytes32 id) external view returns (bytes32);
-}
-*/
 
 contract Tasks is DepositsManager {
 
