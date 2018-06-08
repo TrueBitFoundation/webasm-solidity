@@ -252,10 +252,11 @@ contract Filesystem {
     // more efficient way to store data onchain in chunks
     mapping (bytes32 => uint) chunks;
    
-    function addChunk(bytes32[] arr, uint sz) public {
-        require(arr.length == 2**sz && arr.length > 1);
+    function addChunk(bytes32[] arr, uint sz) public returns (bytes32) {
+        require( /* arr.length == 2**sz && */ arr.length > 1);
         bytes32 hash = fileMerkle(arr, 0, sz);
         chunks[hash] = sz;
+        return hash;
     }
     
     function combineChunks(bytes32[] arr, uint part_sz, uint sz) public {
