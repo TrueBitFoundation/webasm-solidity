@@ -63,6 +63,8 @@ contract Interactive {
         address winner;
         address next;
         
+        address manager;
+        
         uint256 size;
         uint256 timeout;
         uint256 clock;
@@ -93,9 +95,11 @@ contract Interactive {
     }
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
+    
+    uint nonce;
 
     function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32) {
-        bytes32 uniq = keccak256(task_id, p, c, s, e, par, to);
+        bytes32 uniq = keccak256(task_id, p, c, s, e, par, to, nonce++);
         Record storage r = records[uniq];
         r.task_id = task_id;
         r.prover = p;
@@ -109,6 +113,7 @@ contract Interactive {
         r.phase = 16;
         r.size = par;
         r.state = State.Started;
+        r.manager = msg.sender;
         emit StartChallenge(p, c, s, e, r.size, to, uniq);
         blocked[task_id] = r.clock + r.timeout;
         return uniq;
@@ -183,6 +188,7 @@ contract Interactive {
     
     function deleteChallenge(bytes32 id) public {
         Record storage r = records[id];
+        require (msg.sender == r.manager);
         rejected[r.task_id] = false;
         delete records[id];
     }

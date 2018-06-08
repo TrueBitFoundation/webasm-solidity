@@ -166,6 +166,7 @@ contract.events.Posted(function (err, ev) {
 contract.events.RePosted(function (err, ev) {
     if (err) return logger.error("Event error", err)
     console.log("Reposted", ev.returnValues)
+    // startSolver(ev.returnValues)
 })
 
 async function pollSolutions() {
