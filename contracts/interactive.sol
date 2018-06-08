@@ -126,10 +126,10 @@ contract Interactive {
         Record storage r = records[id];
         require(msg.sender == r.next && r.state == State.Started);
         // check first state here
-        if (r.start_state != judge.calcIOHash(s_roots)) return false;
+        // if (r.start_state != judge.calcIOHash(s_roots)) return false;
         require (r.start_state == judge.calcIOHash(s_roots));
         // then last one
-        if (r.end_state != judge.calcIOHash(e_roots)) return false;
+        // if (r.end_state != judge.calcIOHash(e_roots)) return false;
         require (r.end_state == judge.calcIOHash(e_roots));
         
         // need to check that the start state is empty
