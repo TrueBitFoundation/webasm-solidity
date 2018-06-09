@@ -12,7 +12,7 @@ interface Callback {
 contract Tasks is DepositsManager {
 
     uint constant DEPOSIT = 0.01 ether;
-    uint constant TIMEOUT = 5;
+    uint constant TIMEOUT = 50;
 
     enum CodeType {
         WAST,
