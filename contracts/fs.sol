@@ -46,7 +46,7 @@ contract Filesystem {
    function calcId(uint nonce) public view returns (bytes32) {
          return keccak256(msg.sender, nonce);
    }
-
+   
    // the IPFS file should have same contents and name
    function addIPFSFile(string name, uint size, string hash, bytes32 root, uint nonce) public returns (bytes32) {
       bytes32 id = keccak256(msg.sender, nonce);
@@ -265,6 +265,18 @@ contract Filesystem {
         for (uint i = 0; i < arr.length; i++) require(chunks[arr[i]] == part_sz);
         chunks[hash] = sz+part_sz;
     }
+
+    function fileFromChunk(string name, bytes32 chunk, uint size) public returns (bytes32) {
+        bytes32 id = keccak256(msg.sender, chunk);
+        require(chunks[chunk] != 0);
+        File storage f = files[id];
+        f.bytesize = size;
+        f.name = name;
+        f.root = chunk;
+        return id;
+    }
+
+
 
 }
 

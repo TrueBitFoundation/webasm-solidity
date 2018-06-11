@@ -94,8 +94,11 @@ contract IpfsLoad {
     }
     
     mapping (bytes32 => Task) tasks;
+    
+    event LoadingToIPFS(bytes32 id, bytes32 state);
 
     // Initializes a new custom verification game
+    // State will include ipfs hash as a base58 string
     function init(bytes32 state, uint state_size, uint /* r3 */, address solver, address verifier) public returns (bytes32) {
         bytes32 id = keccak256(state, state_size, solver, verifier, uniq++);
         // require(state_size == );
@@ -104,6 +107,7 @@ contract IpfsLoad {
         t.verifier = verifier;
         t.name_hash = state;
         t.clock = block.number;
+        emit LoadingToIPFS(id, state);
     }
 
     // Last time the task was updated
@@ -139,28 +143,12 @@ contract IpfsLoad {
         require (block_hash == t.ipfs_block && block_size == t.ipfs_size);
         t.resolved = true;
     }
-    
+
     function resolveBlock(bytes32 id, bytes32 block_hash, uint block_size) public {
         Task storage t = tasks[id];
         t.ipfs_block = block_hash;
         t.ipfs_size = block_size;
     }
-    /*
-    function resolveName(bytes32 id, string ipfs_hash, uint sz) public {
-        Task storage t = tasks[id];
-        bytes32 name = fileMerkle(arrange(bytes(ipfs_hash)), 0, sz);
-        require(name == t.name_hash);
-        t.ipfs_hash = ipfs_hash;
-    }
-    
-    function resolveBlock(bytes32 id) public {
-        Task storage t = tasks[id];
-        bytes32 block_hash;
-        uint block_size;
-        (block_hash, block_size) = ipfs.load(t.ipfs_hash);
-        t.ipfs_block = block_hash;
-        t.ipfs_size = block_size;
-    }*/
 
     // Check if has resolved into correct state: merkle root of output data and output size
     function resolved(bytes32 id, bytes32 state, uint size) public view returns (bool) {
