@@ -66,113 +66,172 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     })
 
     it("should upload wast code to ipfs", async () => {
-	filename = "bundle/factorial.wast"
-	let result = await new Promise(async (resolve, reject) => {
+	fileName = "bundle/factorial.wast"
+	wastCode = await new Promise(async (resolve, reject) => {
 	    fs.readFile(__dirname + codeFilePath, async (err, data) => {
 		if(err) {
 		    reject(err)
-		} else {		    
-		    resolve(await fileSystem.upload(data, filename))
+		} else {
+		    resolve(data)
 		}
 	    })
 	})
 
-	ipfsFileHash = result[0].hash
+	ipfsFileHash = (await fileSystem.upload(wastCode, fileName))[0].hash
     })
 
-    it("should initialize wasm task", async () => {
+    it("should register ipfs file with truebit filesystem", async () => {
+	bundleID = await fileSystemContract.methods.makeBundle(
+	    Math.floor(Math.random()*Math.pow(2, 60))
+	).call(
+	    {from: taskGiver}
+	)
 
-	let config = {
-	    code_file: __dirname + "/../data/factorial.wast",
-	    input_file: "",
-	    actor: {},
-	    files: []
-	}
+	let randomNum = Math.floor(Math.random()*Math.pow(2, 60))
 
-	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+	let size = wastCode.byteLength
 
-	taskGiverVM = merkleComputer.init(config, randomPath)
+	let root = merkleComputer.merkleRoot(web3, wastCode)
 
-	let interpreterArgs = []
+	let fileID = await fileSystemContract.methods.addIPFSFile(
+	    fileName,
+	    size,
+	    ipfsFileHash,
+	    root,
+	    randomNum
+	).call(
+	    {from: taskGiver}
+	)
+
+	await fileSystemContract.methods.addIPFSFile(
+	    fileName,
+	    size,
+	    ipfsFileHash,
+	    root,
+	    randomNum
+	).send({from: taskGiver, gas: 200000})
+
+	await fileSystemContract.methods.addToBundle(bundleID, fileID).send({from: taskGiver})
+
+	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, root).send({from: taskGiver, gas: 1500000})
+
+	initHash = await fileSystemContract.methods.getInitHash(bundleID).call()
 	
-	initStateHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
     })
+
+    // it("should provide the hash of the initialized state", async () => {
+
+    // 	let config = {
+    // 	    code_file: __dirname + "/../data/factorial.wast",
+    // 	    input_file: "",
+    // 	    actor: {},
+    // 	    files: [],
+    // 	    code_type: 0
+    // 	}
+
+    // 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+    // 	taskGiverVM = merkleComputer.init(config, randomPath)
+
+    // 	let interpreterArgs = []
+	
+    // 	initHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
+    // })    
 
     it("should submit a task", async () => {
-	let txReceipt = await tasksContract.methods.add(
-	    initStateHash,
-	    merkleComputer.CodeType.WAST,
-	    merkleComputer.StorageType.IPFS,
-	    ipfsFileHash
-	).send({from: taskGiver, gas: 300000})
+    	let txReceipt = await tasksContract.methods.add(
+    	    initHash,
+    	    merkleComputer.CodeType.WAST,
+    	    merkleComputer.StorageType.IPFS,
+    	    bundleID
+    	).send({from: taskGiver, gas: 300000})
 
-	let result = txReceipt.events.Posted.returnValues
+    	let result = txReceipt.events.Posted.returnValues
 
-	taskID = result.id
+    	taskID = result.id
 
-	assert.equal(result.giver, taskGiver)
-	assert.equal(result.hash, initStateHash)
-	assert.equal(result.stor, ipfsFileHash)
-	assert.equal(result.ct, merkleComputer.CodeType.WAST)
-	assert.equal(result.cs, merkleComputer.StorageType.IPFS)
-	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
+    	assert.equal(result.giver, taskGiver)
+    	assert.equal(result.hash, initHash)
+    	assert.equal(result.stor, bundleID)
+    	assert.equal(result.ct, merkleComputer.CodeType.WAST)
+    	assert.equal(result.cs, merkleComputer.StorageType.IPFS)
+    	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
     })
     
     it("should get task data from ipfs and execute task", async () => {
 
-	let buf = (await fileSystem.download(ipfsFileHash, filename)).content
+	let codeIPFSHash = await fileSystemContract.methods.getIPFSCode(bundleID).call()
+
+	let fileIDs = await fileSystemContract.methods.getFiles(bundleID).call()
+
+	let hash = await fileSystemContract.methods.getHash(fileIDs[0]).call()
+
+	assert(codeIPFSHash == hash)
+
+	let name = await fileSystemContract.methods.getName(fileIDs[0]).call()
+
+	let buf = (await fileSystem.download(codeIPFSHash, name)).content
 	
-	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
+    	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
 
-	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
+    	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
-	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
+    	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
-	let config = {
-	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
-	    input_file: "",
-	    actor: solverConf,
-	    files: [],
-	    vm_parameters: vmParameters,
-	    code_type: parseInt(taskInfo.ct)
-	}
+    	let config = {
+    	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
+    	    input_file: "",
+    	    actor: solverConf,
+    	    files: [],
+    	    vm_parameters: vmParameters,
+    	    code_type: parseInt(taskInfo.ct)
+    	}
 
-	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+    	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
 
-	solverVM = merkleComputer.init(config, randomPath)
+    	solverVM = merkleComputer.init(config, randomPath)
 
-	let interpreterArgs = []
+    	let interpreterArgs = []
 
-	solverResult = await solverVM.executeWasmTask(interpreterArgs)
+    	solverResult = await solverVM.executeWasmTask(interpreterArgs)
     })
 
     it("should submit solution", async () => {
-	let txReceipt = await tasksContract.methods.solveIO(
-	    taskID,
-	    solverResult.vm.code,
-	    solverResult.vm.input_size,
-	    solverResult.vm.input_name,
-	    solverResult.vm.input_data
-	).send({from: solver, gas: 200000})
+    	let txReceipt = await tasksContract.methods.solveIO(
+    	    taskID,
+    	    solverResult.vm.code,
+    	    solverResult.vm.input_size,
+    	    solverResult.vm.input_name,
+    	    solverResult.vm.input_data
+    	).send({from: solver, gas: 200000})
 
-	let result = txReceipt.events.Solved.returnValues
+    	let result = txReceipt.events.Solved.returnValues
 
-	assert.equal(taskID, result.id)
-	//assert.equal(, result.hash) //which hash is this?
-	assert.equal(initStateHash, result.init)
-	assert.equal(merkleComputer.CodeType.WAST, result.ct)
-	assert.equal(merkleComputer.StorageType.IPFS, result.cs)
-	assert.equal(ipfsFileHash, result.stor)
-	assert.equal(solver, result.solver)
-	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
+    	assert.equal(taskID, result.id)
+    	assert.equal(initHash, result.init)
+    	assert.equal(merkleComputer.CodeType.WAST, result.ct)
+    	assert.equal(merkleComputer.StorageType.IPFS, result.cs)
+    	assert.equal(bundleID, result.stor)
+    	assert.equal(solver, result.solver)
+    	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
     })
     
     it("should finalize task", async () => {
 
-	await mineBlocks(web3, 105)
+    	await mineBlocks(web3, 105)
 	
-	assert(await tasksContract.methods.finalizeTask(taskID).call())
+    	assert(await tasksContract.methods.finalizeTask(taskID).call())
 	
+    })
+
+    //This test is meant to simulate what happens when solver calls
+    //interactive's initialize method
+    it("should check solver and task giver initialization is the same", async () => {
+	let interpreterArgs = []
+	let initWasmHash = (await solverVM.initializeWasmTask(interpreterArgs)).hash
+
+	assert(initHash == initWasmHash, "initial hash is not the same for solver and task giver")
+
     })
 
 })

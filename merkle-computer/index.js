@@ -1,5 +1,6 @@
 const execFile = require('child_process').execFile
 const winston = require('winston')
+const merkleRoot = require('./merkleRoot')
 
 const wasmInterpreterPath = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
 
@@ -74,6 +75,8 @@ function exec(config, lst, interpreterArgs, path) {
 
 
 module.exports = {
+
+    merkleRoot: merkleRoot,
 
     uploadOnchain: async (data, web3, options) => {
 	let sz = data.length.toString(16)

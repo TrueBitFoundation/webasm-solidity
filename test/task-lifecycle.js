@@ -61,13 +61,14 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 	storageAddress = await merkleComputer.uploadOnchain(wastCode, web3, {from: taskGiver, gas: 400000})
     })
 
-    it("should initialize wasm task", async () => {
+    it("should provide the hash of the initialized state", async () => {
 
 	let config = {
 	    code_file: __dirname + "/../data/factorial.wast",
 	    input_file: "",
 	    actor: {},
-	    files: []
+	    files: [],
+	    code_type: 0
 	}
 
 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
@@ -198,25 +199,25 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	storageAddress = await merkleComputer.uploadOnchain(wastCode, web3, {from: taskGiver, gas: 400000})
     })
 
-    it("should initialize wasm task", async () => {
+    it("should provide the hash of the initialized state", async () => {
 
 	let config = {
 	    code_file: __dirname + "/../data/factorial.wast",
 	    input_file: "",
 	    actor: {},
-	    files: []
+	    files: [],
+	    code_type: 0
 	}
-	
+
 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-	
-	let interpreterArgs = []
 
 	taskGiverVM = merkleComputer.init(config, randomPath)
+
+	let interpreterArgs = []
 	
 	initStateHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
-	
     })
-
+    
     it("should submit a task", async () => {
 	let txReceipt = await tasksContract.methods.add(
 	    initStateHash,
@@ -314,10 +315,8 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
 	let interpreterArgs = []
 	
-	initWasmData = await taskGiverVM.initializeWasmTask(interpreterArgs)
-
-	solverResult = await solverVM.executeWasmTask(interpreterArgs)
-
+	initWasmData = await solverVM.initializeWasmTask(interpreterArgs)
+	
 	lowStep = 0
 	highStep = solverResult.steps
 
@@ -329,6 +328,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	    merkleComputer.getRoots(solverResult.vm),
 	    merkleComputer.getPointers(solverResult.vm)
 	).send({from: solver, gas: 1000000})
+	
     })
 
     it("should post response for initial midpoint", async () => {
