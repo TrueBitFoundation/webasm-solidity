@@ -9,7 +9,7 @@ const interactiveAbi = JSON.parse(fs.readFileSync(__dirname + "/../contracts/com
 
 const config = JSON.parse(fs.readFileSync(__dirname + "/../config.json"))
 
-const merkleComputer = require('../merkle-computer')
+const merkleComputer = require('../merkle-computer')()
 
 const mineBlocks = require('./helper/mineBlocks')
 

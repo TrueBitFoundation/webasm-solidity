@@ -14,7 +14,7 @@ const ipfsHost = host
 
 const ipfs = require('ipfs-api')(ipfsHost, '5001', {protocol: 'http'})
 
-const merkleComputer = require('../merkle-computer')
+const merkleComputer = require('../merkle-computer')()
 
 const fileSystem = merkleComputer.fileSystem(ipfs)
 
