@@ -1,7 +1,8 @@
 const execFile = require('child_process').execFile
 const winston = require('winston')
+const merkleRoot = require('./merkleRoot')
 
-const wasmInterpreterPath = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
+const defaultWasmInterpreterPath = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
 
 const format = winston.format
 
@@ -60,124 +61,128 @@ function buildArgs(args, config) {
     return args
 }
 
-function exec(config, lst, interpreterArgs, path) {
-    let args = buildArgs(lst, config).concat(interpreterArgs)
-    return new Promise(function (resolve, reject) {
-	execFile(wasmInterpreterPath, args, function (error, stdout, stderr) {
-	    //if (stderr) logger.error('error %s', stderr, args)
-	    //if (stdout) logger.info('output %s', stdout, args)
-	    if (error) reject(error)
-	    else resolve(stdout)
+module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
+
+    function exec(config, lst, interpreterArgs, path) {
+	let args = buildArgs(lst, config).concat(interpreterArgs)
+	return new Promise(function (resolve, reject) {
+	    execFile(wasmInterpreterPath, args, function (error, stdout, stderr) {
+		//if (stderr) logger.error('error %s', stderr, args)
+		//if (stdout) logger.info('output %s', stdout, args)
+		if (error) reject(error)
+		else resolve(stdout)
+	    })
 	})
-    })
-}
+    }
+        
+    return {
 
+	merkleRoot: merkleRoot,
 
-module.exports = {
+	uploadOnchain: async (data, web3, options) => {
+	    let sz = data.length.toString(16)
+	    if (sz.length == 1) sz = "000" + sz
+	    else if (sz.length == 2) sz = "00" + sz
+	    else if (sz.length == 3) sz = "0" + sz
 
-    uploadOnchain: async (data, web3, options) => {
-	let sz = data.length.toString(16)
-	if (sz.length == 1) sz = "000" + sz
-	else if (sz.length == 2) sz = "00" + sz
-	else if (sz.length == 3) sz = "0" + sz
+	    let init_code = "61"+sz+"600061"+sz+"600e600039f3"
 
-	let init_code = "61"+sz+"600061"+sz+"600e600039f3"
+	    let contract = new web3.eth.Contract([])
 
-	let contract = new web3.eth.Contract([])
+	    let hex_data = Buffer.from(data).toString("hex")
 
-	let hex_data = Buffer.from(data).toString("hex")
-
-	contract = await contract.deploy({data: '0x' + init_code + hex_data}).send(options)
+	    contract = await contract.deploy({data: '0x' + init_code + hex_data}).send(options)
+	    
+	    return contract.options.address
+	},
 	
-	return contract.options.address
-    },
-    
-    CodeType: CodeType,
-    StorageType: StorageType,
-    phaseTable: phaseTable,
+	CodeType: CodeType,
+	StorageType: StorageType,
+	phaseTable: phaseTable,
 
-    init: (config, path) => {
-	return {
-	    initializeWasmTask: async (interpreterArgs = []) => {
-		let stdout = await exec(config, ["-m", "-input"], interpreterArgs, path)
-		return JSON.parse(stdout)
-	    },
+	init: (config, path) => {
+	    return {
+		initializeWasmTask: async (interpreterArgs = []) => {
+		    let stdout = await exec(config, ["-m", "-input"], interpreterArgs, path)
+		    return JSON.parse(stdout)
+		},
 
-	    executeWasmTask: async(interpreterArgs = []) => {
-		let stdout = await exec(config, ["-m", "-output"], interpreterArgs, path)
-		return JSON.parse(stdout)
-	    },
-	    
-	    getLocation: async(stepNumber, interpreterArgs = []) => {
-		let stdout = await exec(config, ["-m", "-location", stepNumber], interpreterArgs, path)
+		executeWasmTask: async(interpreterArgs = []) => {
+		    let stdout = await exec(config, ["-m", "-output"], interpreterArgs, path)
+		    return JSON.parse(stdout)
+		},
+		
+		getLocation: async(stepNumber, interpreterArgs = []) => {
+		    let stdout = await exec(config, ["-m", "-location", stepNumber], interpreterArgs, path)
 
-		return JSON.parse(stdout)
-	    },
+		    return JSON.parse(stdout)
+		},
 
-	    getStep: async(stepNumber, interpreterArgs = []) => {
-		let stdout = await exec(config, ["-m", "-step", stepNumber], interpreterArgs, path)
+		getStep: async(stepNumber, interpreterArgs = []) => {
+		    let stdout = await exec(config, ["-m", "-step", stepNumber], interpreterArgs, path)
 
-		return JSON.parse(stdout)
+		    return JSON.parse(stdout)
+		}
+		
 	    }
-	    
-	}
 
-    },
-    
-    getRoots: (vm) => {
-	return [
-	    vm.code,
-	    vm.stack,
-	    vm.memory,
-	    vm.call_stack,
-	    vm.globals,
-	    vm.calltable,
-	    vm.calltypes,
-	    vm.input_size,
-	    vm.input_name,
-	    vm.input_data
-	]
-    },
+	},
+	
+	getRoots: (vm) => {
+	    return [
+		vm.code,
+		vm.stack,
+		vm.memory,
+		vm.call_stack,
+		vm.globals,
+		vm.calltable,
+		vm.calltypes,
+		vm.input_size,
+		vm.input_name,
+		vm.input_data
+	    ]
+	},
 
-    getPointers: (vm) => {
-	return [
-	    vm.pc,
-	    vm.stack_ptr,
-	    vm.call_ptr,
-	    vm.memsize
-	]
-    },
+	getPointers: (vm) => {
+	    return [
+		vm.pc,
+		vm.stack_ptr,
+		vm.call_ptr,
+		vm.memsize
+	    ]
+	},
 
-    fileSystem: (ipfs) => {
-	return {
-	    upload: async (content, path) => {
-		return ipfs.files.add([{content: content, path: path}])
-	    },
+	fileSystem: (ipfs) => {
+	    return {
+		upload: async (content, path) => {
+		    return ipfs.files.add([{content: content, path: path}])
+		},
 
-	    download: async (fileID, filename) => {
-		return new Promise((resolve, reject) => {
-		    ipfs.get(fileID, (err, stream) => {
-			let output
-			if(err) {
-			    reject(err)
-			} else {
-			    stream.on('data', (file) => {
-				if (!file.content) return
-				let chunks = []
-				file.content.on('data', (chunk) => {
-				    chunks.push(chunk)
+		download: async (fileID, filename) => {
+		    return new Promise((resolve, reject) => {
+			ipfs.get(fileID, (err, stream) => {
+			    let output
+			    if(err) {
+				reject(err)
+			    } else {
+				stream.on('data', (file) => {
+				    if (!file.content) return
+				    let chunks = []
+				    file.content.on('data', (chunk) => {
+					chunks.push(chunk)
+				    })
+				    file.content.on('end', () => {
+					output = {name: filename, content: Buffer.concat(chunks)}
+				    })
 				})
-				file.content.on('end', () => {
-				    output = {name: filename, content: Buffer.concat(chunks)}
+				stream.on('end', () => {
+				    resolve(output)
 				})
-			    })
-			    stream.on('end', () => {
-				resolve(output)
-			    })
-			}
+			    }
+			})
 		    })
-		})
+		}
 	    }
-	}
+	}	
     }
 }
