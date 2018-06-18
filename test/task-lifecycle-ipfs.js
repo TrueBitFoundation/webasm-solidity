@@ -113,30 +113,28 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
 	await fileSystemContract.methods.addToBundle(bundleID, fileID).send({from: taskGiver})
 
-	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, root).send({from: taskGiver, gas: 1500000})
-
-	initHash = await fileSystemContract.methods.getInitHash(bundleID).call()
+	//await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, root).send({from: taskGiver, gas: 1500000})
 	
     })
 
-    // it("should provide the hash of the initialized state", async () => {
+    it("should provide the hash of the initialized state", async () => {
 
-    // 	let config = {
-    // 	    code_file: __dirname + "/../data/factorial.wast",
-    // 	    input_file: "",
-    // 	    actor: {},
-    // 	    files: [],
-    // 	    code_type: 0
-    // 	}
+    	let config = {
+    	    code_file: __dirname + "/../data/factorial.wast",
+    	    input_file: "",
+    	    actor: {},
+    	    files: [],
+    	    code_type: 0
+    	}
 
-    // 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+    	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
 
-    // 	taskGiverVM = merkleComputer.init(config, randomPath)
+    	taskGiverVM = merkleComputer.init(config, randomPath)
 
-    // 	let interpreterArgs = []
+    	let interpreterArgs = []
 	
-    // 	initHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
-    // })    
+    	initHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
+    })    
 
     it("should submit a task", async () => {
     	let txReceipt = await tasksContract.methods.add(
@@ -160,17 +158,15 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     
     it("should get task data from ipfs and execute task", async () => {
 
-	let codeIPFSHash = await fileSystemContract.methods.getIPFSCode(bundleID).call()
+	//let codeIPFSHash = await fileSystemContract.methods.getIPFSCode(bundleID).call()
 
 	let fileIDs = await fileSystemContract.methods.getFiles(bundleID).call()
 
 	let hash = await fileSystemContract.methods.getHash(fileIDs[0]).call()
 
-	assert(codeIPFSHash == hash)
-
 	let name = await fileSystemContract.methods.getName(fileIDs[0]).call()
 
-	let buf = (await fileSystem.download(codeIPFSHash, name)).content
+	let buf = (await fileSystem.download(hash, name)).content
 	
     	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
 
@@ -222,16 +218,6 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	
     	assert(await tasksContract.methods.finalizeTask(taskID).call())
 	
-    })
-
-    //This test is meant to simulate what happens when solver calls
-    //interactive's initialize method
-    it("should check solver and task giver initialization is the same", async () => {
-	let interpreterArgs = []
-	let initWasmHash = (await solverVM.initializeWasmTask(interpreterArgs)).hash
-
-	assert(initHash == initWasmHash, "initial hash is not the same for solver and task giver")
-
     })
 
 })
