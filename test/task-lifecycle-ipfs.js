@@ -103,7 +103,8 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	taskGiverVM = merkleComputer.init(config, randomPath)
 
     	let interpreterArgs = []
-    	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
+    	console.log(await taskGiverVM.initializeWasmTask(interpreterArgs))
+    	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
 	// let root = merkleComputer.merkleRoot(web3, wastCode)
 
 /*
@@ -150,11 +151,12 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
     	initHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
 */
-        initHash = await  fileSystemContract.methods.getInitHash(bundleID).call({from: taskGiver, gas: 1500000})
+        initHash = await fileSystemContract.methods.getInitHash(bundleID).call({from: taskGiver, gas: 1500000})
     })
 
     it("should submit a task", async () => {
-    	let txReceipt = await tasksContract.methods.add(
+        // initHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
+        let txReceipt = await tasksContract.methods.add(
     	    initHash,
     	    merkleComputer.CodeType.WAST,
     	    merkleComputer.StorageType.BLOCKCHAIN,
@@ -172,7 +174,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	assert.equal(result.cs, merkleComputer.StorageType.BLOCKCHAIN)
     	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
     })
-    
+
     it("should get task data from ipfs and execute task", async () => {
 
 	let codeIPFSHash = await fileSystemContract.methods.getIPFSCode(bundleID).call()
@@ -206,6 +208,10 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	solverVM = merkleComputer.init(config, randomPath)
 
     	let interpreterArgs = []
+    	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
+    	// Check that we have the same initial state as onchain task
+        assert.equal(root, initHash)
+
 
     	solverResult = await solverVM.executeWasmTask(interpreterArgs)
     })
