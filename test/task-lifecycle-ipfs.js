@@ -133,6 +133,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
     it("should provide the hash of the initialized state", async () => {
 
+/*
     	let config = {
     	    code_file: __dirname + "/../data/factorial.wast",
     	    input_file: "",
@@ -146,9 +147,11 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	taskGiverVM = merkleComputer.init(config, randomPath)
 
     	let interpreterArgs = []
-	
+
     	initHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
-    })    
+*/
+        initHash = await  fileSystemContract.methods.getInitHash(bundleID).call({from: taskGiver, gas: 1500000})
+    })
 
     it("should submit a task", async () => {
     	let txReceipt = await tasksContract.methods.add(
