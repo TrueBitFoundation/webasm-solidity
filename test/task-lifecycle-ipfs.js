@@ -91,34 +91,6 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
 	let size = wastCode.byteLength
 
-	let root = merkleComputer.merkleRoot(web3, wastCode)
-
-	let fileID = await fileSystemContract.methods.addIPFSFile(
-	    fileName,
-	    size,
-	    ipfsFileHash,
-	    root,
-	    randomNum
-	).call(
-	    {from: taskGiver}
-	)
-
-	await fileSystemContract.methods.addIPFSFile(
-	    fileName,
-	    size,
-	    ipfsFileHash,
-	    root,
-	    randomNum
-	).send({from: taskGiver, gas: 200000})
-
-	await fileSystemContract.methods.addToBundle(bundleID, fileID).send({from: taskGiver})
-
-	//await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, root).send({from: taskGiver, gas: 1500000})
-	
-    })
-
-    it("should provide the hash of the initialized state", async () => {
-
     	let config = {
     	    code_file: __dirname + "/../data/factorial.wast",
     	    input_file: "",
@@ -128,21 +100,26 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	}
 
     	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-
     	taskGiverVM = merkleComputer.init(config, randomPath)
 
     	let interpreterArgs = []
+    	
+    	let codeRoot = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
 	
-    	initHash = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
-    })    
+	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 1500000})
+    })
+
+    it("should provide the hash of the initialized state", async () => {
+        initHash = await fileSystemContract.methods.getInitHash(bundleID).call({from: taskGiver})
+    })
 
     it("should submit a task", async () => {
-    	let txReceipt = await tasksContract.methods.add(
+        let txReceipt = await tasksContract.methods.add(
     	    initHash,
     	    merkleComputer.CodeType.WAST,
-    	    merkleComputer.StorageType.IPFS,
+    	    merkleComputer.StorageType.BLOCKCHAIN,
     	    bundleID
-    	).send({from: taskGiver, gas: 300000})
+    	).send({from: taskGiver, gas: 3000000})
 
     	let result = txReceipt.events.Posted.returnValues
 
@@ -152,22 +129,18 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	assert.equal(result.hash, initHash)
     	assert.equal(result.stor, bundleID)
     	assert.equal(result.ct, merkleComputer.CodeType.WAST)
-    	assert.equal(result.cs, merkleComputer.StorageType.IPFS)
+    	assert.equal(result.cs, merkleComputer.StorageType.BLOCKCHAIN)
     	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
     })
-    
+
     it("should get task data from ipfs and execute task", async () => {
 
-	//let codeIPFSHash = await fileSystemContract.methods.getIPFSCode(bundleID).call()
+	let codeIPFSHash = await fileSystemContract.methods.getIPFSCode(bundleID).call()
 
-	let fileIDs = await fileSystemContract.methods.getFiles(bundleID).call()
+        let name = "task.wast"
 
-	let hash = await fileSystemContract.methods.getHash(fileIDs[0]).call()
+	let buf = (await fileSystem.download(codeIPFSHash, name)).content
 
-	let name = await fileSystemContract.methods.getName(fileIDs[0]).call()
-
-	let buf = (await fileSystem.download(hash, name)).content
-	
     	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
 
     	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
@@ -188,6 +161,11 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	solverVM = merkleComputer.init(config, randomPath)
 
     	let interpreterArgs = []
+    	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
+	
+    	// Check that we have the same initial state as onchain task
+        assert.equal(root, initHash)
+
 
     	solverResult = await solverVM.executeWasmTask(interpreterArgs)
     })
@@ -206,7 +184,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	assert.equal(taskID, result.id)
     	assert.equal(initHash, result.init)
     	assert.equal(merkleComputer.CodeType.WAST, result.ct)
-    	assert.equal(merkleComputer.StorageType.IPFS, result.cs)
+    	assert.equal(merkleComputer.StorageType.BLOCKCHAIN, result.cs)
     	assert.equal(bundleID, result.stor)
     	assert.equal(solver, result.solver)
     	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
