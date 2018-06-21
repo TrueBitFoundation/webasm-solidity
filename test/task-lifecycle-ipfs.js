@@ -106,7 +106,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	
     	let codeRoot = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
 	
-	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 1500000})
+	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 1300000})
     })
 
     it("should provide the hash of the initialized state", async () => {
