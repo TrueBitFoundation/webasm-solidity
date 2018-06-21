@@ -193,7 +193,7 @@ function ensureOutputFile(config, cont) {
 exports.ensureOutputFile = ensureOutputFile
 
 function taskResult(config, cont) {
-    if (config.actor.stop_early < 0 && !config.actor.error && config.code_type != CodeType.WAST) {
+    /* if (config.actor.stop_early < 0 && !config.actor.error && config.code_type != CodeType.WAST) {
         execFile("node", ["../env.js"].concat(config.files), {cwd:dir}, function (error, stdout, stderr) {
             logger.info("solving with JIT", {stdout:stdout, stderr:stderr, dir:dir})
             var args = buildArgs(["-m", "-input", "-input2"], config)
@@ -204,7 +204,7 @@ function taskResult(config, cont) {
             })
         })
     }
-    else taskResultVM(config, cont)
+    else */ taskResultVM(config, cont)
 }
 
 exports.taskResult = taskResult
@@ -554,7 +554,7 @@ async function upload(data) {
     
     return contract.options.address
 }
-    
+
 exports.getPlace = function (idx) {
     var idx1 = parseInt(idx.idx1)
     var idx2 = parseInt(idx.idx2)
