@@ -215,7 +215,10 @@ async function runVerifier() {
     config.files = []
     config.code_file = "task." + common.getExtension(config.code_type)
     config.vm_parameters = await contract.methods.getVMParameters(task_id).call(send_opt)
-    common.getStorage(config, function () {
+    common.getStorage(config, async function () {
+        if (config.metering && config.code_type == common.CodeType.WASM) {
+            await common.insertMetering("task.wasm")
+        }
         verifyTask({init: config.init, hash: config.hash, id:task_id}, config)
     })
 }
