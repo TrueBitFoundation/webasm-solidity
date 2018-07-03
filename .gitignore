@@ -6,6 +6,7 @@ Q*.json
 *.o
 Q*.wast
 *.wasm
+!data/reverse_alphabet.wasm
 contracts/compiled
 contracts/common-offchain.sol
 contracts/common-onchain.sol
