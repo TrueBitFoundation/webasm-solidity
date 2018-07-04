@@ -24,6 +24,7 @@ const solverConf = { error: false, error_location: 0, stop_early: -1, deposit: 1
 
 const codeFilePath = "/../data/reverse_alphabet.wasm"
 const inputFilePath = "/../data/alphabet.txt"
+const outputFilePath = "/../data/reverse_alphabet.txt"
 
 function writeFile(fname, buf) {
     return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (err, res) { cont() }) })
@@ -92,11 +93,11 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	    code_file: __dirname + codeFilePath,
     	    input_file: __dirname + inputFilePath,
     	    actor: {},
-    	    files: [],
+    	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
     	    code_type: 1
     	}
 
-	let interpreterArgs = []
+	let interpreterArgs = ['-asmjs']
 
     	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
     	taskGiverVM = merkleComputer.init(config, randomPath)
@@ -147,9 +148,8 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	let config = {
     	    code_file: process.cwd() + "/tmp.solverWasmCode.wasm",
     	    input_file: __dirname + inputFilePath,
-	    actor: {},
     	    actor: solverConf,
-    	    files: [],
+    	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
     	}
@@ -158,15 +158,16 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
     	solverVM = merkleComputer.init(config, randomPath)
 
-	let interpreterArgs = []
+	let interpreterArgs = ['-asmjs']
     	
     	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
 	
     	// Check that we have the same initial state as onchain task
         assert.equal(root, initHash)
 
-
     	solverResult = await solverVM.executeWasmTask(interpreterArgs)
+
+	console.log(solverResult)
     })
 
     it("should submit solution", async () => {

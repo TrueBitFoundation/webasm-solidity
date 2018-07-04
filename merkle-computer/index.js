@@ -66,10 +66,15 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
 	let args = buildArgs(lst, config).concat(interpreterArgs)
 	return new Promise(function (resolve, reject) {
 	    execFile(wasmInterpreterPath, args, function (error, stdout, stderr) {
-		//if (stderr) logger.error('error %s', stderr, args)
-		//if (stdout) logger.info('output %s', stdout, args)
-		if (error) reject(error)
-		else resolve(stdout)
+		//if (stderr) console.log(stderr)
+		//if (stdout) console.log(stdout)
+		if (stdout) {
+		    resolve(stdout)
+		} else if (!stdout) {
+		    reject(new Error("ocaml-offchain returned nothing"))
+		} else {
+		    reject(error)
+		}
 	    })
 	})
     }
