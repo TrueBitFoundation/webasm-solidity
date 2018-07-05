@@ -66,6 +66,7 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
     function exec(config, lst, interpreterArgs, path) {
 	let args = buildArgs(lst, config).concat(interpreterArgs)
 	return new Promise(function (resolve, reject) {
+            console.log(wasmInterpreterPath, args.join(" "))
 	    execFile(wasmInterpreterPath, args, function (error, stdout, stderr) {
 		//if (stderr) console.log(stderr)
 		//if (stdout) console.log(stdout)

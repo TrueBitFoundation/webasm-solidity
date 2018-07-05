@@ -73,11 +73,13 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     })
 
     it("should create bundle", async () => {
+	console.log(Math.floor(Math.random()*Math.pow(2, 60)))
 	bundleID = await fileSystemContract.methods.makeBundle(
 	    Math.floor(Math.random()*Math.pow(2, 60))
 	).call(
 	    {from: taskGiver}
-	)	
+        )
+        console.log("bundle id", bundleID)
     })
 
     it("should upload and register input ipfs file w/ truebit fs", async () => {
@@ -85,7 +87,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	let inputSize = inputFile.byteLength
 	let inputRoot = merkleComputer.merkleRoot(web3, inputFile)
 	let inputIPFSHash = (await fileSystem.upload(inputFile, "bundle/alphabet.txt"))[0].hash
-	let inputNonce = 0//use derterministic nonce for testing
+	let inputNonce = 100//use derterministic nonce for testing
 
 	let inputFileID = await fileSystemContract.methods.addIPFSFile(
 	    'alphabet.txt',
@@ -103,6 +105,8 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	    inputNonce
 	).send({from: taskGiver, gas: 200000})
 
+        console.log("in root", await fileSystemContract.methods.getRoot(inputFileID).call())
+
 	await fileSystemContract.methods.addToBundle(bundleID, inputFileID).send({from: taskGiver})
     })
 
@@ -111,7 +115,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	let outputSize = outputFile.byteLength
 	let outputRoot = merkleComputer.merkleRoot(web3, outputFile)
 	let outputIPFSHash = (await fileSystem.upload(outputFile, "bundle/reverse_alphabet.txt"))[0].hash
-	let outputNonce = 0//use derterministic nonce for testing
+	let outputNonce = 101//use derterministic nonce for testing
 
 	let outputFileID = await fileSystemContract.methods.addIPFSFile(
 	    'reverse_alphabet.txt',
@@ -129,6 +133,8 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	    outputNonce
 	).send({from: taskGiver, gas: 200000})
 	
+        console.log("out root", await fileSystemContract.methods.getRoot(outputFileID).call())
+
 	await fileSystemContract.methods.addToBundle(bundleID, outputFileID).send({from: taskGiver})
     })    
 
@@ -161,12 +167,15 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	taskGiverVM = merkleComputer.init(config, randomPath)
     	
     	let codeRoot = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
+        console.log("code root", codeRoot)
 	
+	console.log(await fileSystemContract.methods.debug_finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).call({from: taskGiver, gas: 8000000}))
 	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 2000000})
     })
 
     it("should provide the hash of the initialized state", async () => {
         initHash = await fileSystemContract.methods.getInitHash(bundleID).call({from: taskGiver})
+        console.log(initHash)
     })
 
     it("should submit a task", async () => {
@@ -207,7 +216,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	    code_file: process.cwd() + "/tmp.solverWasmCode.wasm",
     	    input_file: __dirname + inputFilePath,
     	    actor: solverConf,
-    	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
+    	    files: ['reverse_alphabet.txt', 'alphabet.txt'],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
     	}

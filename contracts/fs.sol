@@ -183,14 +183,13 @@ contract Filesystem {
        
        b.code_file = file;
        
-       return (init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleFiles(res3, 0, 4),
-               keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 4), calcMerkleFiles(res3, 0, 4)));
+       return (init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleFiles(res3, 0, 10),
+               keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleFiles(res3, 0, 10)));
    }
 
    function makeBundle(uint num) public view returns (bytes32) {
        bytes32 id = keccak256(msg.sender, num);
-       // return id;
-       return 0x7453;
+       return id;
    }
 
    function addToBundle(bytes32 id, bytes32 file_id) public returns (bytes32) {
