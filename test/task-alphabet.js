@@ -23,11 +23,20 @@ const mineBlocks = require('./helper/mineBlocks')
 const solverConf = { error: false, error_location: 0, stop_early: -1, deposit: 1 }
 
 const codeFilePath = "/../data/reverse_alphabet.wasm"
-const inputFilePath = "/../data/alphabet.txt"
-const outputFilePath = "/../data/reverse_alphabet.txt"
+const inputFilePath = "/../alphabet.txt"
+const outputFilePath = "/../reverse_alphabet.txt"
 
 function writeFile(fname, buf) {
     return new Promise(function (cont,err) { fs.writeFile(fname, buf, function (err, res) { cont() }) })
+}
+
+function readFile(fname) {
+    return new Promise((resolve, reject) => {
+	fs.readFile(fname, (err, res) => {
+	if (err) reject(err)
+	    else resolve(res)
+	})
+    })
 }
 
 before(async () => {
@@ -63,28 +72,77 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	}
     })
 
-    it("should upload wast code to ipfs", async () => {
-	fileName = "bundle/alphabet.wasm"
-	wasmCode = await new Promise(async (resolve, reject) => {
-	    fs.readFile(__dirname + codeFilePath, async (err, data) => {
-		if(err) {
-		    reject(err)
-		} else {
-		    resolve(data)
-		}
-	    })
-	})
-
-	ipfsFileHash = (await fileSystem.upload(wasmCode, fileName))[0].hash
-    })
-
-    it("should register ipfs file with truebit filesystem", async () => {
+    it("should create bundle", async () => {
 	bundleID = await fileSystemContract.methods.makeBundle(
 	    Math.floor(Math.random()*Math.pow(2, 60))
 	).call(
 	    {from: taskGiver}
-	)
+	)	
+    })
 
+    it("should upload and register input ipfs file w/ truebit fs", async () => {
+	let inputFile = await readFile(__dirname + inputFilePath)
+	let inputSize = inputFile.byteLength
+	let inputRoot = merkleComputer.merkleRoot(web3, inputFile)
+	let inputIPFSHash = (await fileSystem.upload(inputFile, "bundle/alphabet.txt"))[0].hash
+	let inputNonce = 0//use derterministic nonce for testing
+
+	let inputFileID = await fileSystemContract.methods.addIPFSFile(
+	    'alphabet.txt',
+	    inputSize,
+	    inputIPFSHash,
+	    inputRoot,
+	    inputNonce
+	).call({from: taskGiver})
+
+	await fileSystemContract.methods.addIPFSFile(
+	    'alphabet.txt',
+	    inputSize,
+	    inputIPFSHash,
+	    inputRoot,
+	    inputNonce
+	).send({from: taskGiver, gas: 200000})
+
+	await fileSystemContract.methods.addToBundle(bundleID, inputFileID).send({from: taskGiver})
+    })
+
+    it("should upload and register output ipfs file w/ truebit fs", async () => {
+	let outputFile = await readFile(__dirname + outputFilePath)
+	let outputSize = outputFile.byteLength
+	let outputRoot = merkleComputer.merkleRoot(web3, outputFile)
+	let outputIPFSHash = (await fileSystem.upload(outputFile, "bundle/reverse_alphabet.txt"))[0].hash
+	let outputNonce = 0//use derterministic nonce for testing
+
+	let outputFileID = await fileSystemContract.methods.addIPFSFile(
+	    'reverse_alphabet.txt',
+	    outputSize,
+	    outputIPFSHash,
+	    outputRoot,
+	    outputNonce
+	).call({from: taskGiver})
+
+	await fileSystemContract.methods.addIPFSFile(
+	    'reverse_alphabet.txt',
+	    outputSize,
+	    outputIPFSHash,
+	    outputRoot,
+	    outputNonce
+	).send({from: taskGiver, gas: 200000})
+	
+	await fileSystemContract.methods.addToBundle(bundleID, outputFileID).send({from: taskGiver})
+    })    
+
+    it("should upload wast code to ipfs", async () => {
+	fileName = "bundle/alphabet.wasm"
+	wasmCode = await readFile(__dirname + codeFilePath)
+
+	ipfsFileHash = (await fileSystem.upload(wasmCode, fileName))[0].hash
+    })    
+
+    it("should register ipfs file with truebit filesystem", async () => {
+
+	//Upload and register input and output files
+	
 	let randomNum = Math.floor(Math.random()*Math.pow(2, 60))
 
 	let size = wasmCode.byteLength
@@ -104,7 +162,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	
     	let codeRoot = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
 	
-	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 1300000})
+	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 2000000})
     })
 
     it("should provide the hash of the initialized state", async () => {
@@ -163,7 +221,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
 	
     	// Check that we have the same initial state as onchain task
-        //assert.equal(root, initHash)
+        assert.equal(root, initHash)
 
     	solverResult = await solverVM.executeWasmTask(interpreterArgs)
     })
