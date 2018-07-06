@@ -167,9 +167,9 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	taskGiverVM = merkleComputer.init(config, randomPath)
     	
     	let codeRoot = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
-        console.log("code root", codeRoot)
+        //console.log("code root", codeRoot)
 	
-	console.log(await fileSystemContract.methods.debug_finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).call({from: taskGiver, gas: 8000000}))
+	//console.log(await fileSystemContract.methods.debug_finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).call({from: taskGiver, gas: 8000000}))
 	await fileSystemContract.methods.finalizeBundleIPFS(bundleID, ipfsFileHash, codeRoot).send({from: taskGiver, gas: 2000000})
     })
 
