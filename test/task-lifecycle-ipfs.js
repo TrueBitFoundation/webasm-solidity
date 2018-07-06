@@ -87,12 +87,8 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	    {from: taskGiver}
 	)
 
-	let randomNum = Math.floor(Math.random()*Math.pow(2, 60))
-
-	let size = wastCode.byteLength
-
     	let config = {
-    	    code_file: __dirname + "/../data/factorial.wast",
+    	    code_file: "factorial.wast",
     	    input_file: "",
     	    actor: {},
     	    files: [],
@@ -100,6 +96,9 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     	}
 
     	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
+	await writeFile(randomPath + "/factorial.wast", wastCode)
     	taskGiverVM = merkleComputer.init(config, randomPath)
 
     	let interpreterArgs = []
@@ -141,22 +140,23 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
 	let buf = (await fileSystem.download(codeIPFSHash, name)).content
 
-    	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
+	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
+	await writeFile(randomPath + "/solverWasmCode.wast", buf)
 
     	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
     	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
     	let config = {
-    	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
+    	    code_file: "solverWasmCode.wast",
     	    input_file: "",
     	    actor: solverConf,
     	    files: [],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
-    	}
-
-    	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+    	}   
 
     	solverVM = merkleComputer.init(config, randomPath)
 
