@@ -69,13 +69,12 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
             //console.log(wasmInterpreterPath, args.join(" "))
 	    execFile(wasmInterpreterPath, args, {cwd:path}, function (error, stdout, stderr) {
 		//if (stderr) console.log(stderr)
-		//if (stdout) console.log(stdout)		
-		if (error) {
-		    reject(error)
-		} else if (stdout) {
+		//if (stdout) console.log(stdout)
+		if (stdout) {
 		    resolve(stdout)
 		} else {
-		    reject(stderr)
+		    console.error(stderr)
+		    reject(error)
 		}
 	    })
 	})

@@ -73,17 +73,17 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     })
 
     it("should create bundle", async () => {
-	console.log(Math.floor(Math.random()*Math.pow(2, 60)))
+	//console.log(Math.floor(Math.random()*Math.pow(2, 60)))
 	bundleID = await fileSystemContract.methods.makeBundle(
 	    Math.floor(Math.random()*Math.pow(2, 60))
 	).call(
 	    {from: taskGiver}
         )
-        console.log("bundle id", bundleID)
+        //console.log("bundle id", bundleID)
     })
 
     it("should upload and register input ipfs file w/ truebit fs", async () => {
-	let inputFile = await readFile(__dirname + inputFilePath)
+	inputFile = await readFile(__dirname + inputFilePath)
 	let inputSize = inputFile.byteLength
 	let inputRoot = merkleComputer.merkleRoot(web3, inputFile)
 	let inputIPFSHash = (await fileSystem.upload(inputFile, "bundle/alphabet.txt"))[0].hash
@@ -105,13 +105,13 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	    inputNonce
 	).send({from: taskGiver, gas: 200000})
 
-        console.log("in root", await fileSystemContract.methods.getRoot(inputFileID).call())
+        //console.log("in root", await fileSystemContract.methods.getRoot(inputFileID).call())
 
 	await fileSystemContract.methods.addToBundle(bundleID, inputFileID).send({from: taskGiver})
     })
 
     it("should upload and register output ipfs file w/ truebit fs", async () => {
-	let outputFile = await readFile(__dirname + outputFilePath)
+	outputFile = await readFile(__dirname + outputFilePath)
 	let outputSize = outputFile.byteLength
 	let outputRoot = merkleComputer.merkleRoot(web3, outputFile)
 	let outputIPFSHash = (await fileSystem.upload(outputFile, "bundle/reverse_alphabet.txt"))[0].hash
@@ -133,7 +133,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 	    outputNonce
 	).send({from: taskGiver, gas: 200000})
 	
-        console.log("out root", await fileSystemContract.methods.getRoot(outputFileID).call())
+        //console.log("out root", await fileSystemContract.methods.getRoot(outputFileID).call())
 
 	await fileSystemContract.methods.addToBundle(bundleID, outputFileID).send({from: taskGiver})
     })    
@@ -148,14 +148,18 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
     it("should register ipfs file with truebit filesystem", async () => {
 
 	//Upload and register input and output files
+    	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)	
 	
-	let randomNum = Math.floor(Math.random()*Math.pow(2, 60))
+	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
+	await writeFile(randomPath + "/reverse_alphabet.wasm", wasmCode)
+	await writeFile(randomPath + "/alphabet.txt", inputFile)
+	await writeFile(randomPath + "/reverse_alphabet.txt", outputFile)
 
 	let size = wasmCode.byteLength
 
     	let config = {
-    	    code_file: __dirname + codeFilePath,
-    	    input_file: __dirname + inputFilePath,
+    	    code_file: "reverse_alphabet.wasm",
+    	    input_file: "alphabet.txt",
     	    actor: {},
     	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
     	    code_type: merkleComputer.CodeType.WASM
@@ -163,7 +167,6 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
 	let interpreterArgs = ['-asmjs']
 
-    	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
     	taskGiverVM = merkleComputer.init(config, randomPath)
     	
     	let codeRoot = (await taskGiverVM.initializeWasmTask(interpreterArgs)).vm.code
@@ -175,7 +178,7 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
     it("should provide the hash of the initialized state", async () => {
         initHash = await fileSystemContract.methods.getInitHash(bundleID).call({from: taskGiver})
-        console.log(initHash)
+        //console.log(initHash)
     })
 
     it("should submit a task", async () => {
@@ -206,22 +209,25 @@ describe("Test task lifecycle using ipfs with no challenge", async function() {
 
 	let buf = (await fileSystem.download(codeIPFSHash, name)).content
 
-    	await writeFile(process.cwd() + "/tmp.solverWasmCode.wasm", buf)
+	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
+    	await writeFile(randomPath + "/solverWasmCode.wasm", buf)
+	await writeFile(randomPath + "/alphabet.txt", inputFile)
+	await writeFile(randomPath + "/reverse_alphabet.txt", outputFile)
 
     	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
     	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
     	let config = {
-    	    code_file: process.cwd() + "/tmp.solverWasmCode.wasm",
-    	    input_file: __dirname + inputFilePath,
+    	    code_file: "solverWasmCode.wasm",
+    	    input_file: "alphabet.txt",
     	    actor: solverConf,
     	    files: ['reverse_alphabet.txt', 'alphabet.txt'],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
-    	}
-
-    	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+    	}    	
 
     	solverVM = merkleComputer.init(config, randomPath)
 
