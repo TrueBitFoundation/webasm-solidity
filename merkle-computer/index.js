@@ -1,7 +1,8 @@
 const execFile = require('child_process').execFile
 const winston = require('winston')
+const merkleRoot = require('./merkleRoot')
 
-const defaultWasmInterpreterPath = process.cwd() + "/../ocaml-offchain/interpreter/wasm"
+const defaultWasmInterpreterPath = "./../../ocaml-offchain/interpreter/wasm"
 
 const format = winston.format
 
@@ -65,16 +66,23 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
     function exec(config, lst, interpreterArgs, path) {
 	let args = buildArgs(lst, config).concat(interpreterArgs)
 	return new Promise(function (resolve, reject) {
-	    execFile(wasmInterpreterPath, args, function (error, stdout, stderr) {
-		//if (stderr) logger.error('error %s', stderr, args)
-		//if (stdout) logger.info('output %s', stdout, args)
-		if (error) reject(error)
-		else resolve(stdout)
+            //console.log(wasmInterpreterPath, args.join(" "))
+	    execFile(wasmInterpreterPath, args, {cwd:path}, function (error, stdout, stderr) {
+		//if (stderr) console.log(stderr)
+		//if (stdout) console.log(stdout)
+		if (stdout) {
+		    resolve(stdout)
+		} else {
+		    console.error(stderr)
+		    reject(error)
+		}
 	    })
 	})
     }
         
     return {
+
+	merkleRoot: merkleRoot,
 
 	uploadOnchain: async (data, web3, options) => {
 	    let sz = data.length.toString(16)

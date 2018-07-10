@@ -63,17 +63,22 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 
     it("should provide the hash of the initialized state", async () => {
 
+	taskFileName = "factorial.wast"	    
+
 	let config = {
-	    code_file: __dirname + "/../data/factorial.wast",
+	    code_file: taskFileName,
 	    input_file: "",
 	    actor: {},
 	    files: [],
 	    code_type: 0
 	}
 
-	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+	taskGiverRandomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
 
-	taskGiverVM = merkleComputer.init(config, randomPath)
+	if (!fs.existsSync(taskGiverRandomPath)) fs.mkdirSync(taskGiverRandomPath)
+	fs.writeFileSync(taskGiverRandomPath + "/" + taskFileName, wastCode)
+
+	taskGiverVM = merkleComputer.init(config, taskGiverRandomPath)
 
 	let interpreterArgs = []
 	
@@ -112,19 +117,23 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
     })
 
     it("should get task data from onchain and execute task", async () => {
+
+	solverRandomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	if (!fs.existsSync(solverRandomPath)) fs.mkdirSync(solverRandomPath)
 	
 	let wasmCode = await fileSystemContract.methods.getCode(bundleID).call()
 
 	let buf = Buffer.from(wasmCode.substr(2), "hex")
 
-	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
+	await writeFile(solverRandomPath + "/solverWasmCode.wast", buf)
 
 	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
 	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
 	let config = {
-	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
+	    code_file: "solverWasmCode.wast",
 	    input_file: "",
 	    actor: solverConf,
 	    files: [],
@@ -132,9 +141,7 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 	    code_type: parseInt(taskInfo.ct)
 	}
 
-	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-
-	solverVM = merkleComputer.init(config, randomPath)
+	solverVM = merkleComputer.init(config, solverRandomPath)
 
 	let interpreterArgs = []
 
@@ -169,7 +176,6 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 	assert(await tasksContract.methods.finalizeTask(taskID).call())
 	
     })
-
 })
 
 describe("Test task lifecycle through wasm game with challenge", async function() {
@@ -202,7 +208,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
     it("should provide the hash of the initialized state", async () => {
 
 	let config = {
-	    code_file: __dirname + "/../data/factorial.wast",
+	    code_file: "factorial.wast",
 	    input_file: "",
 	    actor: {},
 	    files: [],
@@ -210,6 +216,9 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	}
 
 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
+	fs.writeFileSync(randomPath + "/factorial.wast", wastCode)	
 
 	taskGiverVM = merkleComputer.init(config, randomPath)
 
@@ -250,19 +259,22 @@ describe("Test task lifecycle through wasm game with challenge", async function(
     })
 
     it("should get task data from onchain and execute task", async () => {
+	solverRandomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
 	
 	let wasmCode = await fileSystemContract.methods.getCode(bundleID).call()
 
+	if (!fs.existsSync(solverRandomPath)) fs.mkdirSync(solverRandomPath)	
+
 	let buf = Buffer.from(wasmCode.substr(2), "hex")
 
-	await writeFile(process.cwd() + "/tmp.solverWasmCode.wast", buf)
+	await writeFile(solverRandomPath + "/solverWasmCode.wast", buf)	
 
 	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 	
 	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
 	let config = {
-	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
+	    code_file: "solverWasmCode.wast",
 	    input_file: "",
 	    actor: solverConf,
 	    files: [],
@@ -270,9 +282,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	    code_type: parseInt(taskInfo.ct)
 	}
 
-	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-
-	solverVM = merkleComputer.init(config, randomPath)
+	solverVM = merkleComputer.init(config, solverRandomPath)
 
 	let interpreterArgs = []
 
@@ -347,7 +357,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
 
 	let config = {
-	    code_file: process.cwd() + "/tmp.solverWasmCode.wast",
+	    code_file: "solverWasmCode.wast",
 	    input_file: "",
 	    actor: solverConf,
 	    files: [],
@@ -355,9 +365,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	    code_type: parseInt(taskInfo.ct)
 	}
 
-	let randomPath = process.cwd() + "/tmp.verifier_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
-
-	verifierVM = merkleComputer.init(config, randomPath)
+	verifierVM = merkleComputer.init(config, solverRandomPath)
 
 	let indices = await interactiveContract.methods.getIndices(gameID).call()
 
