@@ -39,6 +39,10 @@ function readFile(fname) {
     })
 }
 
+function midpoint(lowStep, highStep) {
+    return Math.floor((highStep - lowStep) / 2 + lowStep)
+}
+
 before(async () => {
     accounts = await web3.eth.getAccounts()
     taskGiver = accounts[0]
@@ -50,7 +54,7 @@ before(async () => {
     minDeposit = web3.utils.toWei('1', 'ether')
 })
 
-describe("Test reverse alphabet wasm task with no challenge", async function() {
+describe("Test reverse alphabet wasm task with challenge", async function() {
     this.timeout(600000)
     
     it("should make deposits", async () => {
@@ -260,7 +264,228 @@ describe("Test reverse alphabet wasm task with no challenge", async function() {
     	assert.equal(solver, result.solver)
     	assert.equal(result.deposit, web3.utils.toWei('0.01', 'ether'))
     })
+
+    it("should submit a challenge", async () => {	
+	let txReceipt = await tasksContract.methods.challenge(taskID).send({from: verifier, gas: 350000})
+
+	gameID = (await tasksContract.methods.getChallenges(taskID).call())[0]
+
+	assert.equal(await interactiveContract.methods.getChallenger(gameID).call(), verifier)
+
+	assert.equal(await interactiveContract.methods.getProver(gameID).call(), solver)
+    })
+
+    it("should initialize the verification game", async () => {
+
+	let interpreterArgs = ['-asmjs']
+	
+	initWasmData = await solverVM.initializeWasmTask(interpreterArgs)
+	
+	lowStep = 0
+	highStep = solverResult.steps
+
+	await interactiveContract.methods.initialize(
+	    gameID,
+	    merkleComputer.getRoots(initWasmData.vm),
+	    merkleComputer.getPointers(initWasmData.vm),
+	    solverResult.steps + 1,
+	    merkleComputer.getRoots(solverResult.vm),
+	    merkleComputer.getPointers(solverResult.vm)
+	).send({from: solver, gas: 1000000})
+	
+    })
+
+    it("should post response for initial midpoint", async () => {
+	let stepNumber = midpoint(lowStep, highStep)
+
+	let interpreterArgs = ['-asmjs']
+
+	let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
+
+	await interactiveContract.methods.report(gameID, lowStep, highStep, [stateHash]).send({from: solver})
+    })
+
+    it("should query step", async () => {
+	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
+
+	let vmParameters = await tasksContract.methods.getVMParameters(taskID).call()
+
+    	let config = {
+    	    code_file: "solverWasmCode.wasm",
+    	    input_file: "alphabet.txt",
+    	    actor: solverConf,
+    	    files: ['reverse_alphabet.txt', 'alphabet.txt'],
+    	    vm_parameters: vmParameters,
+    	    code_type: parseInt(taskInfo.ct)
+    	}    	
+	
+	verifierVM = merkleComputer.init(config, solverRandomPath)
+
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
+	
+	let interpreterArgs = ['-asmjs']
+
+	let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
+
+	let num = reportedStateHash == stateHash ? 1 : 0
+
+	let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier})
+
+	let result = txReceipt.events.Queried.returnValues
+
+	assert.equal(result.id, gameID)
+	assert.equal(result.idx1, stepNumber)
+
+    })
+
+    it("should post response to query", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+	
+	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	let interpreterArgs = ['-asmjs']
+
+	let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
+
+	await interactiveContract.methods.report(gameID, indices.idx1, indices.idx2, [stateHash]).send({from: solver})
+    })
+
+    for(i = 0; i < 7; i++) {
+	it("should submit query", async () => {
+	    let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	    let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	    let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
+	    
+	    let interpreterArgs = ['-asmjs']
+
+	    let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
+
+	    let num = reportedStateHash == stateHash ? 1 : 0
+
+	    let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier})	
+	})
+
+	it("should post response to query", async () => {
+	    let indices = await interactiveContract.methods.getIndices(gameID).call()
+	    
+	    let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	    let interpreterArgs = ['-asmjs']
+
+	    let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
+
+	    await interactiveContract.methods.report(gameID, indices.idx1, indices.idx2, [stateHash]).send({from: solver})
+	})
+
+    }
+
+    it("should submit query", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
+
+	let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
+	
+	let interpreterArgs = ['-asmjs']
+
+	let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
+
+	let num = reportedStateHash == stateHash ? 1 : 0
+
+	let txReceipt = await interactiveContract.methods.query(gameID, parseInt(indices.idx1), parseInt(indices.idx2), num).send({from: verifier})	
+    })
     
+
+    it("lowStep + 1 should equal highstep", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let lowStep = parseInt(indices.idx1)
+	let highStep = parseInt(indices.idx2)
+	assert(lowStep + 1 == highStep)
+    })
+
+    it("should post phases", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let lowStep = parseInt(indices.idx1)
+
+	let lowStepState = await interactiveContract.methods.getStateAt(gameID, lowStep).call()
+	let highStepState = await interactiveContract.methods.getStateAt(gameID, lowStep+1).call()
+
+	let interpreterArgs = ['-asmjs']
+	
+	let states = (await solverVM.getStep(lowStep, interpreterArgs)).states
+
+	assert.equal(lowStepState, states[0])
+	assert.equal(highStepState, states[12])
+
+	let txReceipt = await interactiveContract.methods.postPhases(gameID, lowStep, states).send({from: solver, gas: 400000})
+
+	phases = txReceipt.events.PostedPhases.returnValues.arr
+    })
+
+    it("should select phase", async () => {
+	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+	let lowStep = parseInt(indices.idx1)
+
+	let interpreterArgs = ['-asmjs']
+
+	//Not needed for the test, but is needed for implementation
+	//let states = (await verifierVM.getStep(lowStep, interpreterArgs)).states
+
+	let txReceipt = await interactiveContract.methods.selectPhase(gameID, lowStep, phases[1], 1).send({from: verifier})
+
+	phase = parseInt(txReceipt.events.SelectedPhase.returnValues.phase)
+	
+    })
+
+    it("should call judge", async () => {
+    	let indices = await interactiveContract.methods.getIndices(gameID).call()
+
+    	let lowStep = parseInt(indices.idx1)
+
+    	let interpreterArgs = ['-asmjs']
+
+    	let stepResults = await solverVM.getStep(lowStep, interpreterArgs)
+
+    	let phaseStep = merkleComputer.phaseTable[phase]
+
+    	let proof = stepResults[merkleComputer.phaseTable[phase]]
+
+    	let merkle = proof.location || []
+
+    	let merkle2 = []
+
+        if (proof.merkle) {
+            merkle = proof.merkle.list || proof.merkle.list1 || []
+            merkle2 = proof.merkle.list2 || []
+        }
+
+    	let m = proof.machine || {reg1:0, reg2:0, reg3:0, ireg:0, vm:"0x00", op:"0x00"}
+
+    	let vm = proof.vm
+	
+    	await interactiveContract.methods.callJudge(
+    	    gameID,
+    	    lowStep,
+    	    phase,
+    	    merkle,
+    	    merkle2,
+    	    m.vm,
+    	    m.op,
+    	    [m.reg1, m.reg2, m.reg3, m.ireg],
+    	    merkleComputer.getRoots(vm),
+    	    merkleComputer.getPointers(vm)
+    	).send({from: solver, gas: 400000})
+    })    
+            
     it("should finalize task", async () => {
 
     	await mineBlocks(web3, 105)
