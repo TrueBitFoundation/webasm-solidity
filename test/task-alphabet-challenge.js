@@ -356,7 +356,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 	await interactiveContract.methods.report(gameID, indices.idx1, indices.idx2, [stateHash]).send({from: solver})
     })
 
-    for(i = 0; i < 7; i++) {
+    for(i = 0; i < 12; i++) {
 	it("should submit query", async () => {
 	    let indices = await interactiveContract.methods.getIndices(gameID).call()
 
