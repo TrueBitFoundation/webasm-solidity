@@ -224,7 +224,7 @@ describe("Test reverse alphabet wasm task with no challenge", async function() {
     	    code_file: "solverWasmCode.wasm",
     	    input_file: "alphabet.txt",
     	    actor: solverConf,
-    	    files: ['reverse_alphabet.txt', 'alphabet.txt'],
+    	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
     	}    	
