@@ -213,7 +213,9 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	let buf = (await fileSystem.download(codeIPFSHash, name)).content
 
-	let randomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+	solverRandomPath = process.cwd() + "/tmp.solver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
+
+	let randomPath = solverRandomPath
 
 	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
     	await writeFile(randomPath + "/solverWasmCode.wasm", buf)
@@ -228,7 +230,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
     	    code_file: "solverWasmCode.wasm",
     	    input_file: "alphabet.txt",
     	    actor: solverConf,
-    	    files: ['reverse_alphabet.txt', 'alphabet.txt'],
+    	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
     	}    	
@@ -314,7 +316,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
     	    code_file: "solverWasmCode.wasm",
     	    input_file: "alphabet.txt",
     	    actor: solverConf,
-    	    files: ['reverse_alphabet.txt', 'alphabet.txt'],
+    	    files: ['alphabet.txt', 'reverse_alphabet.txt'],
     	    vm_parameters: vmParameters,
     	    code_type: parseInt(taskInfo.ct)
     	}    	
