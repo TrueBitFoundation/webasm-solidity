@@ -219,8 +219,8 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
     	await writeFile(randomPath + "/solverWasmCode.wasm", buf)
-	await writeFile(randomPath + "/alphabet.txt", inputFile)
-	await writeFile(randomPath + "/reverse_alphabet.txt", outputFile)
+	    await writeFile(randomPath + "/alphabet.txt", inputFile)
+	    await writeFile(randomPath + "/reverse_alphabet.txt", outputFile)
 
     	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
@@ -286,6 +286,15 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 	lowStep = 0
 	highStep = solverResult.steps
 
+	console.log("test", await interactiveContract.methods.initialize(
+	    gameID,
+	    merkleComputer.getRoots(initWasmData.vm),
+	    merkleComputer.getPointers(initWasmData.vm),
+	    solverResult.steps + 1,
+	    merkleComputer.getRoots(solverResult.vm),
+	    merkleComputer.getPointers(solverResult.vm)
+	).call({from: solver, gas: 1000000}))
+	
 	await interactiveContract.methods.initialize(
 	    gameID,
 	    merkleComputer.getRoots(initWasmData.vm),
@@ -295,6 +304,10 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 	    merkleComputer.getPointers(solverResult.vm)
 	).send({from: solver, gas: 1000000})
 	
+	let highStepState = await interactiveContract.methods.getStateAt(gameID, 11249).call()
+    
+    console.log("end state", highStepState, solverResult.vm, merkleComputer.getRoots(solverResult.vm), merkleComputer.getPointers(solverResult.vm))
+    
     })
 
     it("should post response for initial midpoint", async () => {
@@ -419,6 +432,8 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	let lowStepState = await interactiveContract.methods.getStateAt(gameID, lowStep).call()
 	let highStepState = await interactiveContract.methods.getStateAt(gameID, lowStep+1).call()
+    
+    console.log("at step", lowStep, "state transition", lowStepState, highStepState)
 
 	let interpreterArgs = ['-asmjs']
 	
@@ -485,8 +500,8 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
     	    [m.reg1, m.reg2, m.reg3, m.ireg],
     	    merkleComputer.getRoots(vm),
     	    merkleComputer.getPointers(vm)
-    	).send({from: solver, gas: 400000})
-    })    
+    	).send({from: solver, gas: 5000000})
+    })
             
     it("should finalize task", async () => {
 
