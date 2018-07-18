@@ -169,7 +169,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
     	    code_type: merkleComputer.CodeType.WASM
     	}
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
     	taskGiverVM = merkleComputer.init(config, randomPath)
     	
@@ -219,8 +219,8 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
     	await writeFile(randomPath + "/solverWasmCode.wasm", buf)
-	    await writeFile(randomPath + "/alphabet.txt", inputFile)
-	    await writeFile(randomPath + "/reverse_alphabet.txt", outputFile)
+	await writeFile(randomPath + "/alphabet.txt", inputFile)
+	await writeFile(randomPath + "/reverse_alphabet.txt", outputFile)
 
     	let taskInfo = await tasksContract.methods.taskInfo(taskID).call()
 
@@ -237,7 +237,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
     	solverVM = merkleComputer.init(config, randomPath)
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
     	
     	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
 	
@@ -279,7 +279,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
     it("should initialize the verification game", async () => {
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 	
 	initWasmData = await solverVM.initializeWasmTask(interpreterArgs)
 	
@@ -304,16 +304,16 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 	    merkleComputer.getPointers(solverResult.vm)
 	).send({from: solver, gas: 1000000})
 	
-	let highStepState = await interactiveContract.methods.getStateAt(gameID, 11249).call()
+	let highStepState = await interactiveContract.methods.getStateAt(gameID, solverResult.steps).call()
     
-    console.log("end state", highStepState, solverResult.vm, merkleComputer.getRoots(solverResult.vm), merkleComputer.getPointers(solverResult.vm))
+	console.log("end state", highStepState, solverResult.vm, merkleComputer.getRoots(solverResult.vm), merkleComputer.getPointers(solverResult.vm))
     
     })
 
     it("should post response for initial midpoint", async () => {
 	let stepNumber = midpoint(lowStep, highStep)
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
 	let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
 
@@ -342,7 +342,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
 	
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
 	let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
 
@@ -362,7 +362,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 	
 	let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
 	let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
 
@@ -377,7 +377,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	    let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
 	    
-	    let interpreterArgs = ['-asmjs']
+	    let interpreterArgs = []
 
 	    let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
 
@@ -391,7 +391,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 	    
 	    let stepNumber = midpoint(parseInt(indices.idx1), parseInt(indices.idx2))
 
-	    let interpreterArgs = ['-asmjs']
+	    let interpreterArgs = []
 
 	    let stateHash = await solverVM.getLocation(stepNumber, interpreterArgs)
 
@@ -407,7 +407,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	let reportedStateHash = await interactiveContract.methods.getStateAt(gameID, stepNumber).call()
 	
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
 	let stateHash = await verifierVM.getLocation(stepNumber, interpreterArgs)
 
@@ -435,7 +435,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
     
     console.log("at step", lowStep, "state transition", lowStepState, highStepState)
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 	
 	let states = (await solverVM.getStep(lowStep, interpreterArgs)).states
 
@@ -452,7 +452,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
 	let lowStep = parseInt(indices.idx1)
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
 	//Not needed for the test, but is needed for implementation
 	//let states = (await verifierVM.getStep(lowStep, interpreterArgs)).states
@@ -468,7 +468,7 @@ describe("Test reverse alphabet wasm task with challenge", async function() {
 
     	let lowStep = parseInt(indices.idx1)
 
-    	let interpreterArgs = ['-asmjs']
+    	let interpreterArgs = []
 
     	let stepResults = await solverVM.getStep(lowStep, interpreterArgs)
 

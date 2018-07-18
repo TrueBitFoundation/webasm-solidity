@@ -165,7 +165,7 @@ describe("Test reverse alphabet wasm task with no challenge", async function() {
     	    code_type: merkleComputer.CodeType.WASM
     	}
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
 
     	taskGiverVM = merkleComputer.init(config, randomPath)
     	
@@ -231,7 +231,7 @@ describe("Test reverse alphabet wasm task with no challenge", async function() {
 
     	solverVM = merkleComputer.init(config, randomPath)
 
-	let interpreterArgs = ['-asmjs']
+	let interpreterArgs = []
     	
     	let root = (await taskGiverVM.initializeWasmTask(interpreterArgs)).hash
 	
