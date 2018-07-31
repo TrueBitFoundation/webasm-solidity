@@ -28,7 +28,7 @@ interface CustomJudge {
 import "./IGameMaker.sol";
 import "./IDisputeResolutionLayer.sol";
 
-contract Interactive is IGameMaker {
+contract Interactive is IGameMaker, IDisputeResolutionLayer {
 
     constructor(address addr) public {
         judge = JudgeInterface(addr);
@@ -79,6 +79,7 @@ contract Interactive is IGameMaker {
         bytes32[13] result;
         
         State state;
+	Status status;
         
         // 
         CustomJudge judge;
@@ -112,9 +113,14 @@ contract Interactive is IGameMaker {
         g.phase = 16;
         g.size = size;
         g.state = State.Started;
+	g.status = Status.Challenged;	
         emit StartChallenge(solver, verifier, startStateHash, endStateHash, g.size, timeout, gameID);
         blocked[taskID] = g.clock + g.timeout;
         return gameID;
+    }
+
+    function status(bytes32 gameID) external view returns(Status) {
+	return games[gameID].status;
     }
     
     uint constant FINAL_STATE = 0xffffffffff;
@@ -227,6 +233,7 @@ contract Interactive is IGameMaker {
         g.proof[g.steps-1] = judge.calcStateHash(e_roots, e_pointers);
         g.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         g.state = State.Running;
+	g.status = Status.Unresolved;
         // return true;
         return (e_roots, e_pointers, keccak256(abi.encodePacked(e_roots, e_pointers)), ccStateHash(e_roots, e_pointers));
     }
@@ -270,10 +277,12 @@ contract Interactive is IGameMaker {
         require(checkTimeout(gameID));
         if (g.next == g.prover) {
             g.winner = g.challenger;
+	    g.status = Status.ChallengerWon;
             rejected[g.task_id] = true;
         }
         else {
             g.winner = g.prover;
+	    g.status = Status.SolverWon;
             blocked[g.task_id] = 0;
         }
         emit WinnerSelected(gameID);
@@ -390,13 +399,13 @@ contract Interactive is IGameMaker {
 
     event WinnerSelected(bytes32 id);
 
-    function callJudge(bytes32 gameID, uint i1, uint q, bytes32[] proof, bytes32[] proof2, bytes32 vm, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers) public {
+    function callJudge(bytes32 gameID, uint i1, uint q, bytes32[] proof, bytes32[] proof2, bytes32 vmHash, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers) public {
         Game storage g = games[gameID];
         require(g.state == State.SelectedPhase && g.phase == q && msg.sender == g.prover && g.idx1 == i1 && g.next == g.prover);
         // for custom judge, use another method
         // uint alu_hint = (uint(op)/2**(8*3))&0xff; require (q != 5 || alu_hint != 0xff);
         
-        judge.judge(g.result, g.phase, proof, proof2, vm, op, regs, roots, pointers);
+        judge.judge(g.result, g.phase, proof, proof2, vmHash, op, regs, roots, pointers);
         emit WinnerSelected(gameID);
         g.winner = g.prover;
         blocked[g.task_id] = 0;
@@ -449,5 +458,5 @@ contract Interactive is IGameMaker {
     function calcStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {
         return judge.calcStateHash(roots, pointers);
     }
-
+    
 }
