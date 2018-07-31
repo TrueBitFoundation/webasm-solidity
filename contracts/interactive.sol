@@ -25,7 +25,9 @@ interface CustomJudge {
     function resolved(bytes32 id, bytes32 state, uint size) external returns (bool);
 }
 
-contract Interactive {
+import "./IGameMaker.sol";
+
+contract Interactive is IGameMaker {
 
     constructor(address addr) public {
         judge = JudgeInterface(addr);
@@ -94,7 +96,7 @@ contract Interactive {
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
-    function make(uint taskID, address solver, address verifier, bytes32 startStateHash, bytes32 endStateHash, uint256 size, uint timeout) public returns (bytes32) {
+    function make(uint taskID, address solver, address verifier, bytes32 startStateHash, bytes32 endStateHash, uint256 size, uint timeout) external returns (bytes32) {
         bytes32 uniq = keccak256(taskID, solver, verifier, startStateHash, endStateHash, size, timeout);
         Record storage r = records[uniq];
         r.task_id = taskID;

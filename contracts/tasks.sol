@@ -3,6 +3,7 @@ pragma solidity ^0.4.16;
 import "./DepositsManager.sol";
 import "./interactive.sol";
 import "./fs.sol";
+import "./IGameMaker.sol";
 
 /*
 interface InteractiveI {
@@ -128,7 +129,6 @@ contract Tasks is DepositsManager {
     function add(bytes32 init, CodeType ct, Storage cs, string stor) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
-        tasks2.length++;
         params.length++;
         io_roots.length++;
         Task storage t = tasks[id];
@@ -146,7 +146,6 @@ contract Tasks is DepositsManager {
     function addWithParameters(bytes32 init, CodeType ct, Storage cs, string stor, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
-        tasks2.length++;
         params.length++;
         io_roots.length++;
         Task storage t = tasks[id];
@@ -213,7 +212,7 @@ contract Tasks is DepositsManager {
     function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public returns (bool) {
         Task storage t = tasks[id];
         IO storage io = io_roots[id];
-        require(t2.solver == 0 && t2.good);
+        require(t.solver == 0 && t.good);
         
         io.size = size;
         io.name = name;
@@ -222,7 +221,7 @@ contract Tasks is DepositsManager {
         t.result = keccak256(code, size, name, data);
         t.state = 1;
         t.blocked = block.number + TIMEOUT;
-        emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
+        emit Solved(id, t.result, t.init, t.code_type, t.storage_type, t.stor, t.solver, DEPOSIT);
         subDeposit(msg.sender, DEPOSIT);
         return true;
     }
@@ -246,7 +245,7 @@ contract Tasks is DepositsManager {
         Task storage t = tasks[id];
         // VMParameters storage p = params[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.make(id, t.solver, msg.sender, t.init, t.result, 1, TIMEOUT);
+        bytes32 uniq = IGameMaker(iactive).make(id, t.solver, msg.sender, t.init, t.result, 1, TIMEOUT);
         challenges[uniq] = id;
         t.challenges.push(uniq);
         subDeposit(msg.sender, DEPOSIT);
