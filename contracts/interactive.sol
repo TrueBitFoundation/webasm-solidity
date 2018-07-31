@@ -98,7 +98,7 @@ contract Interactive is IGameMaker {
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
     function make(uint taskID, address solver, address verifier, bytes32 startStateHash, bytes32 endStateHash, uint256 size, uint timeout) external returns (bytes32) {
-        bytes32 gameID = keccak256(taskID, solver, verifier, startStateHash, endStateHash, size, timeout);
+        bytes32 gameID = keccak256(abi.encodePacked(taskID, solver, verifier, startStateHash, endStateHash, size, timeout));
         Game storage g = games[gameID];
         g.task_id = taskID;
         g.prover = solver;
@@ -187,7 +187,7 @@ contract Interactive is IGameMaker {
         arr[11] = bytes32(vm.stack_ptr);
         arr[12] = bytes32(vm.call_ptr);
         arr[13] = bytes32(vm.memsize);
-        return keccak256(arr);
+        return keccak256(abi.encodePacked(arr));
     }
     
     function initialize(bytes32 gameID, bytes32[10] s_roots, uint[4] s_pointers, uint _steps, bytes32[10] e_roots, uint[4] e_pointers) public returns (bytes32[10], uint[4], bytes32, bytes32) {
@@ -228,7 +228,7 @@ contract Interactive is IGameMaker {
         g.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         g.state = State.Running;
         // return true;
-        return (e_roots, e_pointers, keccak256(e_roots, e_pointers), ccStateHash(e_roots, e_pointers));
+        return (e_roots, e_pointers, keccak256(abi.encodePacked(e_roots, e_pointers)), ccStateHash(e_roots, e_pointers));
     }
     
     function getDescription(bytes32 gameID) public view returns (bytes32 init, uint steps, bytes32 last) {

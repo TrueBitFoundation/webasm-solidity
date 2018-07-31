@@ -218,7 +218,7 @@ contract Tasks is DepositsManager {
         io.name = name;
         io.data = data;
         t.solver = msg.sender;
-        t.result = keccak256(code, size, name, data);
+        t.result = keccak256(abi.encodePacked(code, size, name, data));
         t.state = 1;
         t.blocked = block.number + TIMEOUT;
         emit Solved(id, t.result, t.init, t.code_type, t.storage_type, t.stor, t.solver, DEPOSIT);
