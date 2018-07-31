@@ -94,23 +94,23 @@ contract Interactive {
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
 
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) public returns (bytes32) {
-        bytes32 uniq = keccak256(task_id, p, c, s, e, par, to);
+    function make(uint taskID, address solver, address verifier, bytes32 startStateHash, bytes32 endStateHash, uint256 size, uint timeout) public returns (bytes32) {
+        bytes32 uniq = keccak256(taskID, solver, verifier, startStateHash, endStateHash, size, timeout);
         Record storage r = records[uniq];
-        r.task_id = task_id;
-        r.prover = p;
-        r.challenger = c;
-        r.start_state = s;
-        r.end_state = e;
-        r.timeout = to;
+        r.task_id = taskID;
+        r.prover = solver;
+        r.challenger = verifier;
+        r.start_state = startStateHash;
+        r.end_state = endStateHash;
+        r.timeout = timeout;
         r.clock = block.number;
         r.next = r.prover;
         r.idx1 = 0;
         r.phase = 16;
-        r.size = par;
+        r.size = size;
         r.state = State.Started;
-        emit StartChallenge(p, c, s, e, r.size, to, uniq);
-        blocked[task_id] = r.clock + r.timeout;
+        emit StartChallenge(solver, verifier, startStateHash, endStateHash, r.size, timeout, uniq);
+        blocked[taskID] = r.clock + r.timeout;
         return uniq;
     }
     

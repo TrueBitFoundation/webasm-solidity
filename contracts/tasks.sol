@@ -320,4 +320,3 @@ contract Tasks is DepositsManager {
     }
 
 }
-

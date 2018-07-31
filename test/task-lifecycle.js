@@ -529,7 +529,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
     	    [m.reg1, m.reg2, m.reg3, m.ireg],
     	    merkleComputer.getRoots(vm),
     	    merkleComputer.getPointers(vm)
-    	).send({from: solver, gas: 400000})
+    	).send({from: solver, gas: 500000})
     })
 
     it("should finalize task", async () => {
