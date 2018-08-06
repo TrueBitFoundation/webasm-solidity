@@ -189,8 +189,7 @@ contract Filesystem {
 
    function makeBundle(uint num) public view returns (bytes32) {
        bytes32 id = keccak256(msg.sender, num);
-       // return id;
-       return 0x7453;
+       return id;
    }
 
    function addToBundle(bytes32 id, bytes32 file_id) public returns (bytes32) {
