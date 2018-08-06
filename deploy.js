@@ -53,9 +53,9 @@ async function getNetwork() {
 
 async function exports(filesystem, tasks, iactive) {
     let exportedContracts = {
-	filesystem: {abi: filesystem._jsonInterface, address: filesystem._address},
-	tasks: {abi: tasks._jsonInterface, address: tasks._address},
-	interactive: {abi: iactive._jsonInterface, address: iactive._address} 
+	filesystem: {abi: filesystem._jsonInterface, address: filesystem._address.toLowerCase()},
+	tasks: {abi: tasks._jsonInterface, address: tasks._address.toLowerCase()},
+	interactive: {abi: iactive._jsonInterface, address: iactive._address.toLowerCase()} 
     }
     
     let network = await getNetwork()

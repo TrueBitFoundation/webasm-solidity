@@ -121,8 +121,79 @@ contract Interactive {
     
     uint constant FINAL_STATE = 0xffffffffff;
     
+        struct Roots {
+        bytes32 code;
+        bytes32 stack;
+        bytes32 mem;
+        bytes32 globals;
+        bytes32 calltable;
+        bytes32 calltypes;
+        bytes32 call_stack;
+        bytes32 input_size;
+        bytes32 input_name;
+        bytes32 input_data;
+    }
+
+    struct VM {
+        uint pc;
+        uint stack_ptr;
+        uint call_ptr;
+        uint memsize;
+    }
+    
+        VM vm;
+    Roots vm_r;
+
+    function ccStateHash(bytes32[10] roots, uint[4] pointers) public returns (bytes32) {
+        vm_r.code = roots[0];
+        vm_r.stack = roots[1];
+        vm_r.mem = roots[2];
+        vm_r.call_stack = roots[3];
+        vm_r.globals = roots[4];
+        vm_r.calltable = roots[5];
+        vm_r.calltypes = roots[6];
+        vm_r.input_size = roots[7];
+        vm_r.input_name = roots[8];
+        vm_r.input_data = roots[9];
+
+        vm.pc = pointers[0];
+        vm.stack_ptr = pointers[1];
+        vm.call_ptr = pointers[2];
+        vm.memsize = pointers[3];
+        bytes32[] memory arr = new bytes32[](14);
+        arr[0] = vm_r.code;
+        arr[1] = vm_r.mem;
+        arr[2] = vm_r.stack;
+        arr[3] = vm_r.globals;
+        arr[4] = vm_r.call_stack;
+        arr[5] = vm_r.calltable;
+        arr[6] = vm_r.calltypes;
+        arr[7] = vm_r.input_size;
+        arr[8] = vm_r.input_name;
+        arr[9] = vm_r.input_data;
+        
+        arr[0] = roots[0];
+        arr[1] = roots[2];
+        arr[2] = roots[1];
+        
+        arr[3] = roots[4];
+        arr[4] = roots[3];
+        
+        arr[5] = roots[5];
+        arr[6] = roots[6];
+        arr[7] = roots[7];
+        arr[8] = roots[8];
+        arr[9] = roots[9];
+        
+        arr[10] = bytes32(vm.pc);
+        arr[11] = bytes32(vm.stack_ptr);
+        arr[12] = bytes32(vm.call_ptr);
+        arr[13] = bytes32(vm.memsize);
+        return keccak256(arr);
+    }
+    
     function initialize(bytes32 id, bytes32[10] s_roots, uint[4] s_pointers, uint _steps,
-                                    bytes32[10] e_roots, uint[4] e_pointers) public returns (bool) {
+                                    bytes32[10] e_roots, uint[4] e_pointers) public returns (bytes32[10], uint[4], bytes32, bytes32) {
         Record storage r = records[id];
         require(msg.sender == r.next && r.state == State.Started);
         // check first state here
@@ -157,10 +228,11 @@ contract Interactive {
         if (r.size > r.steps - 2) r.size = r.steps-2;
         r.idx2 = r.steps-1;
         r.proof.length = r.steps;
-        r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.proof[r.steps-1] = judge.calcStateHash(e_roots, e_pointers);
+        r.proof[0] = judge.calcStateHash(s_roots, s_pointers);
         r.state = State.Running;
-        return true;
+        // return true;
+        return (e_roots, e_pointers, keccak256(e_roots, e_pointers), ccStateHash(e_roots, e_pointers));
     }
     
     function getDescription(bytes32 id) public view returns (bytes32 init, uint steps, bytes32 last) {

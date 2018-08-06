@@ -183,8 +183,8 @@ contract Filesystem {
        
        b.code_file = file;
        
-       return (init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleFiles(res3, 0, 4),
-               keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 4), calcMerkleFiles(res3, 0, 4)));
+       return (init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleFiles(res3, 0, 10),
+               keccak256(init, calcMerkle(res1, 0, 10), calcMerkle(res2, 0, 10), calcMerkleFiles(res3, 0, 10)));
    }
 
    function makeBundle(uint num) public view returns (bytes32) {
