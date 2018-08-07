@@ -77,7 +77,7 @@ contract Onchain {
         arr[11] = bytes32(vm.stack_ptr);
         arr[12] = bytes32(vm.call_ptr);
         arr[13] = bytes32(vm.memsize);
-        return keccak256(arr);
+        return keccak256(abi.encodePacked(arr));
     }
     
     function setMachine(
@@ -96,7 +96,7 @@ contract Onchain {
     }
     
     function hashMachine() internal view returns (bytes32) {
-        return keccak256(m.vm, m.op, m.reg1, m.reg2, m.reg3, m.ireg);
+        return keccak256(abi.encodePacked(m.vm, m.op, m.reg1, m.reg2, m.reg3, m.ireg));
     }
     
     function getLeaf(uint loc) internal view returns (uint) {
@@ -137,11 +137,11 @@ contract Onchain {
 
     function getRoot(uint loc) internal view returns (bytes32) {
         require(proof.length >= 2);
-        bytes32 res = keccak256(proof[0], proof[1]);
+        bytes32 res = keccak256(abi.encodePacked(proof[0], proof[1]));
         for (uint i = 2; i < proof.length; i++) {
             loc = loc/2;
-            if (loc%2 == 0) res = keccak256(res, proof[i]);
-            else res = keccak256(proof[i], res);
+            if (loc%2 == 0) res = keccak256(abi.encodePacked(res, proof[i]));
+            else res = keccak256(abi.encodePacked(proof[i], res));
         }
         require(loc < 2); // This should be runtime error, access over bounds
         return res;
@@ -161,11 +161,11 @@ contract Onchain {
 
     function getRoot2(uint loc) internal view returns (bytes32) {
         require(proof2.length >= 2);
-        bytes32 res = keccak256(proof2[0], proof2[1]);
+        bytes32 res = keccak256(abi.encodePacked(proof2[0], proof2[1]));
         for (uint i = 2; i < proof2.length; i++) {
             loc = loc/2;
-            if (loc%2 == 0) res = keccak256(res, proof2[i]);
-            else res = keccak256(proof2[i], res);
+            if (loc%2 == 0) res = keccak256(abi.encodePacked(res, proof2[i]));
+            else res = keccak256(abi.encodePacked(proof2[i], res));
         }
         require(loc < 2);
         return res;
@@ -173,11 +173,11 @@ contract Onchain {
 
     function getRoot2_16(uint loc) internal view returns (bytes32) {
         require(proof2.length >= 2);
-        bytes32 res = keccak256(uint128(proof2[0]), uint128(proof2[1]));
+        bytes32 res = keccak256(abi.encodePacked(uint128(proof2[0]), uint128(proof2[1])));
         for (uint i = 2; i < proof2.length; i++) {
             loc = loc/2;
-            if (loc%2 == 0) res = keccak256(res, proof2[i]);
-            else res = keccak256(proof2[i], res);
+            if (loc%2 == 0) res = keccak256(abi.encodePacked(res, proof2[i]));
+            else res = keccak256(abi.encodePacked(proof2[i], res));
         }
         require(loc < 2);
         return res;
@@ -320,10 +320,10 @@ contract Onchain {
         require(getRoot(loc) == vm_r.input_data && proof.length == INPUT_FILES);
         
         sz = sz/32;
-        bytes32 zero = keccak256(bytes16(0), bytes16(0));
+        bytes32 zero = keccak256(abi.encodePacked(bytes16(0), bytes16(0)));
         while (sz > 1) {
             sz = sz/2;
-            zero = keccak256(zero, zero);
+            zero = keccak256(abi.encodePacked(zero, zero));
         }
         setLeaf(loc, uint(zero));
         vm_r.input_data = getRoot(loc);
@@ -488,7 +488,7 @@ contract Onchain {
     
     function makeZero(uint n) internal pure returns (bytes32) {
        bytes32 res = 0;
-       for (uint i = 0; i < n; i++) res = keccak256(res, res);
+       for (uint i = 0; i < n; i++) res = keccak256(abi.encodePacked(res, res));
        return res;
     }
     
@@ -519,7 +519,7 @@ contract Onchain {
     function setTableSize(uint sz) internal {
         bytes32 res = bytes32(uint32(-1));
         debugb = res;
-        for (uint i = 0; i < sz; i++) res = keccak256(res, res);
+        for (uint i = 0; i < sz; i++) res = keccak256(abi.encodePacked(res, res));
         vm_r.calltable = res;
         m.vm = hashVM();
         state = hashMachine();

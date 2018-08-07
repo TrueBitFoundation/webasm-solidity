@@ -1,7 +1,7 @@
 pragma solidity ^0.4.23;
 
 contract A {
-    function foo() external returns (uint) {
+    function foo() external pure returns (uint) {
         return 123;
     }
 }

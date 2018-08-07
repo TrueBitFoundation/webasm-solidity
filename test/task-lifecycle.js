@@ -113,7 +113,7 @@ describe("Test task lifecycle through wasm game no challenge", async function() 
 
 	bundleID = await fileSystemContract.methods.calcId(randomNum).call({from: solver})
 
-	await fileSystemContract.methods.makeSimpleBundle(randomNum, taskInfo.stor, taskInfo.hash, "0x00").send({from: solver, gas: 200000})
+	await fileSystemContract.methods.makeSimpleBundle(randomNum, taskInfo.stor, taskInfo.hash, "0x00").send({from: solver, gas: 400000})
     })
 
     it("should get task data from onchain and execute task", async () => {
@@ -218,7 +218,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 	let randomPath = process.cwd() + "/tmp.giver_" + Math.floor(Math.random()*Math.pow(2, 60)).toString(32)
 
 	if (!fs.existsSync(randomPath)) fs.mkdirSync(randomPath)
-	fs.writeFileSync(randomPath + "/factorial.wast", wastCode)	
+	fs.writeFileSync(randomPath + "/factorial.wast", wastCode)
 
 	taskGiverVM = merkleComputer.init(config, randomPath)
 
@@ -255,7 +255,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
 
 	bundleID = await fileSystemContract.methods.calcId(randomNum).call({from: solver})
 
-	await fileSystemContract.methods.makeSimpleBundle(randomNum, taskInfo.stor, taskInfo.hash, "0x00").send({from: solver, gas: 200000})
+	await fileSystemContract.methods.makeSimpleBundle(randomNum, taskInfo.stor, taskInfo.hash, "0x00").send({from: solver, gas: 400000})
     })
 
     it("should get task data from onchain and execute task", async () => {
@@ -529,7 +529,7 @@ describe("Test task lifecycle through wasm game with challenge", async function(
     	    [m.reg1, m.reg2, m.reg3, m.ireg],
     	    merkleComputer.getRoots(vm),
     	    merkleComputer.getPointers(vm)
-    	).send({from: solver, gas: 400000})
+    	).send({from: solver, gas: 500000})
     })
 
     it("should finalize task", async () => {

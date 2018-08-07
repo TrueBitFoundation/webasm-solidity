@@ -3,6 +3,7 @@ pragma solidity ^0.4.16;
 import "./DepositsManager.sol";
 import "./interactive.sol";
 import "./fs.sol";
+import "./IGameMaker.sol";
 
 /*
 interface InteractiveI {
@@ -58,9 +59,9 @@ contract Tasks is DepositsManager {
     Interactive iactive;
     Filesystem fs;
 
-    constructor(address contr, address fs_addr) public {
-        iactive = Interactive(contr);
-        fs = Filesystem(fs_addr);
+    constructor(address disputeResolutionLayer, address fileSystem) public {
+        iactive = Interactive(disputeResolutionLayer);
+        fs = Filesystem(fileSystem);
     }
 
     function getInteractive() public view returns (address) {
@@ -89,18 +90,6 @@ contract Tasks is DepositsManager {
         uint8 table_size;
     }
 
-    struct Task2 {
-        address solver;
-        bytes32 result;
-        
-        bytes32 output_file;
-        
-        bool good; // has the file been loaded
-        uint blocked; // how long we have to wait to accept solution
-        
-        bytes32[] challenges;
-    }
-
     struct Task {
         address giver;
         bytes32 init; // includes code and input roots, the output should be similar
@@ -110,10 +99,19 @@ contract Tasks is DepositsManager {
         Storage storage_type;
         
         uint state;
+
+        address solver;
+        bytes32 result;
+        
+        bytes32 output_file;
+        
+        bool good; // has the file been loaded
+        uint blocked; // how long we have to wait to accept solution
+        
+        bytes32[] challenges;	
     }
 
     Task[] public tasks;
-    Task2[] public tasks2;
     VMParameters[] params;
     IO[] io_roots;
 
@@ -131,15 +129,13 @@ contract Tasks is DepositsManager {
     function add(bytes32 init, CodeType ct, Storage cs, string stor) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
-        tasks2.length++;
         params.length++;
         io_roots.length++;
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
         t.stor = stor;
-        t2.good = true;
+        t.good = true;
         t.code_type = ct;
         t.storage_type = cs;
         defaultParameters(id);
@@ -150,15 +146,13 @@ contract Tasks is DepositsManager {
     function addWithParameters(bytes32 init, CodeType ct, Storage cs, string stor, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public returns (uint) {
         uint id = tasks.length;
         tasks.length++;
-        tasks2.length++;
         params.length++;
         io_roots.length++;
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
         t.giver = msg.sender;
         t.init = init;
         t.stor = stor;
-        t2.good = true;
+        t.good = true;
         t.code_type = ct;
         t.storage_type = cs;
         
@@ -212,31 +206,29 @@ contract Tasks is DepositsManager {
     }
 
     function getSolver(uint id) public view returns (address) {
-        return tasks2[id].solver;
+        return tasks[id].solver;
     }
 
     function solveIO(uint id, bytes32 code, bytes32 size, bytes32 name, bytes32 data) public returns (bool) {
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
         IO storage io = io_roots[id];
-        require(t2.solver == 0 && t2.good);
+        require(t.solver == 0 && t.good);
         
         io.size = size;
         io.name = name;
         io.data = data;
-        t2.solver = msg.sender;
-        t2.result = keccak256(code, size, name, data);
+        t.solver = msg.sender;
+        t.result = keccak256(abi.encodePacked(code, size, name, data));
         t.state = 1;
-        t2.blocked = block.number + TIMEOUT;
-        emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, DEPOSIT);
+        t.blocked = block.number + TIMEOUT;
+        emit Solved(id, t.result, t.init, t.code_type, t.storage_type, t.stor, t.solver, DEPOSIT);
         subDeposit(msg.sender, DEPOSIT);
         return true;
     }
 
     function solutionInfo(uint unq) public view returns (uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver) {
         Task storage t = tasks[unq];
-        Task2 storage t2 = tasks2[unq];
-        return (unq, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver);
+        return (unq, t.result, t.init, t.code_type, t.storage_type, t.stor, t.solver);
     }
 
     /*
@@ -251,12 +243,11 @@ contract Tasks is DepositsManager {
 
     function challenge(uint id) public {
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
         // VMParameters storage p = params[id];
         require(t.state == 1);
-        bytes32 uniq = iactive.make(id, t2.solver, msg.sender, t.init, t2.result, 1, TIMEOUT);
+        bytes32 uniq = IGameMaker(iactive).make(id, t.solver, msg.sender, t.init, t.result, 1, TIMEOUT);
         challenges[uniq] = id;
-        t2.challenges.push(uniq);
+        t.challenges.push(uniq);
         subDeposit(msg.sender, DEPOSIT);
     }
 
@@ -265,7 +256,7 @@ contract Tasks is DepositsManager {
     }
 
     function getChallenges(uint id) public view returns (bytes32[]) {
-        return tasks2[id].challenges;
+        return tasks[id].challenges;
     }
 
     function uploadFile(uint id, uint num, bytes32 file_id, bytes32[] name_proof, bytes32[] data_proof, uint file_num) public returns (bool) {
@@ -281,9 +272,8 @@ contract Tasks is DepositsManager {
 
     function finalizeTask(uint id) public returns (bool) {
         Task storage t = tasks[id];
-        Task2 storage t2 = tasks2[id];
         IO storage io = io_roots[id];
-        if (t.state != 1 || t2.blocked >= block.number || iactive.isRejected(id) || iactive.blockedTime(id) >= block.number) return false;
+        if (t.state != 1 || t.blocked >= block.number || iactive.isRejected(id) || iactive.blockedTime(id) >= block.number) return false;
         // if (!(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number)) return false;
         
         // require(t.state == 1 && t2.blocked < block.number && !iactive.isRejected(id) && iactive.blockedTime(id) < block.number);
@@ -299,7 +289,7 @@ contract Tasks is DepositsManager {
         if (files.length > 0) Callback(t.giver).solved(id, files);
         
         emit Finalized(id);
-        addDeposit(t2.solver, DEPOSIT);
+        addDeposit(t.solver, DEPOSIT);
         
         return true;
     }
@@ -320,4 +310,3 @@ contract Tasks is DepositsManager {
     }
 
 }
-
