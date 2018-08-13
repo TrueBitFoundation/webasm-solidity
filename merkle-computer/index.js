@@ -1,6 +1,7 @@
 const execFile = require('child_process').execFile
 const winston = require('winston')
 const merkleRoot = require('./merkleRoot')
+const fs = require('fs')
 
 const defaultWasmInterpreterPath = "./../../ocaml-offchain/interpreter/wasm"
 
@@ -81,7 +82,7 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
     }
         
     return {
-
+        
 	merkleRoot: merkleRoot,
 
 	uploadOnchain: async (data, web3, options) => {
@@ -111,6 +112,23 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
 		    let stdout = await exec(config, ["-m", "-input"], interpreterArgs, path)
 		    return JSON.parse(stdout)
 		},
+
+		fileProofs: async (interpreterArgs = []) => {
+		    let stdout = await exec(config, ["-m", "-input2", "-input-proofs"], interpreterArgs, path)
+		    return JSON.parse(stdout)
+		},
+            
+        readFile: async (fname_) => {
+            let fname = path + "/" + fname_
+            return new Promise(function (cont,err) {
+                fs.readFile(fname, function (err, buf) {
+                    if (err) {
+                        console.log("Error reading file, assuming it should be empty", {err:err});
+                        cont(Buffer.from("")) 
+                    }
+                    else cont(buf)
+            }) })
+        },
 
 		executeWasmTask: async(interpreterArgs = []) => {
 		    let stdout = await exec(config, ["-m", "-output"], interpreterArgs, path)
@@ -162,6 +180,8 @@ module.exports = (wasmInterpreterPath = defaultWasmInterpreterPath) => {
 		upload: async (content, path) => {
 		    return ipfs.files.add([{content: content, path: path}])
 		},
+            
+        
 
 		download: async (fileID, filename) => {
 		    return new Promise((resolve, reject) => {
