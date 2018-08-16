@@ -53,9 +53,9 @@ async function getNetwork() {
 
 async function exports(filesystem, tasks, iactive) {
     let exportedContracts = {
-	filesystem: {abi: filesystem._jsonInterface, address: filesystem._address},
-	tasks: {abi: tasks._jsonInterface, address: tasks._address},
-	interactive: {abi: iactive._jsonInterface, address: iactive._address} 
+	filesystem: {abi: filesystem._jsonInterface, address: filesystem._address.toLowerCase()},
+	tasks: {abi: tasks._jsonInterface, address: tasks._address.toLowerCase()},
+	interactive: {abi: iactive._jsonInterface, address: iactive._address.toLowerCase()} 
     }
     
     let network = await getNetwork()
@@ -73,14 +73,14 @@ async function exports(filesystem, tasks, iactive) {
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
     send_opt = {gas:4700000, from:accts[0], gasPrice:"21000000000"}
-    var test = await createContract("Test")
+    //var test = await createContract("Test")
 
     var judge = await createContract("Judge")
 
     var fs = await createContract("Filesystem")
     var iactive = await createContract("Interactive", [judge.options.address])
     var tasks = await createContract("Tasks", [iactive.options.address, fs.options.address])
-    var resubmit = await createContract("TasksResubmit", [iactive.options.address, fs.options.address])
+    //var resubmit = await createContract("TasksResubmit", [iactive.options.address, fs.options.address])
     var merkle = await createContract("Merkle")
     iactive.setProvider(web3.currentProvider)
     var tx = await iactive.methods.registerJudge(1, merkle.options.address).send(send_opt)
@@ -91,9 +91,9 @@ async function doDeploy() {
         host: host,
         base: send_opt.from,
         tasks: tasks.options.address,
-        resubmit: resubmit.options.address,
+        //resubmit: resubmit.options.address,
         fs: fs.options.address,
-        merkle: merkle.options.address,
+        //merkle: merkle.options.address,
         ipfshost: "programming-progress.com",
         events_disabled: false, poll: false,
         timeout: 5000,

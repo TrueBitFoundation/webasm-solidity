@@ -236,7 +236,7 @@ contract TasksResubmit is DepositsManager {
         io.name = name;
         io.data = data;
         t2.solver = msg.sender;
-        t2.result = keccak256(code, size, name, data);
+        t2.result = keccak256(abi.encodePacked(code, size, name, data));
         t.state = 1;
         t2.blocked = block.number + 10;
         emit Solved(id, t2.result, t.init, t.code_type, t.storage_type, t.stor, t2.solver, t.deposit);

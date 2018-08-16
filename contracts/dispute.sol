@@ -22,7 +22,7 @@ contract WasmDispute is CommonOnchain, IDisputeResolver {
 
     function newGame(address s, address v, bytes32 spec, uint) public returns (bytes32) {
         require(spec != 0);
-        bytes32 id = keccak256(s, v, spec);
+        bytes32 id = keccak256(abi.encodePacked(s, v, spec));
         Task storage t = tasks[id];
         t.solver = s;
         t.verifier = v;
@@ -44,7 +44,7 @@ contract WasmDispute is CommonOnchain, IDisputeResolver {
         require(msg.sender == t.solver);
         t.phases = phases;
         t.bnum = block.number;
-        require(t.spec == keccak256(phases[0], phases[12]));
+        require(t.spec == keccak256(abi.encodePacked(phases[0], phases[12])));
     }
 
     function selectPhase(bytes32 dispute_id, uint q) public {
@@ -60,10 +60,7 @@ contract WasmDispute is CommonOnchain, IDisputeResolver {
        if (pr2.length == 0 && !(phase == 7 && getHint(7) == 0x0c)) require (pr.length == 0 || (pr.length != 1 && pr[0] == pr[0]&mask && pr[1] == pr[1]&mask));
     }
 
-    function judgeDispute(bytes32 dispute_id,
-                        bytes32[] _proof, bytes32[] _proof2,
-                        bytes32 vm_, bytes32 op, uint[4] regs,
-                        bytes32[10] roots, uint[4] pointers) public {
+    function judgeDispute(bytes32 dispute_id, bytes32[] _proof, bytes32[] _proof2, bytes32 vm_, bytes32 op, uint[4] regs, bytes32[10] roots, uint[4] pointers) public {
         
         Task storage t = tasks[dispute_id];
         require (t.selected_phase > 0);
@@ -116,7 +113,7 @@ contract PhaseDispute is IDisputeResolver {
 
     function newGame(address s, address v, bytes32 spec, uint when) public returns (bytes32) {
         require(spec != 0);
-        bytes32 id = keccak256(s, v, spec);
+        bytes32 id = keccak256(abi.encodePacked(s, v, spec));
         Task storage t = tasks[id];
         t.solver = s;
         t.verifier = v;
@@ -141,14 +138,14 @@ contract PhaseDispute is IDisputeResolver {
         t.phases = phases;
         t.bnum = block.number;
         t.res = res;
-        require(t.spec == keccak256(phases[0], phases[phases.length-1], phases.length, res));
+        require(t.spec == keccak256(abi.encodePacked(phases[0], phases[phases.length-1], phases.length, res)));
     }
 
     function selectPhase(bytes32 dispute_id, uint q) public {
         Task storage t = tasks[dispute_id];
         require(msg.sender == t.solver);
         require(q < t.phases.length-1);
-        t.dispute_id = IDisputeResolver(t.res).newGame(t.solver, t.verifier, keccak256(t.phases[q], t.phases[q+1], q), t.when);
+        t.dispute_id = IDisputeResolver(t.res).newGame(t.solver, t.verifier, keccak256(abi.encodePacked(t.phases[q], t.phases[q+1], q)), t.when);
     }
 
 }
@@ -170,7 +167,7 @@ contract TransitionDispute is IDisputeResolver {
     
     function newGame(address s, address v, bytes32 spec, uint) public returns (bytes32) {
         require(spec != 0);
-        bytes32 id = keccak256(s, v, spec);
+        bytes32 id = keccak256(abi.encodePacked(s, v, spec));
         Task storage t = tasks[id];
         t.solver = s;
         t.verifier = v;
@@ -191,7 +188,7 @@ contract TransitionDispute is IDisputeResolver {
 
     function judge(bytes32 dispute_id, bytes32 state, uint q) public {
         Task storage t = tasks[dispute_id];
-        require(t.spec == keccak256(state, transition(state, q), q));
+        require(t.spec == keccak256(abi.encodePacked(state, transition(state, q), q)));
         t.solved = true;
     }
 
@@ -269,7 +266,7 @@ contract InteractiveDispute is IDisputeResolver {
     
     function newGame(address s, address v, bytes32 spec, uint when) public returns (bytes32) {
         require(spec != 0);
-        bytes32 id = keccak256(s, v, spec);
+        bytes32 id = keccak256(abi.encodePacked(s, v, spec));
         Task storage t = tasks[id];
         t.solver = s;
         t.verifier = v;
@@ -281,7 +278,7 @@ contract InteractiveDispute is IDisputeResolver {
     
     function init(bytes32 dispute_id, address res, bytes32 first, bytes32 last, uint steps, uint size) public {
         Task storage t = tasks[dispute_id];
-        require(t.spec == keccak256(res, first, last, steps, size));
+        require(t.spec == keccak256(abi.encodePacked(res, first, last, steps, size)));
         t.proof.length = steps;
         t.proof[0] = first;
         t.proof[t.proof.length-1] = last;
@@ -332,7 +329,7 @@ contract InteractiveDispute is IDisputeResolver {
         emit Queried(id, r.idx1, r.idx2);
         // Size eventually becomes zero here
         // Then call step resolver
-        if (r.size == 0) r.dispute_id = IDisputeResolver(r.res).newGame(r.solver, r.verifier, keccak256(r.proof[r.idx1], r.proof[r.idx1+1]), r.when);
+        if (r.size == 0) r.dispute_id = IDisputeResolver(r.res).newGame(r.solver, r.verifier, keccak256(abi.encodePacked(r.proof[r.idx1], r.proof[r.idx1+1])), r.when);
     }
 
 }

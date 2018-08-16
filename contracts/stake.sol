@@ -67,19 +67,19 @@ contract Stake is DepositsManager {
 
     function taskInitRandom(uint tnum, address solver) internal view returns (uint) {
         Task storage t = tasks[tnum];
-        bytes32 thash = keccak256(solver, t.init, blockhash(t.bnum));
+        bytes32 thash = keccak256(abi.encodePacked(solver, t.init, blockhash(t.bnum)));
         return uint(thash);
     }
 
     function taskSolveRandom(uint tnum, bytes32 solution, address solver) internal view returns (uint) {
         Task storage t = tasks[tnum];
-        bytes32 thash = keccak256(solver, solution, blockhash(t.bnum2));
+        bytes32 thash = keccak256(abi.encodePacked(solver, solution, blockhash(t.bnum2)));
         return uint(thash)/t.multiplier/specialMultiplier(tnum, solver);
     }
     
     function specialMultiplier(uint tnum, address solver) internal view returns (uint) {
         Task storage t = tasks[tnum];
-        bytes32 thash = keccak256(solver, t.init, blockhash(t.bnum));
+        bytes32 thash = keccak256(abi.encodePacked(solver, t.init, blockhash(t.bnum)));
         return (uint(thash) % 20) + 1;
     }
 
@@ -100,7 +100,7 @@ contract Stake is DepositsManager {
     // 
     function finalize(uint tnum, bytes32 solution) public {
         Task storage t = tasks[tnum];
-        require(keccak256(solution) == t.commit_solution);
+        require(keccak256(abi.encodePacked(solution)) == t.commit_solution);
         require(t.solver == msg.sender);
         require(block.number > t.bnum2 + TIMEOUT);
         t.solution = solution;
@@ -119,7 +119,7 @@ contract Stake is DepositsManager {
     function claimJackpot(uint tnum, uint idx, bytes32 solution) public {
         Task storage t = tasks[tnum];
         require(t.check[idx] == msg.sender);
-        require(keccak256(solution) == t.commit_solution && block.number > t.bnum2 + TIMEOUT);
+        require(keccak256(abi.encodePacked(solution)) == t.commit_solution && block.number > t.bnum2 + TIMEOUT);
         if (taskSolveRandom(tnum, solution, msg.sender) < JACKPOT_LIMIT) {
            addDeposit(msg.sender, JACKPOT);
         }
@@ -129,7 +129,7 @@ contract Stake is DepositsManager {
     function stealJackpot(uint tnum, bytes32 solution, address victim) public {
         Task storage t = tasks[tnum];
         require(t.checked[victim] == false);
-        require(keccak256(solution) == t.commit_solution && block.number > t.bnum2 + TIMEOUT);
+        require(keccak256(abi.encodePacked(solution)) == t.commit_solution && block.number > t.bnum2 + TIMEOUT);
         if (taskSolveRandom(tnum, solution, victim) < JACKPOT_LIMIT) {
            addDeposit(msg.sender, JACKPOT);
         }
