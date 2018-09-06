@@ -51,7 +51,7 @@ async function doDeploy() {
         // resubmit: resubmit.options.address,
         fs: fs.options.address,
         // merkle: merkle.options.address,
-        ipfshost: "programming-progress.com",
+        ipfshost: "localhost",
         events_disabled: false, poll: false,
         timeout: 5000,
         tick: true,
