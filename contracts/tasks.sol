@@ -5,41 +5,15 @@ import "./interactive.sol";
 import "./fs.sol";
 import "./IGameMaker.sol";
 
-/*
-interface InteractiveI {
-    function make(uint task_id, address p, address c, bytes32 s, bytes32 e, uint256 par, uint to) external returns (bytes32);
-    
-    function calcStateHash(bytes32[10] roots, uint[4] pointers) external returns (bytes32);
-    function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] proof, uint loc) external returns (bool);
-    function checkProof(bytes32 hash, bytes32 root, bytes32[] proof, uint loc) external returns (bool);
-    
-    // Check if a task has been rejected
-    function isRejected(uint id) external returns (bool);
-    // Check if a task is blocked, returns the block when it can be accepted
-    function blockedTime(uint id) external returns (uint);
-    function getChallenger(bytes32 id) external returns (address);
-    function getTask(bytes32 id) external view returns (uint);
-    function deleteChallenge(bytes32 id) external;
-    function getProver(bytes32 id) external returns (address);
-}
-*/
-
 interface Callback {
     function solved(uint id, bytes32[] files) external;
     function rejected(uint id) external;
 }
 
-/*
-interface FilesystemI {
-  function getRoot(bytes32 id) external view returns (bytes32);
-  function getNameHash(bytes32 id) external view returns (bytes32);
-}
-*/
-
 contract Tasks is DepositsManager {
 
     uint constant DEPOSIT = 0.01 ether;
-    uint constant TIMEOUT = 100;
+    uint constant TIMEOUT = 50;
 
     enum CodeType {
         WAST,
@@ -53,6 +27,7 @@ contract Tasks is DepositsManager {
     }
 
     event Posted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
+    event RePosted(address giver, bytes32 hash, CodeType ct, Storage cs, string stor, uint id, uint deposit);
     event Solved(uint id, bytes32 hash, bytes32 init, CodeType ct, Storage cs, string stor, address solver, uint deposit);
     event Finalized(uint id);
 
@@ -135,12 +110,21 @@ contract Tasks is DepositsManager {
         t.giver = msg.sender;
         t.init = init;
         t.stor = stor;
-        t.good = true;
+        // t.good = true;
         t.code_type = ct;
         t.storage_type = cs;
         defaultParameters(id);
-        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        // emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        commit(id);
         return id;
+    }
+
+    function commit(uint id) public {
+        Task storage t1 = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require (msg.sender == t1.giver);
+        t2.good = true;
+        emit Posted(t1.giver, t1.init, t1.code_type, t1.storage_type, t1.stor, id, DEPOSIT);
     }
 
     function addWithParameters(bytes32 init, CodeType ct, Storage cs, string stor, uint8 stack, uint8 mem, uint8 globals, uint8 table, uint8 call) public returns (uint) {
@@ -152,7 +136,7 @@ contract Tasks is DepositsManager {
         t.giver = msg.sender;
         t.init = init;
         t.stor = stor;
-        t.good = true;
+        // t.good = true;
         t.code_type = ct;
         t.storage_type = cs;
         
@@ -162,12 +146,15 @@ contract Tasks is DepositsManager {
         param.globals_size = globals;
         param.table_size = table;
         param.call_size = call;
-        emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
+        // emit Posted(msg.sender, init, ct, cs, stor, id, DEPOSIT);
         return id;
     }
 
     // Make sure they won't be required after the task has been posted already
     function requireFile(uint id, bytes32 hash, Storage st) public {
+        Task storage t1 = tasks[id];
+        Task2 storage t2 = tasks2[id];
+        require (!t2.good && msg.sender == t1.giver);
         IO storage io = io_roots[id];
         io.uploads.push(RequiredFile(hash, st, 0));
     }
@@ -294,12 +281,20 @@ contract Tasks is DepositsManager {
         return true;
     }
     
-    function claimDeposit(bytes32 cid) public {
+    function claimDeposit(bytes32 cid) public returns (address) {
         uint id = iactive.getTask(cid);
         require(iactive.isRejected(id));
-        require(iactive.getChallenger(cid) == msg.sender);
+        address challenger = iactive.getChallenger(cid);
+        require(challenger != 0);
+        addDeposit(challenger, DEPOSIT);
         iactive.deleteChallenge(cid);
-        addDeposit(msg.sender, DEPOSIT);
+        Task2 storage t2 = tasks2[id];
+        Task storage t1 = tasks[id];
+        t2.solver = 0;
+        t2.good = true;
+        t1.state = 0;
+        emit RePosted(t1.giver, t1.init, t1.code_type, t1.storage_type, t1.stor, id, DEPOSIT);
+        return challenger;
     }
 
     uint tick_var;

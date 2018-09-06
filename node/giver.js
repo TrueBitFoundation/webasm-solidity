@@ -38,8 +38,8 @@ function giveTask(obj) {
             // store into filesystem
             common.initTask(obj).then(function (state) {
                 contract.methods.add(state, obj.code_type, obj.storage, address).send(send_opt, function (err, tr) {
-                    if (err) logger.error("Failed to add task", err)
-                    else logger.error("Success", tr)
+                    if (err) return logger.error("Failed to add task", err)
+                    logger.error("Success", tr)
                     // process.exit(0)
                 })
             })
