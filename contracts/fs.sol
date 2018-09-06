@@ -187,7 +187,7 @@ contract Filesystem {
    }
 
    function makeBundle(uint num) public view returns (bytes32) {
-       bytes32 id = keccak256(msg.sender, num);
+       bytes32 id = keccak256(abi.encodePacked(msg.sender, num));
        return id;
    }
 

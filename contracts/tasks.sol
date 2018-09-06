@@ -121,9 +121,8 @@ contract Tasks is DepositsManager {
 
     function commit(uint id) public {
         Task storage t1 = tasks[id];
-        Task2 storage t2 = tasks2[id];
         require (msg.sender == t1.giver);
-        t2.good = true;
+        t1.good = true;
         emit Posted(t1.giver, t1.init, t1.code_type, t1.storage_type, t1.stor, id, DEPOSIT);
     }
 
@@ -153,8 +152,7 @@ contract Tasks is DepositsManager {
     // Make sure they won't be required after the task has been posted already
     function requireFile(uint id, bytes32 hash, Storage st) public {
         Task storage t1 = tasks[id];
-        Task2 storage t2 = tasks2[id];
-        require (!t2.good && msg.sender == t1.giver);
+        require (!t1.good && msg.sender == t1.giver);
         IO storage io = io_roots[id];
         io.uploads.push(RequiredFile(hash, st, 0));
     }
@@ -288,10 +286,9 @@ contract Tasks is DepositsManager {
         require(challenger != 0);
         addDeposit(challenger, DEPOSIT);
         iactive.deleteChallenge(cid);
-        Task2 storage t2 = tasks2[id];
         Task storage t1 = tasks[id];
-        t2.solver = 0;
-        t2.good = true;
+        t1.solver = 0;
+        t1.good = true;
         t1.state = 0;
         emit RePosted(t1.giver, t1.init, t1.code_type, t1.storage_type, t1.stor, id, DEPOSIT);
         return challenger;
