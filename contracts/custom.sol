@@ -41,7 +41,7 @@ contract GenericCustom {
     function clock(bytes32 id) public view returns (uint) {
         return tasks[id].clock;
     }
-
+    
     // Check if has resolved into correct state: merkle root of output data and output size
     function resolved(bytes32 id, bytes32 state, uint size) public view returns (bool) {
        Task storage t = tasks[id];

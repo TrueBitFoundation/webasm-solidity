@@ -163,6 +163,12 @@ contract.events.Posted(function (err, ev) {
     startSolver(ev.returnValues)
 })
 
+contract.events.RePosted(function (err, ev) {
+    if (err) return logger.error("Event error", err)
+    console.log("Reposted", ev.returnValues)
+    // startSolver(ev.returnValues)
+})
+
 async function pollSolutions() {
     var next_id = await contract.methods.nextTask().call(send_opt)
     if (parseInt(next_id) == 0) return

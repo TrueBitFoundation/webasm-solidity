@@ -193,13 +193,18 @@ async function forceTimeout() {
     if (good == true) iactive.methods.gameOver(challenge_id).send(send_opt, function (err,tx) {
         if (err) return console.error(err)
         status("Trying timeout " + tx)
+        cleanup()
     })
 }
 
 var ival = setInterval(forceTimeout, common.config.timeout)
 
-function cleanup() {
-    if (challenge_id) contract.methods.claimDeposit(challenge_id).send(send_opt)
+async function cleanup() {
+    if (challenge_id) {
+        var addr = await contract.methods.claimDeposit(challenge_id).call(send_opt)
+        var tx = await contract.methods.claimDeposit(challenge_id).send(send_opt)
+        logger.info("Address should have been", addr, tx)
+    }
     clearInterval(ival)
 }
 
@@ -215,7 +220,10 @@ async function runVerifier() {
     config.files = []
     config.code_file = "task." + common.getExtension(config.code_type)
     config.vm_parameters = await contract.methods.getVMParameters(task_id).call(send_opt)
-    common.getStorage(config, function () {
+    common.getStorage(config, async function () {
+        if (config.metering && config.code_type == common.CodeType.WASM) {
+            await common.insertMetering("task.wasm")
+        }
         verifyTask({init: config.init, hash: config.hash, id:task_id}, config)
     })
 }

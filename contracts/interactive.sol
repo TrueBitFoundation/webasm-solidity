@@ -66,6 +66,8 @@ contract Interactive is IGameMaker, IDisputeResolutionLayer {
         address winner;
         address next;
         
+        address manager;
+        
         uint256 size;
         uint256 timeout;
         uint256 clock;
@@ -97,9 +99,11 @@ contract Interactive is IGameMaker, IDisputeResolutionLayer {
     }
 
     event StartChallenge(address p, address c, bytes32 s, bytes32 e, uint256 par, uint to, bytes32 uniq);
+    
+    uint nonce;
 
     function make(uint taskID, address solver, address verifier, bytes32 startStateHash, bytes32 endStateHash, uint256 size, uint timeout) external returns (bytes32) {
-        bytes32 gameID = keccak256(abi.encodePacked(taskID, solver, verifier, startStateHash, endStateHash, size, timeout));
+        bytes32 gameID = keccak256(abi.encodePacked(taskID, solver, verifier, startStateHash, endStateHash, size, timeout, nonce++));
         Game storage g = games[gameID];
         g.task_id = taskID;
         g.prover = solver;
@@ -114,6 +118,7 @@ contract Interactive is IGameMaker, IDisputeResolutionLayer {
         g.size = size;
         g.state = State.Started;
 	g.status = Status.Challenged;	
+        g.manager = msg.sender;
         emit StartChallenge(solver, verifier, startStateHash, endStateHash, g.size, timeout, gameID);
         blocked[taskID] = g.clock + g.timeout;
         return gameID;
@@ -261,8 +266,11 @@ contract Interactive is IGameMaker, IDisputeResolutionLayer {
         return g.task_id;
     }
     
-    function deleteChallenge(bytes32 gameID) public {
-       delete games[gameID];
+    function deleteChallenge(bytes32 id) public {
+        Game storage r = game[id];
+        require (msg.sender == r.manager);
+        rejected[r.task_id] = false;
+        delete records[id];
     }
 
     function checkTimeout(bytes32 gameID) internal returns (bool) {

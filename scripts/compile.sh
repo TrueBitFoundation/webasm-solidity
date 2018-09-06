@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# ./wasm -step 10 -m ../test/core/fac.wast | head -n 17 > test.json
-
 cd contracts
 
 mkdir -p compiled
@@ -18,7 +16,9 @@ solc --abi --optimize --overwrite --bin -o compiled interpreter.sol
 solc --abi --optimize --overwrite --bin -o compiled judge.sol
 # solc --abi --optimize --overwrite --bin -o compiled testUser.sol
 # solc --abi --optimize --overwrite --bin -o compiled parallel.sol
-solc --abi --optimize --overwrite --bin -o compiled merkle.sol
+# solc --abi --optimize --overwrite --bin -o compiled merkle.sol
+# solc --abi --optimize --overwrite --bin -o compiled ipfs.sol
 # solc --abi --optimize --overwrite --bin -o compiled stake.sol
 # solc --abi --optimize --overwrite --bin -o compiled dispute.sol
 # solc --abi --optimize --overwrite --bin -o compiled test.sol
+

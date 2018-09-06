@@ -87,11 +87,13 @@ contract Judge is CommonOnchain {
         return (q, state, debugb, debug);
     }
 
+/*
     function checkFileProof(bytes32 state, bytes32[10] roots, uint[4] pointers, bytes32[] _proof, uint loc) public returns (bool) {
         setVM(roots, pointers);
         proof = _proof;
         return state == calcIOHash(roots) && vm_r.input_data == getRoot(loc);
     }
+*/
 
     function checkProof(bytes32 hash, bytes32 root, bytes32[] _proof, uint loc) public returns (bool) {
         proof = _proof;
