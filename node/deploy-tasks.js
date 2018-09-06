@@ -35,10 +35,10 @@ async function doDeploy() {
     var fs = await createContract("Filesystem")
     var iactive = await createContract("Interactive", [judge.options.address])
     var tasks = await createContract("Tasks", [iactive.options.address, fs.options.address])
-    var resubmit = await createContract("TasksResubmit", [iactive.options.address, fs.options.address])
-    var merkle = await createContract("Merkle")
+    // var resubmit = await createContract("TasksResubmit", [iactive.options.address, fs.options.address])
+    // var merkle = await createContract("Merkle")
     iactive.setProvider(web3.currentProvider)
-    var tx = await iactive.methods.registerJudge(1, merkle.options.address).send(send_opt)
+    // var tx = await iactive.methods.registerJudge(1, merkle.options.address).send(send_opt)
     // console.log(tx)
     var config = {
         judge: judge.options.address,
