@@ -38,6 +38,8 @@ async function doDeploy() {
     // var resubmit = await createContract("TasksResubmit", [iactive.options.address, fs.options.address])
     // var merkle = await createContract("Merkle")
     iactive.setProvider(web3.currentProvider)
+    tasks.setProvider(web3.currentProvider)
+    var tx = await tasks.methods.makeDeposit().send({gas:4700000, from:accts[0], gasPrice:"21000000000", value:"1000000000000000000"})
     // var tx = await iactive.methods.registerJudge(1, merkle.options.address).send(send_opt)
     // console.log(tx)
     var config = {
