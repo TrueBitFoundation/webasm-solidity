@@ -29,6 +29,7 @@ async function createContract(name, args) {
 
 async function doDeploy() {
     var accts = await web3.eth.getAccounts()
+    console.log(accts)
     send_opt = {gas:4700000, from:accts[0], gasPrice:"21000000000"}
     // var test = await createContract("Test")
     var judge = await createContract("Judge")
