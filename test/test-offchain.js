@@ -12,37 +12,44 @@ var host = process.argv[3] || "localhost"
 
 var steps = parseInt(process.argv[4]) || 1000
 
-web3.setProvider(new web3.providers.HttpProvider('http://' + host + ':8545'))
+let provider = new web3.providers.HttpProvider('http://' + host + ':8545')
+web3.setProvider(provider)
 
-var base = web3.eth.coinbase
-// var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
-// var base = "0x9acbcf2d9bd157999ae5541c446f8d6962da1d4d"
+var dir = __dirname + "/../contracts/compiled/"
 
-
-web3.eth.getBalance(base, (err,balance) => {
-    if (err) console.log(err)
-    else console.log(balance.toString())
-})
-
-var code = fs.readFileSync("contracts/Interpreter.bin")
-var abi = JSON.parse(fs.readFileSync("contracts/Interpreter.abi"))
 var test = JSON.parse(fs.readFileSync(process.argv[2]))
 
-var send_opt = {from:base, gas: 40000000000}
+// var send_opt = {from:base, gas: 40000000000}
 
-function handleResult(err, res) {
-        if (err) {
-            console.log("Got error", err)
-            process.exit(-1)
+async function handleTests(contr) {
+    console.log("Found", test.length, "test cases")
+    for (let i = 0; i < test.length; i++) {
+        let t = test[i]
+        console.log("Code length", t.code.length, "with", t.steps, "steps")
+        try {
+            let res = await contr.methods.run3((t.steps+10)*12,t.code).call({gas:"4000000000"})
+            console.log(res)
+            console.log("Expected", t.end_stack[0], "got", res[0])
         }
-        else console.log(res)
-        if (res[0].toString() != "7034535277573963776") {
-            console.log("wrong result")
-            process.exit(-1)
+        catch (e) {
+            console.log("Had error, let's try to find location")
+            let i = 94*12
+            while (true) {
+                i++
+                try {
+                    let res = await contr.methods.run3(i,t.code).call({gas:"4000000000"})
+                    console.log("Step", Math.floor(i/12), "phase", i%12)
+                    console.log(res)
+                }
+                catch (e) {
+                    break
+                }
+            }
         }
+    }
 }
 
-function testInterpreter(contr) {
+async function testInterpreter(contr) {
     vm = test
     /*vm.memory = []
     vm.stack = []
@@ -51,24 +58,40 @@ function testInterpreter(contr) {
     vm.calltable = []
     vm.calltypes = []
     vm.input = [] */
-    contr.run2.call(steps*12, vm.code, [vm.stack.length, vm.memory.length, vm.call_stack.length,
+    console.log("Contract at", contr.options.address)
+    let res = await contr.methods.run2(steps*12, vm.code, [vm.stack.length, vm.memory.length, vm.call_stack.length,
                     vm.globals.length, vm.calltable.length, vm.calltypes.length, vm.input.length],
-                    vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize, send_opt, (err,res) => handleResult(err,res))
+                    vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize).call({gas:"4000000000"})
+    console.log(res)
+    if (res[0].toString() != "7034535277573963776") {
+        console.log("wrong result")
+        process.exit(-1)
+    }
+                
     /* contr.run.call(vm.code, vm.stack, vm.memory, vm.call_stack, vm.globals, vm.calltable, vm.calltypes, vm.input,
                    vm.pc, vm.stack_ptr, vm.call_ptr, vm.memsize, send_opt, (err,res) => handleResult(err,res)) */
 }
 
-function doTest() {
-    web3.eth.contract(abi).new({from: base, data: '0x' + code, gas: '4500000'}, function (e, contr) {
-        if (e) {
-            console.log(e)
-            process.exit(-1)
-        }
-        if (contr && typeof contr.address !== 'undefined') {
-            console.log('Contract mined! address: ' + contr.address)
-            testInterpreter(contr)
-        }
-    })
+async function createContract(name, args, base) {
+    var code = "0x" + fs.readFileSync(dir + name + ".bin")
+    var abi = JSON.parse(fs.readFileSync(dir + name + ".abi"))
+    return new web3.eth.Contract(abi).deploy({data: code, arguments:args}).send({from:base, gas:"5000000"})
+}
+
+async function doTest() {
+    var accts = await web3.eth.getAccounts()
+    var base = accts[0]
+    // var base = "0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1"
+    // var base = "0x9acbcf2d9bd157999ae5541c446f8d6962da1d4d"
+    // console.log(base)
+    
+    let balance = await web3.eth.getBalance(base)
+    console.log("Using account", base, "with", balance, "wei")
+
+    let contr = await createContract("Interpreter", [], base)
+    contr.setProvider(provider)
+    // testInterpreter(contr)
+    handleTests(contr)
 }
 
 doTest()

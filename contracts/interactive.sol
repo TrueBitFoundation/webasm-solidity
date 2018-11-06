@@ -267,10 +267,10 @@ contract Interactive is IGameMaker, IDisputeResolutionLayer {
     }
     
     function deleteChallenge(bytes32 id) public {
-        Game storage r = game[id];
+        Game storage r = games[id];
         require (msg.sender == r.manager);
         rejected[r.task_id] = false;
-        delete records[id];
+        delete games[id];
     }
 
     function checkTimeout(bytes32 gameID) internal returns (bool) {
