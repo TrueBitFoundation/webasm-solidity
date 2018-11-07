@@ -39,6 +39,11 @@ contract ALU is VMMemory {
             if (r2 != 0) res = r1;
             else res = r3;
         }
+        // Calculate conditional jump
+        else if (hint == 8) {
+            if (r2 != 0) res = r3;
+            else res = r1;
+        }
         // Calculate jump to jump table
         else if (hint == 4) {
             res = r2 + (r1 >= ireg ? ireg : r1);

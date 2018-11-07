@@ -1,56 +1,83 @@
 
-var Web3 = require('web3')
-var web3 = new Web3()
-var fs = require("fs")
+const Web3 = require('web3')
+const web3 = new Web3()
+const fs = require("fs")
+
+const BN = Web3.utils.BN
 
 if (process.argv.length < 3) {
     console.log("Give test file as argument!")
     process.exit(0)
 }
 
-var host = process.argv[3] || "localhost"
+let host = process.argv[3] || "localhost"
 
-var steps = parseInt(process.argv[4]) || 1000
+let steps = parseInt(process.argv[4]) || 1000
 
 let provider = new web3.providers.HttpProvider('http://' + host + ':8545')
 web3.setProvider(provider)
 
-var dir = __dirname + "/../contracts/compiled/"
+let dir = __dirname + "/../contracts/compiled/"
 
-var test = JSON.parse(fs.readFileSync(process.argv[2]))
+let test = JSON.parse(fs.readFileSync(process.argv[2]))
 
 // var send_opt = {from:base, gas: 40000000000}
 
+async function findErrorLocation(contr, t) {
+    console.log("Had error, let's try to find location")
+    let i = 0
+    while (i < t.steps*12) {
+        i++
+        try {
+            let res = await contr.methods.run3(i, t.code).call({ gas: "4000000000" })
+            console.log("Step", Math.floor(i / 12), "phase", i % 12)
+            console.log(res)
+            console.log("OP", t.code[parseInt(res[1])])
+        }
+        catch (e) {
+            break
+        }
+    }
+}
+
 async function handleTests(contr) {
     console.log("Found", test.length, "test cases")
+    let good = 0
+    let bad = 0
+    let error = 0
     for (let i = 0; i < test.length; i++) {
         let t = test[i]
         console.log("Code length", t.code.length, "with", t.steps, "steps")
         try {
             let res = await contr.methods.run3((t.steps+10)*12,t.code).call({gas:"4000000000"})
-            console.log(res)
-            console.log("Expected", t.end_stack[0], "got", res[0])
-        }
-        catch (e) {
-            console.log("Had error, let's try to find location")
-            let i = 94*12
-            while (true) {
-                i++
-                try {
-                    let res = await contr.methods.run3(i,t.code).call({gas:"4000000000"})
-                    console.log("Step", Math.floor(i/12), "phase", i%12)
-                    console.log(res)
-                }
-                catch (e) {
-                    break
-                }
+            // console.log(res)
+            let expected = t.end_stack[0]
+            // let expected = new BN(t.end_stack[0].substr(2), 16)
+            if (expected == res[0]) {
+                // console.log("Ok!")
+                good++
+            }
+            else {
+                console.log("Expected", expected, "got", res[0])
+                bad++
+                var str = t.code.map(a => a.substr(2)).join("")
+                fs.writeFileSync("wrong.code", Buffer.from(str, "hex"))
+                await findErrorLocation(contr, t)
+                process.exit(-1)
             }
         }
+        catch (e) {
+            console.log("VM error")
+            error++
+            await findErrorLocation(contr, t)
+            process.exit(-1)
+        }
+        console.log("Status", good, "ok", bad, "bad", error, "error /", i)
     }
 }
 
 async function testInterpreter(contr) {
-    vm = test
+    let vm = test
     /*vm.memory = []
     vm.stack = []
     vm.call_stack = []
