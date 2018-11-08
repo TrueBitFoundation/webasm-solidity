@@ -331,6 +331,7 @@ contract REPLACEME, ALU {
         (res, fin4l) = handleALU(getHint(3), getReg1(), getReg2(), getReg3(), getIreg());
         if (fin4l) setPC(FINAL_STATE);
         else setReg1(res);
+        // setReg1(res);
     }
     
     /**

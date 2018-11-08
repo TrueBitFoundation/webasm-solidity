@@ -22,8 +22,8 @@ contract ALU is VMMemory {
         uint res = r1;
         if (hint == 0) return (r1, false);
         else if (hint == 1 || hint == 6) {
-           return (0, true);
-           // revert(); // Trap
+            return (0, true);
+            // revert(); // Trap
         }
         // Loading from memory
         else if (hint & 0xc0 == 0xc0) {
@@ -50,7 +50,7 @@ contract ALU is VMMemory {
         }
         // Check dynamic call
         else if (hint == 7) {
-            if (ireg != r2) revert();
+            if (ireg != r2) return (0, true);
             res = 0;
         }
         else if (hint == 0x45 || hint == 0x50) {

@@ -104,7 +104,8 @@ contract Interpreter is CommonOffchain {
         bytes32 s_top = 0;
         if (vm_r.stack.length > 0) s_top = bytes32(vm_r.stack[0]);
 
-        return (s_top, vm.pc, vm.stack_ptr, getHint(3));
+        return (s_top, vm.pc, m.reg1, m.reg2);
+        // return (s_top, vm.pc, vm.stack_ptr, 0);
     }
 }
 

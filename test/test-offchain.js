@@ -25,6 +25,7 @@ let test = JSON.parse(fs.readFileSync(process.argv[2]))
 
 async function findErrorLocation(contr, t) {
     console.log("Had error, let's try to find location")
+    // let i = 1000*12
     let i = 0
     while (i < t.steps*12) {
         i++
@@ -69,10 +70,14 @@ async function handleTests(contr) {
         catch (e) {
             console.log("VM error")
             error++
-            await findErrorLocation(contr, t)
-            process.exit(-1)
+            var str = t.code.map(a => a.substr(2)).join("")
+            fs.writeFileSync("wrong.code", Buffer.from(str, "hex"))
+            if (t.steps < 2000) {
+                await findErrorLocation(contr, t)
+                process.exit(-1)
+            }
         }
-        console.log("Status", good, "ok", bad, "bad", error, "error /", i)
+        console.log("Status", good, "ok", bad, "bad", error, "error /", i+1)
     }
 }
 
