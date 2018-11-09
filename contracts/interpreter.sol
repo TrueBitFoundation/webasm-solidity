@@ -80,7 +80,7 @@ contract Interpreter is CommonOffchain {
         return (int64(vm_r.stack[0]), vm.pc, keccak256(abi.encodePacked(vm_r.stack)));
     }
 
-    function run3(uint limit, bytes32[] code) public returns (bytes32, uint, uint, uint) {
+    function run3(uint limit, bytes32[] code) public returns (bytes32, uint, uint, uint, uint) {
         vm_r.code = code;
         vm_r.stack.length = 4;
         vm_r.mem.length = 4;
@@ -104,7 +104,7 @@ contract Interpreter is CommonOffchain {
         bytes32 s_top = 0;
         if (vm_r.stack.length > 0) s_top = bytes32(vm_r.stack[0]);
 
-        return (s_top, vm.pc, m.reg1, m.reg2);
+        return (s_top, vm.pc, m.reg1, m.reg2, getHint(3));
         // return (s_top, vm.pc, vm.stack_ptr, 0);
     }
 }
