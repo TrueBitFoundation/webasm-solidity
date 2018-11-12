@@ -196,28 +196,26 @@ contract ALU is VMMemory {
         else if (hint == 0x86) {
             res = r1*2**(r2%64); // shift 
         }
-        else if (hint == 0x75) {
-            res = sar32(r1, r2);
+        else if (hint == 0x76) {
+            res = uint(uint32(r1) >> uint32(r2%32));
         }
         else if (hint == 0x87) {
             res = sar64(r1, r2);
         }
-        else if (hint == 0x76) {
-            res = uint(int32(r1) >> int32(r2%32));
-            // if (r2 > 32) res = 0;
-            // else res = r1/2**r2;
+        else if (hint == 0x75) {
+            res = sar32(r1, r2);
         }
         else if (hint == 0x88) {
             res = uint(uint64(r1) >> uint64(r2%64));
-            // if (r2 > 64) res = 0;
-            // else res = r1/2**r2;
         }
         // rol, ror -- fix
         else if (hint == 0x77) {
-            res = (r1*2**r2) | (r1/2**32);
+            uint rt = r2 % 32;
+            res = ((r1*2**rt) | (r1/2**(32-rt)));
         }
         else if (hint == 0x78) {
-            res = (r1/2**r2) | (r1*2**32);
+            uint rt2 = (r2 % 32);
+            res = ((r1*2**(32-rt2)) | (r1/2**rt2)) & 0xffffffffffffffff;
         }
         else if (hint == 0x89) {
             uint rot = r2 % 64;
@@ -227,6 +225,13 @@ contract ALU is VMMemory {
             uint rot2 = (r2 % 64);
             res = ((r1*2**(64-rot2)) | (r1/2**rot2)) & 0xffffffffffffffff;
 //            res = (r1/2**rot2) | (r1*2**64);
+        }
+        else if (hint == 0xac) {
+            if (r1 & 0x80000000 != 0) res = r1 | 0xffffffff00000000;
+            else res = r1;
+        }
+        else if (hint == 0xa7) {
+            res = r1 & 0xffffffff;
         }
         
         if (hint >= 0x62 && hint <= 0x78) {
@@ -323,7 +328,7 @@ contract ALU is VMMemory {
       n += 2;
       temp_r1 = temp_r1 << 2;
     }
-    if (temp_r1 & 0x8000000 == 0) {
+    if (temp_r1 & 0x80000000 == 0) {
       n++;
     }
     return n;
