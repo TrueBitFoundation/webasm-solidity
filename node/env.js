@@ -44,7 +44,10 @@ var module
 
 var system = 0
 
-var HEAP32, HEAP8
+var gas = 0
+var gas_limit = 0
+
+var HEAP32, HEAP8, e
 
 function _sbrk(increment) {
     console.log("sbrk", increment)
@@ -144,6 +147,15 @@ function makeEnv(env) {
         input.data[i][j] = c
     }
     
+    env.usegas = function (i) {
+        gas += i
+        if (gas > gas_limit) {
+            console.log("Running out of gas")
+            flushFiles()
+            process.exit(-1)
+        }
+    }
+
 }
 
 // var dta = JSON.parse(fs.readFileSync("info.json"))
@@ -170,6 +182,27 @@ function handleImport(env, imp) {
     env[str] = function () { console.log("called", str) }
 }
 
+function finalize() {
+
+    if (e._finalizeSystem) {
+        console.log("finalize")
+        e._finalizeSystem()
+    }
+
+    flushFiles()
+
+    console.log("exiting")
+
+}
+
+function flushFiles() {
+    for (var i = 0; i < input.data.length; i++) {
+        if (input.data[i].length > 0) {
+            fs.writeFileSync(input.name[i] + ".out", input.data[i])
+        }
+    }
+}
+
 async function run(binary, args) {
     var info = { env: {}, global: {NaN: 0/0, Infinity:1/0} }
     // var sz = TOTAL_MEMORY / WASM_PAGE_SIZE
@@ -191,12 +224,16 @@ async function run(binary, args) {
     var m = await WebAssembly.instantiate(new Uint8Array(binary), info)
     module = m.instance.exports
     
+    gas_limit = module['GAS_LIMIT']*1000000
+    // gas_limit = 1000*1000000
+    console.log("gas limit", gas_limit)
+
     m.wasmMemory = info.env.memory
     
     HEAP32 = new Uint32Array(info.env.memory.buffer)
     HEAP8 = new Uint8Array(info.env.memory.buffer)
     
-    var e = m.instance.exports
+    e = m.instance.exports
     
     // After building the environment, run the init functions
     console.log("initializing")
@@ -214,19 +251,7 @@ async function run(binary, args) {
 
     e._main(args.length, argv)
 
-    if (e._finalizeSystem) {
-        console.log("finalize")
-        e._finalizeSystem()
-    }
-    
-    console.log("exiting")
-
-    for (var i = 0; i < input.data.length; i++) {
-        if (input.data[i].length > 0) {
-            fs.writeFileSync(input.name[i]+".out", input.data[i])
-        }
-    }
-    
+    finalize()
 }
 
 process.argv.slice(2).forEach(loadFile)
